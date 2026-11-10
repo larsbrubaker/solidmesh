@@ -23,6 +23,8 @@ mod parallel_sequential_equivalence_tests;
 mod part_opacity_tests;
 #[path = "ray_tracer/path_camera_ray_tests.rs"]
 mod path_camera_ray_tests;
+#[path = "ray_tracer/path_shader_inlining_tests.rs"]
+mod path_shader_inlining_tests;
 #[path = "ray_tracer/path_shader_tests.rs"]
 mod path_shader_tests;
 #[path = "ray_tracer/path_tracer_golden_tests.rs"]

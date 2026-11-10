@@ -169,6 +169,9 @@ describe('the words for failures the person cannot fix by reloading', () => {
     expect(text).toContain('drawn on the CPU');
     expect(text).toContain('driver');
     expect(text).not.toMatch(/reload|results text|report/i);
+    // A phone's driver is not something its owner can update.
+    expect(text).not.toMatch(/updat/i);
+    expect(text).toContain('slower');
   });
 
   test('a trapped worker during the GPU pack says what to do', () => {
@@ -232,6 +235,17 @@ describe('hidden means hidden', () => {
     expect(rule('.pass-pill')).toContain('visibility: hidden');
     expect(rule('.pass-pill.visible')).toContain('visibility: visible');
     expect(rule('.busy-badge.visible ~ .pass-pill')).toContain('visibility: hidden');
+    expect(rule('.route-note')).toContain('visibility: hidden');
+    expect(rule('.route-note.visible')).toContain('visibility: visible');
+  });
+
+  test('why the picture is on the CPU sits over the picture, seen without scrolling on a phone', () => {
+    expect(rule('.route-note')).toContain('position: absolute');
+    expect(rule('.route-note')).toContain('bottom: 10px');
+    const page = readFileSync(join(import.meta.dir, 'demos', 'ray-trace.ts'), 'utf8');
+    expect(page).toContain("routeNote.className = 'route-note';");
+    expect(page).toContain('area.appendChild(routeNote);');
+    expect(page).not.toContain('controls.appendChild(routeNote)');
   });
 });
 

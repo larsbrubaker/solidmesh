@@ -160,115 +160,164 @@ struct FloorLight {
     sky_lost: f32,
 }
 
-// One sample of the light reaching the floor at `at` for pixel (x, y)'s sample: sun and sky each
-// sampled once along the same directions with and without the parts in the way, so the ratio is
-// exactly 1 on open floor with no noise and no reference to trace.
-fn path_floor_light(at: vec2<f32>, x: u32, y: u32, sample_index: u32) -> FloorLight {
-    let height = path_view.floor_plane.z;
-    let point = vec3<f32>(at.x, at.y, height);
-    let origin = vec3<f32>(at.x, at.y, height + path_floor_offset(point));
-    var light = FloorLight(vec3<f32>(0.0f), vec3<f32>(0.0f), 0.0f, 0.0f);
-
-    if path_has_sun() {
-        let u = path_jitter(PATH_SUN_SALT_LOW, PATH_SUN_SALT_HIGH, x, y, sample_index);
-        let direction = path_sun_sample(u);
-        if direction.z > 0.0f {
-            // A sun sample stands for its whole solid angle (one over its density); what a white
-            // floor reflects of it is that times the cosine over pi.
-            let reflected = path_view.sun_radiance.xyz
-                * (direction.z / path_view.sun_tangent.w / PATH_PI);
-            let seen = 1.0f - path_coverage_along(path_ray_from(origin, direction));
-            light.sun_lost = dot(PATH_LUMA, reflected) * (1.0f - seen);
-            light.reached += reflected * seen;
-            light.open += reflected;
-        }
-    }
-
-    let u = path_jitter(PATH_SKY_SALT_LOW, PATH_SKY_SALT_HIGH, x, y, sample_index);
-    let radius = sqrt(u.x);
-    let turn = cos_sin_of_turn(u.y);
-    let direction = vec3<f32>(radius * turn.x, radius * turn.y, sqrt(max(1.0f - u.x, 0.0f)));
-    let sky = path_environment(direction);
-    let seen = 1.0f - path_coverage_along(path_ray_from(origin, direction));
-    light.sky_lost = dot(PATH_LUMA, sky) * (1.0f - seen);
-    light.reached += sky * seen;
-    light.open += sky;
-    return light;
-}
-
 // ---- A composited sample.
 
-// One sample of a pixel, in the order `tile_work.rs` documents: the line's coverage first, and the
-// floor's light only when the line reaches the floor past what it covers. Radiance is computed
-// only where it is shown, so a sample that covers nothing and sees no part past the floor costs
-// two shadow rays and no path.
-fn path_composite_sample(index: u32, x: u32, y: u32, sample_index: u32, ray: Ray) {
-    let has_floor = (path_view.flags & PATH_FLAG_FLOOR) != 0u;
-    var coverage = 0.0f;
-    var found_light = false;
-    var light = FloorLight(vec3<f32>(0.0f), vec3<f32>(0.0f), 0.0f, 0.0f);
-    var past_seen = 0.0f;
-    var past_radiance = vec3<f32>(0.0f);
+// What a composited sample learned before its path, and whether it shows one: `path_trace_main`
+// traces that path with `floor_active` as the scene's floor, then `path_composite_finish` adds the
+// sample. The path is traced from that one place for both the plain and the composited sample (see
+// `path.wgsl`'s header on call sites).
+struct CompositePlan {
+    coverage: f32,
+    found_light: bool,
+    light: FloorLight,
+    // The share of a part past the floor the bed shows through, 0 when there is none.
+    past_seen: f32,
+    traces_path: bool,
+    floor_active: bool,
+}
 
+fn path_composite_plan_none() -> CompositePlan {
+    return CompositePlan(0.0f, false, FloorLight(vec3<f32>(0.0f), vec3<f32>(0.0f), 0.0f, 0.0f),
+        0.0f, false, false);
+}
+
+// The lines a composited sample asks the coverage of, in the order it asks them: the camera's line
+// up to the floor, then from the floor point toward the sun and the sky, then the camera's line past
+// the floor. Each line after the first is asked only when the one before says so.
+const PATH_LINE_CAMERA: u32 = 0u;
+const PATH_LINE_SUN: u32 = 1u;
+const PATH_LINE_SKY: u32 = 2u;
+const PATH_LINE_BEYOND: u32 = 3u;
+const PATH_LINE_DONE: u32 = 4u;
+
+// One sample of a pixel up to its path, in the order `tile_work.rs` documents: the line's coverage
+// first, and the floor's light only when the line reaches the floor past what it covers. Radiance
+// is wanted only where it is shown, so a sample that covers nothing and sees no part past the floor
+// costs two shadow rays and no path.
+//
+// The floor's light is one sample of the sun and one of the sky, each along the same direction
+// with and without the parts in the way, so the ratio is exactly 1 on open floor with no noise and
+// no reference to trace. Every line is asked through the one `path_coverage_along` call in the
+// loop, its answer read by the stage that asked it.
+fn path_composite_plan(x: u32, y: u32, sample_index: u32, ray: Ray) -> CompositePlan {
+    let has_floor = (path_view.flags & PATH_FLAG_FLOOR) != 0u;
+    let show_through = path_view.floor_show_through;
+    var plan = path_composite_plan_none();
+    var floor_t = PATH_NO_FLOOR;
     if has_floor {
-        let floor_t = path_catcher_distance(ray);
-        let reaches = floor_t != PATH_NO_FLOOR;
-        var line = ray;
-        if reaches {
-            line.t_max = floor_t;
-        }
-        coverage = path_coverage_along(line);
-        if coverage < 1.0f && reaches {
-            let at = ray.origin.xy + ray.direction.xy * floor_t;
-            light = path_floor_light(at, x, y, sample_index);
-            found_light = true;
-            let show_through = path_view.floor_show_through;
-            if coverage == 0.0f && show_through > 0.0f {
-                var beyond = ray;
-                beyond.t_min = max(floor_t, 0.0f);
-                beyond.t_max = PATH_FAR;
-                let seen = path_coverage_along(beyond) * show_through;
-                if seen > 0.0f {
-                    // The parts' own scene, with no floor in the way: the part below it.
-                    path_floor_active = false;
-                    path_rng_start(x, y, sample_index);
-                    past_radiance = path_radiance(ray);
-                    past_seen = seen;
+        floor_t = path_catcher_distance(ray);
+    }
+    let reaches = floor_t != PATH_NO_FLOOR;
+
+    var line = ray;
+    if reaches {
+        line.t_max = floor_t;
+    }
+    var stage = PATH_LINE_CAMERA;
+    // A sun sample stands for its whole solid angle (one over its density); what a white floor
+    // reflects of it is that times the cosine over pi.
+    var sun_reflected = vec3<f32>(0.0f);
+    var sky = vec3<f32>(0.0f);
+    var sky_line = ray;
+    loop {
+        let covered = path_coverage_along(line);
+        var next = PATH_LINE_DONE;
+        if stage == PATH_LINE_CAMERA {
+            plan.coverage = covered;
+            if covered < 1.0f && reaches {
+                let at = ray.origin.xy + ray.direction.xy * floor_t;
+                let height = path_view.floor_plane.z;
+                let point = vec3<f32>(at.x, at.y, height);
+                let origin = vec3<f32>(at.x, at.y, height + path_floor_offset(point));
+                plan.found_light = true;
+                next = PATH_LINE_SKY;
+                if path_has_sun() {
+                    let u = path_jitter(PATH_SUN_SALT_LOW, PATH_SUN_SALT_HIGH, x, y, sample_index);
+                    let direction = path_sun_sample(u);
+                    if direction.z > 0.0f {
+                        sun_reflected = path_view.sun_radiance.xyz
+                            * (direction.z / path_view.sun_tangent.w / PATH_PI);
+                        line = path_ray_from(origin, direction);
+                        next = PATH_LINE_SUN;
+                    }
+                }
+                let u = path_jitter(PATH_SKY_SALT_LOW, PATH_SKY_SALT_HIGH, x, y, sample_index);
+                let radius = sqrt(u.x);
+                let turn = cos_sin_of_turn(u.y);
+                let direction = vec3<f32>(radius * turn.x, radius * turn.y, sqrt(max(1.0f - u.x, 0.0f)));
+                sky = path_environment(direction);
+                sky_line = path_ray_from(origin, direction);
+                if next == PATH_LINE_SKY {
+                    line = sky_line;
                 }
             }
+        } else if stage == PATH_LINE_SUN {
+            let seen = 1.0f - covered;
+            plan.light.sun_lost = dot(PATH_LUMA, sun_reflected) * (1.0f - seen);
+            plan.light.reached += sun_reflected * seen;
+            plan.light.open += sun_reflected;
+            line = sky_line;
+            next = PATH_LINE_SKY;
+        } else if stage == PATH_LINE_SKY {
+            let seen = 1.0f - covered;
+            plan.light.sky_lost = dot(PATH_LUMA, sky) * (1.0f - seen);
+            plan.light.reached += sky * seen;
+            plan.light.open += sky;
+            if plan.coverage == 0.0f && show_through > 0.0f {
+                line = ray;
+                line.t_min = max(floor_t, 0.0f);
+                line.t_max = PATH_FAR;
+                next = PATH_LINE_BEYOND;
+            }
+        } else {
+            let seen = covered * show_through;
+            if seen > 0.0f {
+                // The parts' own scene, with no floor in the way: the part below it.
+                plan.past_seen = seen;
+                plan.traces_path = true;
+                plan.floor_active = false;
+            }
         }
-    } else {
-        coverage = path_coverage_along(ray);
+        if next == PATH_LINE_DONE {
+            break;
+        }
+        stage = next;
     }
 
-    // A sample that covers nothing and sees no part past the floor adds only its floor loss. One
-    // with a part past the floor adds that part at the bed's see-through share, over the floor it
-    // stands on.
+    if plan.coverage > 0.0f {
+        plan.traces_path = true;
+        plan.floor_active = has_floor;
+    }
+    return plan;
+}
+
+// The rest of the sample once `traced` holds its path's radiance (zero when `plan` traced none).
+// One that covers nothing and sees no part past the floor adds only its floor loss. One with a part
+// past the floor adds that part at the bed's see-through share, over the floor it stands on.
+fn path_composite_finish(index: u32, plan: CompositePlan, traced: vec3<f32>, ray: Ray) {
     var radiance = vec3<f32>(0.0f);
     var added = 0.0f;
-    if coverage > 0.0f {
-        path_floor_active = has_floor;
-        path_rng_start(x, y, sample_index);
-        radiance = path_radiance(ray);
-        added = coverage;
-    } else if past_seen > 0.0f && found_light {
-        let floor_radiance = light.reached * path_view.floor_base.xyz;
-        radiance = past_radiance * past_seen + floor_radiance * (1.0f - past_seen);
-        added = past_seen;
+    if plan.coverage > 0.0f {
+        radiance = traced;
+        added = plan.coverage;
+    } else if plan.past_seen > 0.0f && plan.found_light {
+        let floor_radiance = plan.light.reached * path_view.floor_base.xyz;
+        radiance = traced * plan.past_seen + floor_radiance * (1.0f - plan.past_seen);
+        added = plan.past_seen;
     }
 
     var sun_shadow = 0.0f;
     var sky_shadow = 0.0f;
-    if found_light {
-        let open = dot(PATH_LUMA, light.open);
+    if plan.found_light {
+        let open = dot(PATH_LUMA, plan.light.open);
         if open > 0.0f {
-            sun_shadow = clamp(light.sun_lost / open, 0.0f, 1.0f);
-            sky_shadow = clamp(light.sky_lost / open, 0.0f, 1.0f);
+            sun_shadow = clamp(plan.light.sun_lost / open, 0.0f, 1.0f);
+            sky_shadow = clamp(plan.light.sky_lost / open, 0.0f, 1.0f);
         }
     }
     var backdrop = path_escaped(ray.direction, false, 0.0f);
-    if found_light {
-        backdrop = light.reached * path_view.floor_base.xyz;
+    if plan.found_light {
+        backdrop = plan.light.reached * path_view.floor_base.xyz;
     }
 
     path_composite_add(index, radiance, added, sun_shadow, sky_shadow, backdrop);

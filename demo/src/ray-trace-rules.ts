@@ -49,7 +49,7 @@ export function fallbackMessage(failure: GpuFailure): string {
     case 'no-adapter':
       return 'This browser has WebGPU but found no usable graphics adapter, so the picture is drawn on the CPU. Updating your graphics driver may help.';
     case 'shader':
-      return 'Your graphics driver refused the path tracing shader, so the picture is drawn on the CPU. Updating the driver may fix it.';
+      return "This device's graphics driver could not build the path tracing program, so the picture is drawn on the CPU, which is slower.";
     case 'trapped':
       return 'Preparing this part for your graphics card failed, most likely out of memory, so it is drawn on the CPU. A smaller Detail may fit.';
     case 'error':

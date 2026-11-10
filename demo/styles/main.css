@@ -688,6 +688,25 @@ input[type="number"] {
 /* The pill sits at the top like the busy badge; while the badge shows, the badge speaks. */
 .busy-badge.visible ~ .pass-pill { opacity: 0; visibility: hidden; }
 
+/* The Ray Tracing page's reason the picture is drawn on the CPU: over the picture's bottom edge,
+   where it is seen without scrolling on a phone, whose controls sit below the picture. */
+.route-note {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(20, 33, 61, 0.85);
+  color: #fff;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.route-note.visible { visibility: visible; }
+
 /* ===================== Responsive ===================== */
 
 @media (max-width: 900px) {

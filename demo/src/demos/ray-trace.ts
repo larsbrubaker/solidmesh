@@ -29,8 +29,9 @@
 // moves on, so a slow GPU still shows a whole frame. A still first runs a small pilot of itself,
 // not shown, so the size of its first full-size slices is measured rather than guessed
 // (`SliceCosts` in src/ray-trace-rules.ts). A failure sends the picture to the CPU with a
-// sentence saying what happened and holds until the person picks a renderer again, so a lost device
-// is never retried in a loop; the Normals and Depth views read hit data on the CPU either way.
+// sentence over the picture's bottom edge (`.route-note`) saying what happened, and holds until
+// the person picks a renderer again, so a lost device is never retried in a loop; the Normals and
+// Depth views read hit data on the CPU either way.
 //
 // A wasm trap (out of memory packing a large part, say) kills the worker and everything it held,
 // so the page forgets its prepared part and builds it again on the fresh worker, once
@@ -196,8 +197,11 @@ export function init(container: HTMLElement): () => void {
   note.className = 'note-line';
   const error = document.createElement('div');
   error.className = 'error-line';
+  // Why the picture fell back to the CPU, over the picture's bottom edge: on a phone the controls
+  // and the readout sit below the picture, out of sight, and this is the one thing to see.
   const routeNote = document.createElement('div');
-  routeNote.className = 'note-line';
+  routeNote.className = 'route-note';
+  area.appendChild(routeNote);
   const pill = document.createElement('div');
   pill.className = 'pass-pill';
   area.appendChild(pill);
@@ -300,6 +304,7 @@ export function init(container: HTMLElement): () => void {
     </div>`;
     note.textContent = prepared ? prepared.note : '';
     routeNote.textContent = route().message;
+    routeNote.classList.toggle('visible', routeNote.textContent !== '');
     pill.textContent = passCountText(moving || !pass ? 0 : pass.samples, SAMPLE_CAP);
     pill.classList.toggle('visible', pill.textContent !== '');
   };
@@ -554,7 +559,11 @@ export function init(container: HTMLElement): () => void {
         // Stopped on purpose, or already handled as a lost device.
         if (generation !== gpuGeneration) return;
         if (e instanceof NoGraphicsAdapter) failGpu({ kind: 'no-adapter', detail: e.message });
-        else if (e instanceof ShaderRefused) failGpu({ kind: 'shader', detail: e.driverText });
+        else if (e instanceof ShaderRefused) {
+          // The page's sentence is for the person; the driver's own words are for a remote debugger.
+          console.warn('The graphics driver refused the path tracing shader:', e.driverText);
+          failGpu({ kind: 'shader', detail: e.driverText });
+        }
         else failGpu({ kind: 'error', detail: e.message });
       })
       .finally(() => {
@@ -650,7 +659,6 @@ export function init(container: HTMLElement): () => void {
   controls.appendChild(lookControls);
   controls.appendChild(stats);
   controls.appendChild(note);
-  controls.appendChild(routeNote);
   controls.appendChild(error);
   updateStats();
 

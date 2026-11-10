@@ -53,6 +53,15 @@
 // same way (see `path_power_heuristic` for the one guard WGSL needs beyond it). The loop is a
 // `loop` with bounded iterations: each ends by escape, a stop, the bounce limit, or the per-line
 // crossing cap of `MAX_CROSSINGS_PER_LINE`, and each shadow ray likewise.
+//
+// **Each function that traverses the tree is called from one place.** A GPU driver copies a
+// function into every place it is called, so every call site of `path_radiance`,
+// `path_coverage_along` or `path_sun_reachable` adds a whole copy of the traversal to the compiled
+// program. A phone's driver (Arm Mali) refuses the program once the traversal is copied a few times
+// over, and a desktop driver takes seconds longer to build it. So the plain and composited samples
+// share the one `path_radiance` call in `path_trace_main`, a composited sample asks its lines'
+// coverage in one loop (`catcher.wgsl`), and the shadow ray to the sun runs one `trace` whether it
+// stops at the first hit or walks see-through parts. `path_shader_inlining_tests` counts them.
 
 // ---- Constants, equal to their Rust counterparts in `gpu_scene.rs` and `see_through.rs`.
 
@@ -429,20 +438,26 @@ fn path_sides_agree(geometric: vec3<f32>, wo_world: vec3<f32>, wi_world: vec3<f3
     return local_same_side == geometric_same_side;
 }
 
+// Whether the shadow ray reaches the sun. With no see-through parts any hit blocks it, so the one
+// traversal below stops at the first hit; with them it walks the line hit by hit. One `trace` call
+// serves both (see `path.wgsl`'s header on call sites).
 fn path_sun_reachable(origin_ray: Ray) -> bool {
     if path_floor_distance(origin_ray) >= 0.0f {
         return false;
     }
-    if (path_view.flags & PATH_FLAG_SEE_THROUGH) == 0u {
-        return trace_any(origin_ray).triangle == NO_HIT;
+    let see_through = (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u;
+    if see_through {
+        line_restart();
     }
-    line_restart();
     var ray = origin_ray;
     let direction = origin_ray.direction;
     loop {
-        let hit = trace_closest(ray);
+        let hit = trace(ray, !see_through);
         if hit.triangle == NO_HIT {
             return true;
+        }
+        if !see_through {
+            return false;
         }
         let point = path_surface_point(hit);
         let verdict = line_at_hit(point.part);
@@ -668,13 +683,24 @@ fn path_trace_main(@builtin(global_invocation_id) id: vec3<u32>) {
     let jitter = path_jitter(0u, 0u, x, y, sample_index);
     let ray = path_camera_ray(f32(x) + jitter.x, f32(y) + jitter.y);
 
-    if (path_view.flags & PATH_FLAG_COMPOSITE) != 0u {
-        path_composite_sample(index, x, y, sample_index, ray);
+    // A plain sample always traces its path, with no floor; a composited one decides first whether
+    // it shows a path and which scene that path sees. Either way the path's stream starts here,
+    // after everything the composited sample asked before it.
+    let composite = (path_view.flags & PATH_FLAG_COMPOSITE) != 0u;
+    var plan = path_composite_plan_none();
+    if composite {
+        plan = path_composite_plan(x, y, sample_index, ray);
+    }
+    var value = vec3<f32>(0.0f);
+    if !composite || plan.traces_path {
+        path_floor_active = plan.floor_active;
+        path_rng_start(x, y, sample_index);
+        value = path_radiance(ray);
+    }
+    if composite {
+        path_composite_finish(index, plan, value, ray);
         return;
     }
-
-    path_rng_start(x, y, sample_index);
-    let value = path_radiance(ray);
 
     let prior = accumulation[index];
     let sum = prior.xyz + value;
