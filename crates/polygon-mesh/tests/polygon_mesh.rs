@@ -39,6 +39,12 @@ mod mesh_split_manifold_tests;
 mod mesh_tests;
 #[path = "polygon_mesh/outline_to_mesh_tests.rs"]
 mod outline_to_mesh_tests;
+#[path = "polygon_mesh/reduce_face_data_tests.rs"]
+mod reduce_face_data_tests;
+#[path = "polygon_mesh/reduce_seam_tests.rs"]
+mod reduce_seam_tests;
+#[path = "polygon_mesh/reduce_test_support.rs"]
+mod reduce_test_support;
 #[path = "polygon_mesh/repair_texture_caps_tests.rs"]
 mod repair_texture_caps_tests;
 #[path = "polygon_mesh/rust_only_mesh_editing_tests.rs"]

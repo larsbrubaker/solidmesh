@@ -19,10 +19,13 @@
 //! `dmesh_aabb_tree3_pairs` (the trees' nearest triangle pair) and `dist_triangle3_triangle3`
 //! measure the gap between two meshes for `mesh_distance`.
 //! `reducer` (the Reduce tool's `Mesh::reduced_to_triangle_count`) is Garland-Heckbert quadric
-//! simplification over the same `DMesh3`, with `quadric_error`, `index_priority_queue` and, to
-//! keep the surface, `mesh_projection_target`.
+//! simplification over the same `DMesh3`, with `quadric_error`, `index_priority_queue`, the
+//! face textures and colours it carries (`reducer_face_data`, placed and priced by its child
+//! `reducer_seams` with `attribute_quadric`) and, to keep the surface,
+//! `mesh_projection_target`.
 
 pub(crate) mod advanced_repair;
+pub(crate) mod attribute_quadric;
 pub(crate) mod dist_triangle3_triangle3;
 pub(crate) mod dmesh3;
 pub(crate) mod dmesh3_collapse;
@@ -57,6 +60,7 @@ pub(crate) mod point_set_hashtable;
 pub(crate) mod quadric_error;
 pub(crate) mod ray_intersection;
 pub(crate) mod reducer;
+pub(crate) mod reducer_face_data;
 pub(crate) mod ref_count_vector;
 pub(crate) mod region_operator;
 pub(crate) mod remesher;

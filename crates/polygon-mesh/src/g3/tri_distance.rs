@@ -42,6 +42,35 @@ fn degenerate_distance_sqr_closest(v: &[[f64; 3]; 3], point: [f64; 3]) -> (f64, 
     best
 }
 
+/// The parameters `[s, t]` of the point [`degenerate_distance_sqr_closest`] finds: on the same
+/// nearest edge (ties to the earlier one), at the nearest point's place along it.
+fn degenerate_params(v: &[[f64; 3]; 3], point: [f64; 3]) -> [f64; 2] {
+    let along = |a: [f64; 3], b: [f64; 3]| {
+        let d = sub(b, a);
+        let len_sqr = dot(d, d);
+        if len_sqr > 0.0 {
+            (dot(sub(point, a), d) / len_sqr).clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
+    };
+    let mut best = (segment_distance_sqr_closest(v[0], v[1], point).0, 0);
+    for (edge, (a, b)) in [(1, (v[1], v[2])), (2, (v[2], v[0]))] {
+        let candidate = segment_distance_sqr_closest(a, b, point).0;
+        if candidate < best.0 {
+            best = (candidate, edge);
+        }
+    }
+    match best.1 {
+        0 => [along(v[0], v[1]), 0.0],
+        1 => {
+            let l = along(v[1], v[2]);
+            [1.0 - l, l]
+        }
+        _ => [0.0, 1.0 - along(v[2], v[0])],
+    }
+}
+
 /// The squared distance from `point` to the triangle `v`.
 pub(crate) fn tri_distance_sqr(v: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
     let diff = sub(v[0], point);
@@ -182,9 +211,20 @@ pub(crate) fn tri_distance_sqr(v: &[[f64; 3]; 3], point: [f64; 3]) -> f64 {
 }
 
 /// The squared distance from `point` to the triangle `v` and the triangle's point nearest to
-/// it, which `MeshProjectionTarget::project` (`mesh_projection_target.rs`) returns. The same
-/// region walk as [`tri_distance_sqr`], also tracking the parameters `s`, `t` of that point.
+/// it, which `MeshProjectionTarget::project` (`mesh_projection_target.rs`) returns.
 pub(crate) fn distance_sqr_closest(v: &[[f64; 3]; 3], point: [f64; 3]) -> (f64, [f64; 3]) {
+    let (sqr_distance, closest, _) = distance_sqr_closest_params(v, point);
+    (sqr_distance, closest)
+}
+
+/// [`distance_sqr_closest`] with the parameters `[s, t]` of the nearest point,
+/// `v0 + s * (v1 - v0) + t * (v2 - v0)`, which the reducer reads a collapse point's UV from
+/// (`reducer_face_data.rs`). The same region walk as [`tri_distance_sqr`]; a degenerate
+/// triangle reports the place of the nearest point along its nearest edge.
+pub(crate) fn distance_sqr_closest_params(
+    v: &[[f64; 3]; 3],
+    point: [f64; 3],
+) -> (f64, [f64; 3], [f64; 2]) {
     let diff = sub(v[0], point);
     let edge0 = sub(v[1], v[0]);
     let edge1 = sub(v[2], v[0]);
@@ -196,7 +236,8 @@ pub(crate) fn distance_sqr_closest(v: &[[f64; 3]; 3], point: [f64; 3]) -> (f64, 
     let c = dot(diff, diff);
     let det = (a00 * a11 - a01 * a01).abs();
     if det == 0.0 {
-        return degenerate_distance_sqr_closest(v, point);
+        let (sqr_distance, closest) = degenerate_distance_sqr_closest(v, point);
+        return (sqr_distance, closest, degenerate_params(v, point));
     }
     let mut s = a01 * b1 - a11 * b0;
     let mut t = a01 * b0 - a00 * b1;
@@ -358,5 +399,5 @@ pub(crate) fn distance_sqr_closest(v: &[[f64; 3]; 3], point: [f64; 3]) -> (f64, 
     } else {
         0.0
     };
-    (sqr_distance, closest)
+    (sqr_distance, closest, [s, t])
 }

@@ -10,7 +10,8 @@
 //!
 //! g3's per-vertex normals, colors and UVs are not stored: nothing that reaches a [`Mesh`] reads
 //! them (the conversion back copies positions only), so no normals are computed at the end of a
-//! repair.
+//! repair. The reducer carries face textures and face colours beside the mesh, per triangle id
+//! (`reducer_face_data`).
 
 use crate::Mesh;
 

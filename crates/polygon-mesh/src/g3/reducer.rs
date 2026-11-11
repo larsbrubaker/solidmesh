@@ -13,6 +13,14 @@
 //! are queued in decides which edges collapse, so Reduce gives the same mesh on every run. The
 //! per-vertex and per-edge setup loops write disjoint slots and run sequentially. There is no
 //! cancel check: nothing that runs the reducer interrupts it.
+//!
+//! A mesh with face textures or face colours carries them through every collapse
+//! (`reducer_face_data.rs`): the seams between its regions become constraints, and the child
+//! module `reducer_seams.rs` places collapses by the seam rules and scores edges inside a textured
+//! region with the texture-aware attribute quadric (`attribute_quadric.rs`), whose optimum also
+//! gives the kept vertex its UV. A mesh with neither runs with no constraints at all, exactly as
+//! before. Some textured shapes cannot reduce everywhere: at a lat-long sphere's poles every
+//! spoke is a UV seam (each face has its own u at the pole), so the pole fans stay as they are.
 
 use std::cmp::Ordering;
 
@@ -22,6 +30,11 @@ use super::index_priority_queue::IndexPriorityQueue;
 use super::mesh_constraints::{EdgeConstraint, ProjectionTarget};
 use super::mesh_refiner_base::MeshRefinerBase;
 use super::quadric_error::QuadricError;
+use super::reducer_face_data::ReducerFaceData;
+use seams::parameter_along;
+
+#[path = "reducer_seams.rs"]
+mod seams;
 use super::vector3d::{add, cross, distance_squared, scale, sub, EPSILON};
 
 /// How a projection target is used.
@@ -86,6 +99,11 @@ pub(crate) struct Reducer<'a, 't> {
     edge_queue: IndexPriorityQueue,
     have_boundary: bool,
     is_boundary_vtx_cache: Vec<bool>,
+    /// The face textures and colours carried through the collapses, when the mesh has any.
+    face_data: Option<ReducerFaceData>,
+    /// Per edge id, the collapse point's UV when the attribute quadric placed it
+    /// (`reducer_seams.rs`); empty on a mesh without face data.
+    edge_uvs: Vec<Option<[f64; 2]>>,
 }
 
 /// The unit normal and the area of triangle `v1 v2 v3`.
@@ -159,7 +177,39 @@ impl<'a, 't> Reducer<'a, 't> {
             edge_queue: IndexPriorityQueue::new(0),
             have_boundary: false,
             is_boundary_vtx_cache: Vec::new(),
+            face_data: None,
+            edge_uvs: Vec::new(),
         }
+    }
+
+    /// Carries `data` (the mesh's face textures and colours) through the reduce: its seams
+    /// become the refiner's constraints.
+    pub(crate) fn attach_face_data(&mut self, mut data: ReducerFaceData) {
+        let constraints = data.seam_constraints(self.base.mesh);
+        data.init_attributes(self.base.mesh);
+        self.base.constraints = Some(constraints);
+        self.face_data = Some(data);
+    }
+
+    /// Edge `[a, b]`'s collapse point, its error and (when the attribute quadric placed it) its
+    /// UV. A mesh without face data scores by position alone.
+    fn score_edge(
+        &self,
+        eid: i32,
+        q: &QuadricError,
+        a: i32,
+        b: i32,
+    ) -> ([f64; 3], f64, Option<[f64; 2]>) {
+        if self.face_data.is_some() {
+            return self.score_seamed_edge(eid, q, a, b);
+        }
+        let opt = self.optimal_point(eid, q, a, b);
+        (opt, q.evaluate(opt), None)
+    }
+
+    /// The face data carried through the reduce, if any.
+    pub(crate) fn face_data(&self) -> Option<&ReducerFaceData> {
+        self.face_data.as_ref()
     }
 
     /// Sets the surface collapsed points are projected back onto.
@@ -185,6 +235,9 @@ impl<'a, 't> Reducer<'a, 't> {
 
         self.precompute(false);
         self.initialize_vertex_quadrics();
+        if self.face_data.is_some() {
+            self.add_seam_planes();
+        }
         self.initialize_queue();
 
         while self.edge_queue.count() > 0 {
@@ -329,6 +382,9 @@ impl<'a, 't> Reducer<'a, 't> {
         let n = max_eid as usize;
 
         self.edge_quadrics = vec![QEdge::default(); n];
+        if self.face_data.is_some() {
+            self.edge_uvs = vec![None; n];
+        }
         self.edge_queue = IndexPriorityQueue::new(max_eid);
         let mut edge_errors = vec![0.0f32; n];
 
@@ -339,12 +395,15 @@ impl<'a, 't> Reducer<'a, 't> {
                     &self.vert_quadrics[a as usize],
                     &self.vert_quadrics[b as usize],
                 );
-                let opt = self.optimal_point(eid, &q, a, b);
-                edge_errors[eid as usize] = q.evaluate(opt) as f32;
+                let (opt, err, uv) = self.score_edge(eid, &q, a, b);
+                edge_errors[eid as usize] = err as f32;
                 self.edge_quadrics[eid as usize] = QEdge {
                     q,
                     collapse_pt: opt,
                 };
+                if let Some(slot) = self.edge_uvs.get_mut(eid as usize) {
+                    *slot = uv;
+                }
             }
         }
 
@@ -374,9 +433,6 @@ impl<'a, 't> Reducer<'a, 't> {
                 return mesh.vertex(eb);
             }
         }
-
-        // [TODO] if we have constraints, we should apply them here, for same reason as bdry
-        // above...
 
         if !self.minimize_quadric_position_error {
             return self.project(scale(add(mesh.vertex(ea), mesh.vertex(eb)), 0.5));
@@ -420,12 +476,14 @@ impl<'a, 't> Reducer<'a, 't> {
                 &self.vert_quadrics[a as usize],
                 &self.vert_quadrics[b as usize],
             );
-            let opt = self.optimal_point(eid, &q, a, b);
-            let err = q.evaluate(opt);
+            let (opt, err, uv) = self.score_edge(eid, &q, a, b);
             self.edge_quadrics[eid as usize] = QEdge {
                 q,
                 collapse_pt: opt,
             };
+            if let Some(slot) = self.edge_uvs.get_mut(eid as usize) {
+                *slot = uv;
+            }
             if self.edge_queue.contains(eid) {
                 self.edge_queue.update(eid, err as f32);
             } else {
@@ -503,12 +561,16 @@ impl<'a, 't> Reducer<'a, 't> {
         let (b_can_collapse, mut collapse_to) = self
             .base
             .can_collapse_constraints(edge_id, a, b, c, d, t0, t1);
-        if !b_can_collapse {
+        if !b_can_collapse || (self.face_data.is_some() && self.seam_refuses(edge_id, a, b)) {
             return (ProcessResult::IgnoredConstrained, collapse_to_v);
         }
 
-        // if we have a boundary, we want to collapse to boundary
-        if self.preserve_boundary_shape && self.have_boundary {
+        // if we have a boundary, we want to collapse to boundary. A boundary edge whose
+        // constraint keeps one end (a pinned seam end on the boundary) collapses along the
+        // boundary onto that end, which keeps the boundary as a midpoint collapse does.
+        let along_boundary_onto_kept_end =
+            collapse_to != -1 && b_is_boundary_edge && self.is_boundary_v(collapse_to);
+        if self.preserve_boundary_shape && self.have_boundary && !along_boundary_onto_kept_end {
             if collapse_to != -1
                 && ((self.is_boundary_v(b) && collapse_to != b)
                     || (self.is_boundary_v(a) && collapse_to != a))
@@ -548,6 +610,42 @@ impl<'a, 't> Reducer<'a, 't> {
             return (ProcessResult::IgnoredCreatesFlip, collapse_to_v);
         }
 
+        // The corner UVs the collapse leaves at the kept vertex, read before the triangles
+        // around the removed vertex change.
+        let uv_plan = match &self.face_data {
+            Some(data) => {
+                let (v_keep, v_gone) = if i_keep == b { (v_b, v_a) } else { (v_a, v_b) };
+                let onto_kept = collapse_to == i_keep;
+                let s = if onto_kept {
+                    1.0
+                } else {
+                    parameter_along(v_gone, v_keep, v_new_pos)
+                };
+                // The attribute quadric's UV belongs to the point it scored, so it is used only
+                // when the collapse goes there.
+                let scored_here = self
+                    .edge_quadrics
+                    .get(edge_id as usize)
+                    .is_some_and(|e| e.collapse_pt == v_new_pos);
+                let uv = if scored_here {
+                    self.edge_uvs.get(edge_id as usize).copied().flatten()
+                } else {
+                    None
+                };
+                Some(data.plan_collapse(
+                    &*self.base.mesh,
+                    edge_id,
+                    (i_collapse, i_keep),
+                    (t0, t1),
+                    s,
+                    v_new_pos,
+                    uv,
+                    onto_kept,
+                ))
+            }
+            None => None,
+        };
+
         // lots of cases where we cannot collapse, but we should just let mesh sort that out,
         // right?
         let mut ret_val = ProcessResult::FailedOpNotSuccessful;
@@ -555,6 +653,10 @@ impl<'a, 't> Reducer<'a, 't> {
         if result == MeshResult::Ok {
             collapse_to_v = i_keep;
             self.base.mesh.set_vertex(i_keep, v_new_pos);
+            if let (Some(data), Some(plan)) = (&mut self.face_data, uv_plan) {
+                data.apply_collapse(&*self.base.mesh, i_keep, plan);
+                data.merge_attributes(i_keep, i_collapse);
+            }
             if let Some(constraints) = &mut self.base.constraints {
                 constraints.clear_edge_constraint(edge_id);
                 constraints.clear_edge_constraint(collapse_info.e_removed[0]);
@@ -605,23 +707,34 @@ impl crate::Mesh {
     /// The geometry of the Reduce operation (`DecimateObject3D`): the mesh as a `DMesh3`, a
     /// `Reducer` reducing to `target_count` triangles - with "Maintain Surface"
     /// (`maintain_surface`), projecting every collapse inline onto a copy of the original mesh
-    /// through its `DMeshAABBTree3` - then back to a `Mesh`. The caller applies Reduce's floor
-    /// of 4.
+    /// through its `DMeshAABBTree3` - then back to a `Mesh`. Face textures and face colours come
+    /// through: no reduced face straddles a seam between pictures, UV islands or colours, and
+    /// each takes its region's picture and colour, with UVs that follow the collapses. The caller
+    /// applies Reduce's floor of 4.
     pub fn reduced_to_triangle_count(&self, target_count: i32, maintain_surface: bool) -> Self {
-        let mut mesh = self.to_dmesh3();
-        if maintain_surface {
-            let original = mesh.clone();
-            let tree = super::DMeshAABBTree3::new(&original);
-            let target = super::mesh_projection_target::MeshProjectionTarget::new(&tree);
-            let mut reducer = Reducer::new(&mut mesh);
-            reducer.set_projection_target(&target);
-            reducer.projection_mode = TargetProjectionMode::Inline;
-            reducer.reduce_to_triangle_count(target_count);
-            reducer.mesh().to_mesh()
+        let (mut mesh, face_data) = self.to_dmesh3_with_face_data();
+        let original = if maintain_surface {
+            Some(mesh.clone())
         } else {
-            let mut reducer = Reducer::new(&mut mesh);
-            reducer.reduce_to_triangle_count(target_count);
-            reducer.mesh().to_mesh()
+            None
+        };
+        let tree = original.as_ref().map(super::DMeshAABBTree3::new);
+        let target = tree
+            .as_ref()
+            .map(super::mesh_projection_target::MeshProjectionTarget::new);
+        let mut reducer = Reducer::new(&mut mesh);
+        if let Some(target) = &target {
+            reducer.set_projection_target(target);
+            reducer.projection_mode = TargetProjectionMode::Inline;
         }
+        if let Some(data) = face_data {
+            reducer.attach_face_data(data);
+        }
+        reducer.reduce_to_triangle_count(target_count);
+        let mut out = reducer.mesh().to_mesh();
+        if let Some(data) = reducer.face_data() {
+            data.write_faces(reducer.mesh(), &mut out);
+        }
+        out
     }
 }
