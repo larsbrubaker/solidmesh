@@ -1,7 +1,8 @@
 //! The boolean's driver: the kernel's one-time configuration, the operand loop, and which combine
 //! runs, each with a yielding variant for a caller that hands the UI its thread back. Each stage it
 //! drives is its own module: `manifold_operand_batch`, `manifold_import`,
-//! `manifold_cancellable_boolean`, `manifold_pairwise_fold` and `manifold_result_reader`.
+//! `manifold_cancellable_boolean`, `manifold_pairwise_fold` and `manifold_result_reader`, with
+//! `manifold_uv_channel` carrying face textures through them.
 
 use std::future::Future;
 use std::sync::{Arc, Once};
@@ -16,7 +17,7 @@ use super::boolean_progress_adapter::{progress_sink_for, BooleanProgressAdapter}
 use super::manifold_operand_batch::{AddOutcome, ManifoldOperandBatch};
 use super::{
     manifold_cancellable_boolean, manifold_kernel_call_counts, manifold_pairwise_fold,
-    manifold_result_reader,
+    manifold_result_reader, manifold_uv_channel,
 };
 use super::{BooleanError, BooleanOptions, BooleanReporter, CsgModes};
 use crate::{CancelToken, Mesh};
@@ -55,6 +56,7 @@ pub(crate) fn run_boolean(
         options.mesh_colors.clone(),
         options.repair_orientation,
         options.single_precision,
+        carries_textures(items),
     );
 
     for &(mesh, matrix) in items {
@@ -96,6 +98,7 @@ pub(crate) async fn run_boolean_async<F: Future<Output = ()>, Y: Fn() -> F + ?Si
         options.mesh_colors.clone(),
         options.repair_orientation,
         options.single_precision,
+        carries_textures(items),
     );
 
     for &(mesh, matrix) in items {
@@ -226,6 +229,14 @@ pub(crate) fn throw_if_cancelled(cancel: &CancelToken) -> Result<(), BooleanErro
         return Err(BooleanError::Cancelled);
     }
     Ok(())
+}
+
+/// Whether some operand has a picture on a face, which turns on the UV channel for the textured
+/// operands of this boolean (`manifold_uv_channel`).
+fn carries_textures(items: &[(&Mesh, Matrix4X4)]) -> bool {
+    items
+        .iter()
+        .any(|(mesh, _)| manifold_uv_channel::has_textures(mesh))
 }
 
 /// Runs the n-ary boolean over already-imported operands and reads the result back.

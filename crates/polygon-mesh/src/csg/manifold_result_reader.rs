@@ -1,6 +1,7 @@
 //! Reading a kernel result back out as a [`Mesh`], with per-face colours read exactly from the
 //! result's runs and face ids; called by `manifold_kernel`, with the palettes
-//! `manifold_operand_batch` recorded.
+//! `manifold_operand_batch` recorded. A result carrying the UV channel is welded and textured by
+//! `manifold_uv_channel::build_textured_mesh`; its face colours are read the same way.
 
 use std::collections::HashMap;
 
@@ -10,6 +11,7 @@ use solidmesh_math::Color;
 use solidmesh_math::{Vector3, Vector3Float};
 
 use super::manifold_operand_batch::ManifoldOperandBatch;
+use super::manifold_uv_channel;
 use super::BooleanError;
 use crate::{Face, Mesh};
 
@@ -21,7 +23,17 @@ pub(crate) fn read_result(
 ) -> Result<Mesh, BooleanError> {
     throw_if_errored(bool_result, "boolean")?;
     let exported = bool_result.get_mesh_gl64(-1);
-    let mut result_mesh = build_mesh(&exported, "boolean")?;
+    // The channel is there only when a textured operand went in with it; a batch that carries
+    // textures but whose textured operands all dropped out reads back as an untextured one.
+    let mut result_mesh = if batch.carries_textures && exported.num_prop > 3 {
+        manifold_uv_channel::build_textured_mesh(
+            &exported,
+            &batch.original_id_to_images,
+            "boolean",
+        )?
+    } else {
+        build_mesh(&exported, "boolean")?
+    };
     if let Some(mesh_colors) = &batch.mesh_colors {
         if !result_mesh.faces.is_empty() {
             result_mesh.face_colors = extract_face_colors_from_runs(

@@ -1,7 +1,10 @@
 //! Collecting a boolean's operands: the empty-operand rules, the transformed copy, the import,
-//! the per-operand refusals a union degrades around, and the colour bookkeeping the result is
-//! painted from: each operand's reserved id and the palette its triangles' face ids index.
-//! Driven by `manifold_kernel`, read back by `manifold_result_reader`.
+//! the per-operand refusals a union degrades around, and the colour and picture bookkeeping the
+//! result is painted from: each operand's reserved id and the palettes its triangles' face ids
+//! index. Driven by `manifold_kernel`, read back by `manifold_result_reader`.
+//!
+//! Operands are transformed into the boolean's common space here, before the import; UVs are a
+//! property of each corner and not of where the part sits, so the transform leaves them alone.
 
 use std::collections::HashMap;
 
@@ -10,6 +13,7 @@ use solidmesh_math::Color;
 use solidmesh_math::Matrix4X4;
 
 use super::manifold_import::{self, OperandTag};
+use super::manifold_uv_channel::{self, ImagePalette};
 use super::{BooleanError, CsgModes, SkippedBooleanOperand};
 use crate::{CancelToken, Mesh};
 
@@ -39,6 +43,12 @@ pub(crate) struct ManifoldOperandBatch {
     /// Each tagged operand's colour palette, keyed by the id reserved for it: a result triangle
     /// in a run with that original id wears `palette[face_id]`. Looked up only, never iterated.
     pub(crate) original_id_to_palette: HashMap<i32, Vec<Color>>,
+    /// Whether some operand has a picture on a face, so textured operands go in with their UVs
+    /// and the result is read back with them. Off, the batch is exactly the untextured one.
+    pub(crate) carries_textures: bool,
+    /// Each textured operand's picture palette, keyed like `original_id_to_palette`: a result
+    /// triangle in a run with that original id wears `pictures[face_id]`. Looked up only.
+    pub(crate) original_id_to_images: HashMap<i32, ImagePalette>,
     operand_count: usize,
 }
 
@@ -48,6 +58,7 @@ impl ManifoldOperandBatch {
         mesh_colors: Option<Vec<Color>>,
         repair_orientation: bool,
         single_precision: bool,
+        carries_textures: bool,
     ) -> Self {
         Self {
             operation,
@@ -58,6 +69,8 @@ impl ManifoldOperandBatch {
             manifolds: Vec::new(),
             skipped: Vec::new(),
             original_id_to_palette: HashMap::new(),
+            carries_textures,
+            original_id_to_images: HashMap::new(),
             operand_count: 0,
         }
     }
@@ -114,40 +127,53 @@ impl ManifoldOperandBatch {
     }
 
     /// Uploads one already-transformed operand, recording the palette its triangles' face ids
-    /// index when the caller asked for colour tracking.
+    /// index when the caller asked for colour tracking, and its pictures when it has any.
     ///
     /// An operand with per-face colours (a previous boolean's result) brings its own palette; any
     /// other operand is a one-entry palette of the colour the caller supplied for it. Nothing is
     /// registered past the end of `mesh_colors` for an operand without per-face colours: the
     /// caller supplied no colour for it, and inventing one would make its triangles count as
     /// attributed and come back wearing a colour from nowhere.
+    ///
+    /// Without colour tracking only an operand with pictures is tagged, so an untextured operand
+    /// goes in exactly as it does in a boolean with no textures at all.
     fn import_operand(
         &mut self,
         mesh_copy: &Mesh,
         mesh_index: usize,
     ) -> Result<Manifold, manifold_import::ImportRejected> {
-        let Some(mesh_colors) = &self.mesh_colors else {
+        let textured = self.carries_textures && manifold_uv_channel::has_textures(mesh_copy);
+        if self.mesh_colors.is_none() && !textured {
             return manifold_import::import_at_precision(
                 mesh_copy,
                 self.repair_orientation,
                 self.single_precision,
             );
-        };
+        }
 
         let tag = OperandTag {
             original_id: Manifold::reserve_ids(1),
-            operand_color: mesh_colors.get(mesh_index).copied(),
+            operand_color: self
+                .mesh_colors
+                .as_ref()
+                .and_then(|colors| colors.get(mesh_index).copied()),
+            tracks_colours: self.mesh_colors.is_some(),
+            carries_textures: self.carries_textures,
         };
-        let (manifold, palette) = manifold_import::import_with_provenance(
+        let (manifold, looks) = manifold_import::import_with_provenance(
             mesh_copy,
             self.repair_orientation,
             self.single_precision,
             tag,
         )?;
-        if let Some(palette) = palette {
-            // Signed in the run data the reader compares against; the cast reinterprets the bits.
+        // Signed in the run data the reader compares against; the casts reinterpret the bits.
+        if let Some(palette) = looks.colours {
             self.original_id_to_palette
                 .insert(tag.original_id as i32, palette);
+        }
+        if let Some(pictures) = looks.pictures {
+            self.original_id_to_images
+                .insert(tag.original_id as i32, pictures);
         }
         Ok(manifold)
     }

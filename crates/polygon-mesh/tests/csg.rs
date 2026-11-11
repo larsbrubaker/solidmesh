@@ -1,6 +1,8 @@
 //! The CSG test binary: two-mesh and n-ary booleans, the Minkowski operations, implicit-surface
 //! booleans and the manifold-rust backend, one file per test class.
 
+#[path = "csg/boolean_face_texture_tests.rs"]
+mod boolean_face_texture_tests;
 #[path = "csg/boolean_kernel_yield_tests.rs"]
 mod boolean_kernel_yield_tests;
 #[path = "csg/boolean_processing_crash_tests.rs"]
@@ -29,3 +31,7 @@ mod minkowski_tests;
 mod nested_boolean_face_color_tests;
 #[path = "csg/single_precision_union_tests.rs"]
 mod single_precision_union_tests;
+#[path = "polygon_mesh/test_picture.rs"]
+mod test_picture;
+#[path = "csg/untextured_boolean_pin_tests.rs"]
+mod untextured_boolean_pin_tests;

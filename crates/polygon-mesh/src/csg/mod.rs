@@ -5,10 +5,11 @@
 //! n-ary entry point. Behind it, `manifold_kernel` drives one boolean: `manifold_operand_batch`
 //! collects and imports the operands (`manifold_import`), `manifold_cancellable_boolean` and
 //! `manifold_pairwise_fold` combine them, and `manifold_result_reader` reads the answer back
-//! into a `Mesh`. [`manifold_kernel_call_counts`] counts the kernel evaluations by kind, for
-//! tests. `boolean_progress_adapter` maps the kernel's phases onto a caller's progress
-//! window. This module holds the types they share: the operation, the failures and the
-//! progress callback.
+//! into a `Mesh`; face textures ride all of them through `manifold_uv_channel` (charts in
+//! `manifold_uv_charts`). [`manifold_kernel_call_counts`] counts the kernel evaluations by kind,
+//! for tests. `boolean_progress_adapter` maps the kernel's phases onto a caller's progress
+//! window. This module holds the types they share: the operation, the failures and the progress
+//! callback.
 //!
 //! The implicit-surface processing modes ([`ProcessingModes::MarchingCubes`],
 //! [`ProcessingModes::DualContouring`]) resample the operands instead (`implicit_boolean`).
@@ -34,6 +35,8 @@ mod manifold_operand_batch;
 mod manifold_pairwise_fold;
 #[doc(hidden)]
 pub mod manifold_result_reader;
+mod manifold_uv_channel;
+mod manifold_uv_charts;
 pub mod mesh_repair_rust;
 pub mod minkowski_morph;
 pub mod minkowski_processing;

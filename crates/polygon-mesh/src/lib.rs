@@ -82,7 +82,8 @@
 //!
 //! Per-face colors and textures (`face_data`): `Mesh::face_colors` and
 //! `Mesh::face_textures` follow the faces through every rebuild, and booleans paint their result
-//! from the operands' colors.
+//! from the operands' colors and keep each operand face's picture and UVs
+//! (`csg::manifold_uv_channel`).
 //!
 //! `mesh_distance` measures the true gap between two meshes' surfaces and whether they
 //! overlap.
