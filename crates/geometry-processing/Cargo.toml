@@ -25,9 +25,9 @@ path = "src/lib.rs"
 [dependencies]
 # The Clipper 6 port, which no code here calls: `solidmesh` re-exports it as `solidmesh::clipper`
 # (with `math` and `mesh`), so `solidmesh` alone is enough to depend on.
-solidmesh-clipper = { path = "../clipper-library", version = "0.2.6" }
-solidmesh-math = { path = "../vector-math", version = "0.2.6" }
-solidmesh-mesh = { path = "../polygon-mesh", version = "0.2.6" }
+solidmesh-clipper = { path = "../clipper-library", version = "0.2.7" }
+solidmesh-math = { path = "../vector-math", version = "0.2.7" }
+solidmesh-mesh = { path = "../polygon-mesh", version = "0.2.7" }
 indexmap = "2"
 # Pure-Rust transcendental functions (sin, cos, atan2, pow, ...): std's call each platform's own
 # maths library, whose last bits differ between Windows, Linux, macOS and the browser, so the

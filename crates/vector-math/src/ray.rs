@@ -2,6 +2,9 @@
 //! precomputed reciprocal direction and per-axis signs the slab test uses, and
 //! [`IntersectionType`]. `Plane`/`PlaneFloat` intersect it; the picking BVH traces it.
 //!
+//! The slab test counts touching as a hit: a ray that runs along a box face, or lies in it,
+//! hits the box, on every axis alike (`Ray::touching_x_window` says how).
+//!
 //! A ray is a `Clone` value with public fields. `new` uses the usual window (0 to +infinity,
 //! front faces) and `with_limits` sets it. `intersect` returns `(bool, RayBoundsHit)`.
 //! [`Ray::SAME_SURFACE_OFFSET`] is a constant, since no caller needs another value.
@@ -135,6 +138,59 @@ impl Ray {
         (entry, 1 - entry)
     }
 
+    /// The x slab's entry and exit distances with touching counted as a hit: the window the
+    /// slab tests start from when a plain x distance came out NaN.
+    ///
+    /// A ray that does not move on an axis (a zero direction component, so an infinite
+    /// reciprocal) and starts exactly in one of that axis's box planes stays in the plane for its
+    /// whole length, touching the box, so that plane bounds nothing. Its distance,
+    /// `0 * infinity`, is undefined (NaN). On y and z that already gives the right answer: every
+    /// comparison with a NaN is false, so the window simply does not take that plane's value. On
+    /// x the distance is the window's starting value and the NaN survives to the end: the box
+    /// reads as missed, or, when only the exit distance is NaN, as hit with an undefined exit
+    /// distance. So each such x distance becomes the value the y and z planes behave as:
+    /// -infinity entering, +infinity leaving.
+    ///
+    /// The repair applies only when every NaN x distance is such a `0 * infinity` (offset exactly
+    /// 0, infinite reciprocal). When any comes from anything else (a NaN origin x, a NaN bound x,
+    /// a NaN direction x, or `infinity - infinity`), both raw distances are kept, so the answer is
+    /// what the plain products always gave. The y and z components are not looked at here: a ray
+    /// in an x face plane whose y or z origin or direction is NaN has that axis ignored, as a ray
+    /// off the face always had.
+    ///
+    /// The slab tests compute the plain x products first and come here only when one is NaN,
+    /// through a cold out-of-line copy of themselves, so the common path stays the plain
+    /// products. The copy is entered by returning its answer, which lets
+    /// [`Ray::intersection`], the test a BVH makes at every node, stay a leaf with no stack
+    /// frame.
+    fn touching_x_window(&self, bounds: &AxisAlignedBoundingBox) -> (f64, f64) {
+        let (entry, exit) = self.slab_corners(0);
+        let inverse = self.one_over_direction.x;
+        let entry_offset = bounds.corner(entry).x - self.origin.x;
+        let exit_offset = bounds.corner(exit).x - self.origin.x;
+        let min_dist = entry_offset * inverse;
+        let max_dist = exit_offset * inverse;
+        // True for a NaN distance that is not `0 * infinity`.
+        let undefined_otherwise =
+            |dist: f64, offset: f64| dist.is_nan() && !(offset == 0.0 && inverse.is_infinite());
+        if undefined_otherwise(min_dist, entry_offset) || undefined_otherwise(max_dist, exit_offset)
+        {
+            return (min_dist, max_dist);
+        }
+        (
+            if min_dist.is_nan() {
+                f64::NEG_INFINITY
+            } else {
+                min_dist
+            },
+            if max_dist.is_nan() {
+                f64::INFINITY
+            } else {
+                max_dist
+            },
+        )
+    }
+
     /// The slab test against `bounds`: true when the entry or exit distance is inside the
     /// window. The distances and face axes are filled in as far as the test got, even on a
     /// miss.
@@ -145,7 +201,19 @@ impl Ray {
         let (entry, exit) = self.slab_corners(0);
         hit.min_dist_found = (bounds.corner(entry).x - self.origin.x) * self.one_over_direction.x;
         hit.max_dist_found = (bounds.corner(exit).x - self.origin.x) * self.one_over_direction.x;
+        if hit.min_dist_found.is_nan() | hit.max_dist_found.is_nan() {
+            return self.intersect_touching(bounds);
+        }
+        self.intersect_from_x(bounds, hit)
+    }
 
+    /// [`Ray::intersect`] after its x slab: the y and z slabs and the window test.
+    #[inline(always)]
+    fn intersect_from_x(
+        &self,
+        bounds: &AxisAlignedBoundingBox,
+        mut hit: RayBoundsHit,
+    ) -> (bool, RayBoundsHit) {
         // now find the distance to the y planes of the box
         let (entry, exit) = self.slab_corners(1);
         let min_dist_to_y = (bounds.corner(entry).y - self.origin.y) * self.one_over_direction.y;
@@ -189,6 +257,19 @@ impl Ray {
             || (hit.max_dist_found < self.max_distance_to_consider
                 && hit.max_dist_found > self.min_distance_to_consider);
         (one_hit_is_within_limits, hit)
+    }
+
+    /// [`Ray::intersect`] for a NaN x distance, through [`Ray::touching_x_window`].
+    #[cold]
+    #[inline(never)]
+    fn intersect_touching(&self, bounds: &AxisAlignedBoundingBox) -> (bool, RayBoundsHit) {
+        let (min_dist_found, max_dist_found) = self.touching_x_window(bounds);
+        let hit = RayBoundsHit {
+            min_dist_found,
+            max_dist_found,
+            ..RayBoundsHit::default()
+        };
+        self.intersect_from_x(bounds, hit)
     }
 
     /// The hit on `bounds`: the entry face for a front-face ray, the exit face otherwise, when
@@ -246,7 +327,28 @@ impl Ray {
     /// The slab test against `bounds`: true when the part of the ray inside the box overlaps the
     /// distance window.
     pub fn intersection(&self, bounds: &AxisAlignedBoundingBox) -> bool {
-        match self.slab_window(bounds) {
+        // we calculate distance to the intersection with the x planes of the box
+        let (entry, exit) = self.slab_corners(0);
+        let min_dist_found = (bounds.corner(entry).x - self.origin.x) * self.one_over_direction.x;
+        let max_dist_found = (bounds.corner(exit).x - self.origin.x) * self.one_over_direction.x;
+        if min_dist_found.is_nan() | max_dist_found.is_nan() {
+            return self.intersection_touching(bounds);
+        }
+        self.window_overlaps(self.slab_window_from_x(bounds, min_dist_found, max_dist_found))
+    }
+
+    /// [`Ray::intersection`] for a NaN x distance, through [`Ray::touching_x_window`].
+    #[cold]
+    #[inline(never)]
+    fn intersection_touching(&self, bounds: &AxisAlignedBoundingBox) -> bool {
+        let (min_dist_found, max_dist_found) = self.touching_x_window(bounds);
+        self.window_overlaps(self.slab_window_from_x(bounds, min_dist_found, max_dist_found))
+    }
+
+    /// True when the slab window overlaps the ray's distance window.
+    #[inline(always)]
+    fn window_overlaps(&self, window: Option<(f64, f64)>) -> bool {
+        match window {
             Some((min_dist_found, max_dist_found)) => {
                 (min_dist_found < self.max_distance_to_consider)
                     && (max_dist_found > self.min_distance_to_consider)
@@ -255,15 +357,15 @@ impl Ray {
         }
     }
 
-    /// The entry/exit distances of `Intersection`'s slab test, `None` when a slab misses.
-    fn slab_window(&self, bounds: &AxisAlignedBoundingBox) -> Option<(f64, f64)> {
-        // we calculate distance to the intersection with the x planes of the box
-        let (entry, exit) = self.slab_corners(0);
-        let mut min_dist_found =
-            (bounds.corner(entry).x - self.origin.x) * self.one_over_direction.x;
-        let mut max_dist_found =
-            (bounds.corner(exit).x - self.origin.x) * self.one_over_direction.x;
-
+    /// The entry/exit distances of [`Ray::intersection`]'s slab test from its x slab's, `None`
+    /// when a slab misses.
+    #[inline(always)]
+    fn slab_window_from_x(
+        &self,
+        bounds: &AxisAlignedBoundingBox,
+        mut min_dist_found: f64,
+        mut max_dist_found: f64,
+    ) -> Option<(f64, f64)> {
         // now find the distance to the y planes of the box
         let (entry, exit) = self.slab_corners(1);
         let min_dist_to_y = (bounds.corner(entry).y - self.origin.y) * self.one_over_direction.y;

@@ -17,9 +17,9 @@
 //! ever proves that every active ray misses a box under `Ray::intersection`, the test a lone ray
 //! uses. Those bounds are computed with the same two floating-point operations in the same
 //! order as that test, so rounding (monotone in each operand) keeps every real entry and exit
-//! distance inside them. An axis with a zero direction component gives no bound at all: a lone
-//! ray there sees `0 * inf = NaN` for an origin exactly on a box plane, which its comparisons
-//! read as no constraint, or a miss on x.
+//! distance inside them. An axis with a zero direction component gives no bound at all. A lone
+//! ray is still limited there (one whose origin is outside that slab misses), but leaving an
+//! axis out of the test can only lose a miss proof, never invent one, so the bounds stay sound.
 //!
 //! The ray index is a `u32`, and [`RayBundle::trace`] refuses a bundle of more than `u32::MAX`
 //! rays rather than truncate. Everything that takes an index from outside this module
@@ -424,8 +424,10 @@ impl<'a> RayBundle<'a> {
     }
 
     /// A ray the packet traversal can skip and bound: a finite origin and direction and no NaN
-    /// in its window (an infinite window is the default and is regular), so a slab test's only NaN
-    /// is the `0 * inf` of an origin exactly on a box plane along a zero direction component.
+    /// in its window (an infinite window is the default and is regular), so against a sound box
+    /// the slab test's only undefined distance is the `0 * inf` of an origin exactly on a box
+    /// plane along a zero direction component, and its answer reads that plane as bounding
+    /// nothing (touching counts as a hit), on every axis.
     pub(super) fn ray_is_regular(&self, index: u32) -> bool {
         let ray = &self.rays[index as usize];
         (0..3).all(|axis| ray.origin[axis].is_finite() && ray.direction_normal[axis].is_finite())

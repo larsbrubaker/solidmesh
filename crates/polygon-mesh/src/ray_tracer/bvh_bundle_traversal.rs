@@ -17,10 +17,11 @@
 //!   narrows the ray: the test a lone ray makes there. If that passes, the lone ray also passed
 //!   every ancestor, because a child's box is inside its parent's and a ray's window only
 //!   shrinks while it descends. Entry and exit distances are computed by operations monotone
-//!   under rounding, and the slab test's only NaN (an origin exactly on a box plane along a zero
-//!   direction component, `0 * inf`) reads as no constraint on y and z and as a miss on x, the
-//!   same in the child's box as in the parent's. So a ray that fails a box can be skipped below
-//!   it, and one that a parent's early hit carried past its test is caught here.
+//!   under rounding. Along a zero direction component a slab either constrains nothing (the
+//!   origin inside it, or exactly on one of its planes, which the slab test counts as touching)
+//!   or is a miss (the origin outside it), on every axis alike; a ray inside or on the child's
+//!   slab is inside or on the parent's. So a ray that fails a box can be skipped below it, and
+//!   one that a parent's early hit carried past its test is caught here.
 //! * **Rays are narrowed in the order a lone ray narrows.** Per ray, leaf visits happen in the
 //!   same depth-first order, and a node's near child narrows it before its far child starts.
 //!
