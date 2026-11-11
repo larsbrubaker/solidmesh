@@ -1,6 +1,8 @@
 // Development server for the demo site (started by dev.ts, or `bun run server.ts`): serves
 // index.html, transpiles src/*.ts per request, serves styles/ and public/ (the wasm package and
-// thumbnails), and falls back to index.html for client-side routes.
+// thumbnails), and falls back to index.html for client-side routes. The transpiled code carries
+// the build identity (the commit plus "dev server", site-build-id.ts) as build.ts's bundle does,
+// worked out again each time src/site-build.ts is served.
 //
 // It also takes the localhost-only thumbnail capture src/capture.ts makes (see capture-thumbs.ts):
 //   POST /api/save-thumb  { name, data: JPEG data URL }  -> demo/public/thumbs/<name>.jpg
@@ -10,6 +12,7 @@
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs";
 import { extname, join, resolve } from "path";
+import { siteBuildDefine } from "./site-build-id.ts";
 
 const PORT = parseInt(process.env.PORT || "3030");
 const ROOT = import.meta.dir;
@@ -29,6 +32,9 @@ const MIME_TYPES: Record<string, string> = {
 const BINARY_EXTS = new Set([".wasm", ".jpg", ".png", ".ico"]);
 
 const transpiler = new Bun.Transpiler({ loader: "ts", target: "browser" });
+/** The build identity is worked out afresh each time it is served, so a commit or an edit made
+ * while the server runs shows on the next page load. */
+const IDENTITY_FILE = "/src/site-build.ts";
 
 function tryServe(pathname: string): { content: string | Uint8Array; mime: string } | null {
   if (pathname === "/" || pathname === "/index.html") {
@@ -40,7 +46,10 @@ function tryServe(pathname: string): { content: string | Uint8Array; mime: strin
   if (!existsSync(filePath) || !statSync(filePath).isFile()) return null;
   const ext = extname(filePath);
   if (pathname.startsWith("/src/") && ext === ".ts") {
-    const code = transpiler.transformSync(readFileSync(filePath, "utf-8"));
+    const source = readFileSync(filePath, "utf-8");
+    const code = pathname === IDENTITY_FILE
+      ? new Bun.Transpiler({ loader: "ts", target: "browser", define: siteBuildDefine("dev") }).transformSync(source)
+      : transpiler.transformSync(source);
     return { content: code, mime: "application/javascript" };
   }
   const mime = MIME_TYPES[ext] || "application/octet-stream";

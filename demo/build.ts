@@ -1,15 +1,18 @@
 // Static build for GitHub Pages: bundles src/main.ts (with its lazily loaded pages) and the mesh
 // worker into dist/, then copies index.html, the styles, the wasm package (public/pkg, built
 // first by wasm-pack), the thumbnails and the favicon beside them. .github/workflows/
-// deploy-demo.yml runs it as `bun run build` and uploads dist/.
+// deploy-demo.yml runs it as `bun run build` and uploads dist/. The bundle carries the build's
+// identity (commit and time, site-build-id.ts) for the Ray Tracing page's "Copy timings" report.
 //
 // Usage: bun run build.ts
 
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
+import { siteBuildDefine } from "./site-build-id.ts";
 
 const ROOT = import.meta.dir;
 const DIST = join(ROOT, "dist");
+const DEFINE = siteBuildDefine("build");
 
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(DIST, { recursive: true });
@@ -28,6 +31,7 @@ async function bundle(entry: string, splitting: boolean) {
     format: "esm",
     minify: true,
     naming: "[dir]/[name].[ext]",
+    define: DEFINE,
     // Three.js comes from the CDN through index.html's import map.
     external: ["three", "three/addons/*"],
   });
@@ -39,7 +43,7 @@ async function bundle(entry: string, splitting: boolean) {
   console.log(`  ${entry}: ${result.outputs.length} files`);
 }
 
-console.log("Bundling TypeScript...");
+console.log(`Bundling TypeScript (build ${DEFINE.__SITE_BUILD__})...`);
 await bundle("src/main.ts", true);
 // The worker is its own entry point: Bun.build does not rewrite `new Worker(new URL(...))`, so
 // mesh-runner.ts loads it by the fixed name mesh-worker.js next to main.js.

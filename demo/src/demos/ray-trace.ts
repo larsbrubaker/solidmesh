@@ -2,8 +2,9 @@
 // library's PathTracer (demo/wasm/src/ray_trace.rs) or on the GPU by its WGSL path loop
 // (demo/wasm/src/ray_trace_gpu.rs and src/ray-trace-gpu.ts), and drawn on a 2D canvas either way.
 // The Renderer menu picks which (src/ray-trace-rules.ts has the rule and the words the page says
-// about it). Dragging orbits, pinching or the wheel zooms (src/orbit-gesture.ts is the rule); the
-// Material and Light menus are the library's presets.
+// about it). The settings and menus are src/ray-trace-controls.ts; dragging orbits, pinching or the
+// wheel zooms (src/ray-trace-camera-input.ts); the Material and Light menus are the library's
+// presets.
 //
 // The page has its own worker (`SideWorker`), so the BVH of a million triangles builds off the
 // UI thread and terminating the worker on leaving the page gives that memory back. One wasm call
@@ -45,10 +46,19 @@
 //
 // The thumbnail capture (src/capture.ts) reads the canvas registered with `setCaptureCanvas`, and
 // the page holds it off (`holdBusy`) until the first full-resolution image has CAPTURE_SAMPLES.
+//
+// "Copy timings" puts a plain-text report on the clipboard (src/ray-trace-report.ts builds it, the
+// build's identity first, from src/site-build.ts): the page times each step of the still on screen
+// from the moment it asked for it (`StillTimings`: the GPU route's device open, pack, shader
+// build, pilot, slices, read-backs, decodes and view requests, each cut to the part after the
+// still began and recorded only by the live run, or the CPU route's passes) and the latest stretch
+// of moving previews (`PreviewStretch`), as running totals and capped lists, so a person on a
+// phone can send a developer which build drew what, how big, how fast and where the time went. A
+// change of the renderer drawing restarts the still and the readout's rates (`stillFor`), and a
+// worker crash ends the still.
 
 import { demoFrameMarkup } from '../demo-shell.ts';
 import { Coalescer, SideWorker, WorkerTrapped, holdBusy } from '../mesh-runner.ts';
-import { OrbitGesture, applyDelta } from '../orbit-gesture.ts';
 import { type ImageSize, mayDraw, sameArgs, sizeChanged } from '../ray-trace-refine.ts';
 import {
   GPU_COMPILING_BADGE, GPU_PACKING_BADGE, type GpuFailure, GpuStageBadge, NothingDrawn, type RendererChoice,
@@ -58,10 +68,14 @@ import {
 import { GpuPathRenderer, type GpuPack } from '../ray-trace-gpu.ts';
 import { type GpuContext, NoGraphicsAdapter, ShaderRefused, hasWebGpu, openGpu } from '../gpu-bench.ts';
 import { setCaptureCanvas } from '../capture.ts';
-import { createColor, createDropdown, createSlider } from '../controls.ts';
-import { loadSetting, saveSetting } from '../settings.ts';
-
-const ROUTE = 'ray-trace';
+import { createButton } from '../controls.ts';
+import {
+  DETAIL_OPTIONS, LIGHT_OPTIONS, MATERIAL_OPTIONS, PART_OPTIONS, RENDERER_OPTIONS, VIEW_OPTIONS, appendRayControls,
+  loadRaySettings, menuText,
+} from '../ray-trace-controls.ts';
+import { attachCameraInput } from '../ray-trace-camera-input.ts';
+import { PreviewStretch, type StepKind, type StillTimings, stillFor, timingsReport } from '../ray-trace-report.ts';
+import { SITE_BUILD } from '../site-build.ts';
 
 /** Samples per pixel the refinement stops at. */
 const SAMPLE_CAP = 128;
@@ -144,19 +158,7 @@ export function init(container: HTMLElement): () => void {
   const context = canvas.getContext('2d')!;
   setCaptureCanvas(canvas);
 
-  const s = {
-    part: loadSetting(ROUTE, 'part', '0'),
-    detail: loadSetting(ROUTE, 'detail', '2'),
-    renderer: loadSetting(ROUTE, 'renderer', 'auto'),
-    mode: loadSetting(ROUTE, 'mode', '0'),
-    material: loadSetting(ROUTE, 'material', '0'),
-    color: loadSetting(ROUTE, 'color', '#5bc2b4'),
-    roughness: loadSetting(ROUTE, 'roughness', 0.3),
-    metallic: loadSetting(ROUTE, 'metallic', 0),
-    transmission: loadSetting(ROUTE, 'transmission', 0),
-    light: loadSetting(ROUTE, 'light', '0'),
-    sun: loadSetting(ROUTE, 'sun', 5),
-  };
+  const s = loadRaySettings();
 
   const camera = { yaw: 0.85, pitch: 0.42, zoom: 1 };
   // The image the worker is asked for next: preview while moving, full resolution once still.
@@ -192,6 +194,15 @@ export function init(container: HTMLElement): () => void {
   let gpuRunning = false;
   let lastGpuDisplay = 0;
   let lastGpuDisplayCost = 0;
+  // What "Copy timings" reports (src/ray-trace-report.ts): the still on screen from its start, the
+  // latest stretch of previews, and the GPU route's last part pack, shader build and adapter.
+  let still: StillTimings | null = null;
+  let previews = new PreviewStretch();
+  let lastPackMs: number | null = null;
+  let lastShaderMs: number | null = null;
+  let adapterName: string | null = null;
+  // The renderer the last request headed to: a change restarts the rates and the still.
+  let lastDrawing: Route | null = null;
   const gpuStage = new GpuStageBadge({
     show: text => {
       busy.textContent = text;
@@ -216,6 +227,45 @@ export function init(container: HTMLElement): () => void {
   const pill = document.createElement('div');
   pill.className = 'pass-pill';
   area.appendChild(pill);
+
+  // "Copy timings": the report a person on any device pastes back to whoever is helping them.
+  const timingsText = document.createElement('textarea');
+  timingsText.readOnly = true;
+  timingsText.rows = 9;
+  timingsText.style.width = '100%';
+  timingsText.style.fontSize = '12px';
+  timingsText.style.display = 'none';
+  const timingsStatus = document.createElement('div');
+  timingsStatus.className = 'note-line';
+  const timingsNow = () => {
+    const decision = route();
+    return timingsReport({
+      build: SITE_BUILD, userAgent: navigator.userAgent, pixelRatio: window.devicePixelRatio || 1,
+      areaWidth: area.clientWidth, areaHeight: area.clientHeight, webGpu: hasWebGpu(), adapter: adapterName,
+      part: menuText(PART_OPTIONS, s.part), detail: menuText(DETAIL_OPTIONS, s.detail),
+      triangles: prepared ? prepared.triangles : null, view: menuText(VIEW_OPTIONS, s.mode),
+      renderer: menuText(RENDERER_OPTIONS, s.renderer), material: menuText(MATERIAL_OPTIONS, s.material),
+      light: menuText(LIGHT_OPTIONS, s.light), shown: shownRoute(lastFrom, decision.route),
+      routeMessage: decision.message, failure: gpuFailure, cap: SAMPLE_CAP, lastPackMs, lastShaderMs,
+      still: moving ? null : still, previews, now: performance.now(),
+    });
+  };
+  const timingsButton = createButton('Copy timings', () => {
+    timingsText.value = timingsNow();
+    timingsText.style.display = 'block';
+    const byHand = (why: string) => {
+      timingsText.select();
+      timingsStatus.textContent = `${why}: the text is selected, so copy it by hand.`;
+    };
+    if (!navigator.clipboard) {
+      byHand('This page cannot reach the clipboard');
+      return;
+    }
+    navigator.clipboard.writeText(timingsText.value).then(
+      () => { timingsStatus.textContent = 'Timings copied. Paste them to whoever is helping you.'; },
+      () => byHand('Could not reach the clipboard'),
+    );
+  });
 
   const worker = new SideWorker();
 
@@ -262,6 +312,13 @@ export function init(container: HTMLElement): () => void {
       Number(s.light), s.sun, SEED, size.w, size.h, moving,
       moving ? 0 : PASS_BUDGET_MS,
     ];
+    // A different renderer (Auto falling back to the CPU mid-still, say) starts the readout's rates
+    // and the report's still afresh, so neither mixes two renderers' work.
+    if (drawing !== lastDrawing) {
+      lastDrawing = drawing;
+      resetRates();
+    }
+    if (!moving) still = stillFor(still, currentArgs, size.w, size.h, drawing, performance.now());
     if (drawing === 'gpu') {
       gpuWanted = currentArgs;
       startGpu();
@@ -300,11 +357,13 @@ export function init(container: HTMLElement): () => void {
   const finishMoving = () => {
     stillTimer = null;
     moving = false;
+    still = null;
     resetRates();
     kick();
   };
 
   const nudge = () => {
+    if (!moving) previews = new PreviewStretch();
     moving = true;
     if (stillTimer) clearTimeout(stillTimer);
     stillTimer = setTimeout(finishMoving, STILL_MS);
@@ -360,6 +419,8 @@ export function init(container: HTMLElement): () => void {
     resetRates();
     busy.classList.remove('visible');
     moving = true;
+    still = null;
+    previews = new PreviewStretch();
     if (stillTimer) clearTimeout(stillTimer);
     stillTimer = setTimeout(finishMoving, STILL_MS);
     updateStats();
@@ -372,6 +433,9 @@ export function init(container: HTMLElement): () => void {
     // A pass the page no longer wants: its replacement is already queued, so nothing is lost.
     if (from !== route().route || !mayDraw(args, currentArgs, moving)) return;
     trapRecovery.succeeded();
+    const now = performance.now();
+    if (args[16] === true) previews.shown(from, pass.width, pass.height, now);
+    else stillOf(args)?.drew(from, pass.samples, pass.pixelSamples, pass.ms, pass.rays, SAMPLE_CAP, now);
     draw(pass);
     lastPass = pass;
     lastFrom = from;
@@ -455,6 +519,8 @@ export function init(container: HTMLElement): () => void {
    * on the fresh worker; if that was the GPU route's doing, Auto goes on on the CPU and GPU stops.
    */
   const workerTrapped = (e: WorkerTrapped, onGpu: boolean) => {
+    // The part is rebuilt from scratch, so the still the report would show is over.
+    still = null;
     if (onGpu) noteGpuFailure({ kind: 'trapped', detail: e.message });
     const next = trapRecovery.trapped(e.instance);
     stopGpu();
@@ -487,15 +553,35 @@ export function init(container: HTMLElement): () => void {
   /** What the request `args` is for the worker: 17 numbers, the preview flag as 0 or 1. */
   const traceNumbers = (args: unknown[]) => Float64Array.from(args.slice(0, 17).map(Number));
 
+  /**
+   * The still on screen, if a step for `args` is its work; any request's for a once-per-part step
+   * (`args` null), which the still waits on whoever asked for it. Null while the camera moves.
+   */
+  const stillOf = (args: readonly unknown[] | null) =>
+    !moving && still && (args === null || sameArgs(still.args, args)) ? still : null;
+  /**
+   * A step of the GPU route that began at `started` and ends now, for the still on screen; the
+   * still counts only the part after it began (`StillTimings.record`). Returns the step's length.
+   */
+  const timed = (kind: StepKind, args: readonly unknown[] | null, started: number, pixels = 0) => {
+    const now = performance.now();
+    stillOf(args)?.record(kind, started, now, pixels);
+    return now - started;
+  };
+
   const runGpu = async (generation: number) => {
     const live = () => !disposed && generation === gpuGeneration && usingGpu();
     if (!gpu) {
+      const deviceStarted = performance.now();
       const context = await openDevice();
+      // A run the page has left records nothing: its steps overlap the run that replaced it.
       if (!live()) {
         context.device.destroy();
         return;
       }
+      timed('device', null, deviceStarted);
       gpu = context;
+      adapterName = context.adapter;
       // A validation error drops the dispatch and leaves the picture black, with no other sign.
       context.device.addEventListener('uncapturederror', (e: any) => {
         if (gpu === context) failGpu({ kind: 'error', detail: String(e.error?.message ?? 'the GPU reported an error') });
@@ -512,19 +598,23 @@ export function init(container: HTMLElement): () => void {
       if (!gpuRenderer || gpuPackedKey !== preparedKey()) {
         dropRenderer();
         gpuStage.set(GPU_PACKING_BADGE, usingGpu());
+        const packStarted = performance.now();
         const pack = await worker.call<GpuPack | { fits: false; reason: string }>(
           'ray_trace_gpu_prepare', [gpu.maxBinding, traceNumbers(want)]);
         if (!live()) return;
+        lastPackMs = timed('pack', null, packStarted);
         if (!pack.fits) {
           failGpu({ kind: 'too-large', detail: pack.reason });
           return;
         }
         gpuStage.set(GPU_COMPILING_BADGE, usingGpu());
+        const shaderStarted = performance.now();
         const renderer = await GpuPathRenderer.create(gpu, pack);
         if (!live()) {
           renderer.destroy();
           return;
         }
+        lastShaderMs = timed('shader', null, shaderStarted);
         gpuRenderer = renderer;
         gpuPackedKey = preparedKey();
         gpuStage.set(null, usingGpu());
@@ -539,8 +629,10 @@ export function init(container: HTMLElement): () => void {
           const pilotArgs = [...want];
           pilotArgs[14] = pilot.w;
           pilotArgs[15] = pilot.h;
+          const pilotViewStarted = performance.now();
           const pilotView = await worker.call<ViewAnswer>('ray_trace_gpu_view', [traceNumbers(pilotArgs)]);
           if (!live()) return;
+          timed('views', want, pilotViewStarted);
           if (!pilotView.fits) {
             failGpu({ kind: 'too-large', detail: pilotView.reason });
             return;
@@ -548,12 +640,16 @@ export function init(container: HTMLElement): () => void {
           if (gpuWanted !== want) continue;
           // The pilot overwrites the accumulation, so nothing rendered before it is current.
           gpuRendering = null;
+          const pilotStarted = performance.now();
           await renderer.pilot(pilotView.view, pilotView.parts, pilot.w, pilot.h);
           if (!live()) return;
+          timed('pilot', want, pilotStarted);
         }
+        const viewStarted = performance.now();
         const answer = await worker.call<ViewAnswer>(
           'ray_trace_gpu_view', [traceNumbers(want)]);
         if (!live()) return;
+        timed('views', want, viewStarted);
         if (!answer.fits) {
           failGpu({ kind: 'too-large', detail: answer.reason });
           return;
@@ -575,14 +671,19 @@ export function init(container: HTMLElement): () => void {
       const slice = await renderer.step();
       if (!live()) return;
       if (!slice) return;
+      // The slice's own submission time, ending now.
+      timed('slices', rendering, performance.now() - slice.ms, slice.count);
       frameMs += slice.ms;
       framePixels += slice.count;
       if (!displayDue(performance.now(), lastGpuDisplay, lastGpuDisplayCost, renderer.done, rendering[16] === true, slice.finishedSample)) continue;
       const started = performance.now();
       const bytes = await renderer.read();
       if (!live()) return;
+      timed('reads', rendering, started);
+      const decodeStarted = performance.now();
       const decoded = await worker.call<{ pixels: Uint8Array }>('ray_trace_gpu_decode', [bytes, width, height], [bytes.buffer as ArrayBuffer]);
       if (!live()) return;
+      timed('decodes', rendering, decodeStarted);
       lastGpuDisplay = performance.now();
       lastGpuDisplayCost = lastGpuDisplay - started;
       onPass({ pixels: decoded.pixels, width, height, samples: renderer.samples, rays: 0, pixelSamples: framePixels, ms: frameMs }, rendering, 'gpu');
@@ -630,126 +731,23 @@ export function init(container: HTMLElement): () => void {
     rerender();
   };
 
-  controls.appendChild(createDropdown('Part', [
-    { value: '0', text: 'Boolean (box minus ball)' },
-    { value: '1', text: 'Torus' },
-    { value: '2', text: 'Rounded box' },
-    { value: '3', text: 'Implicit blend' },
-  ], s.part, v => { s.part = v; saveSetting(ROUTE, 'part', v); newScene(); }));
-  controls.appendChild(createDropdown('Detail', [
-    { value: '0', text: 'About 10,000 triangles' },
-    { value: '1', text: 'About 30,000 triangles' },
-    { value: '2', text: 'About 100,000 triangles' },
-    { value: '3', text: 'About 300,000 triangles' },
-    { value: '4', text: 'About 1,000,000 triangles' },
-  ], s.detail, v => { s.detail = v; saveSetting(ROUTE, 'detail', v); newScene(); }));
-  controls.appendChild(createDropdown('View', [
-    { value: '0', text: 'Path traced' },
-    { value: '1', text: 'Normals (smooth hit data)' },
-    { value: '2', text: 'Depth (hit data)' },
-  ], s.mode, v => { s.mode = v; saveSetting(ROUTE, 'mode', v); showLookControls(); rerender(); }));
-  controls.appendChild(createDropdown('Renderer', [
-    { value: 'auto', text: 'Auto' },
-    { value: 'cpu', text: 'CPU' },
-    { value: 'gpu', text: 'GPU' },
-  ], s.renderer, v => {
-    s.renderer = v;
-    saveSetting(ROUTE, 'renderer', v);
-    // A person picking the renderer is the one thing that re-arms a GPU that failed.
-    gpuFailure = null;
-    nothingDrawn.picked();
-    rerender();
-  }));
-
-  // The look controls show only for the path traced view; Custom's sliders and the Sun size
-  // only when they mean something.
-  const lookControls = document.createElement('div');
-  const materialMenu = createDropdown('Material', [
-    { value: '0', text: 'Matte plastic' },
-    { value: '1', text: 'Glossy plastic' },
-    { value: '2', text: 'Brushed metal' },
-    { value: '3', text: 'Polished metal' },
-    { value: '4', text: 'Glass' },
-    { value: '5', text: 'Rubber' },
-    { value: '6', text: 'Custom' },
-  ], s.material, v => { s.material = v; saveSetting(ROUTE, 'material', v); showLookControls(); rerender(); });
-  const colorPicker = createColor('Color', s.color, v => { s.color = v; saveSetting(ROUTE, 'color', v); rerender(); });
-  const customSliders = document.createElement('div');
-  const lightMenu = createDropdown('Light', [
-    { value: '0', text: 'Studio (sky and soft sun)' },
-    { value: '1', text: 'Overcast (no sun)' },
-  ], s.light, v => { s.light = v; saveSetting(ROUTE, 'light', v); showLookControls(); rerender(); });
-  const sunSlider = createSlider('Sun size ', 1, 20, s.sun, 1, v => {
-    s.sun = v;
-    saveSetting(ROUTE, 'sun', v);
-    rerender();
+  appendRayControls(controls, s, {
+    newScene,
+    rerender,
+    pickedRenderer: () => {
+      gpuFailure = null;
+      nothingDrawn.picked();
+    },
   });
-  const slider = (label: string, key: 'roughness' | 'metallic' | 'transmission') =>
-    createSlider(label, 0, 1, s[key], 0.05, v => { s[key] = v; saveSetting(ROUTE, key, v); rerender(); });
-  customSliders.appendChild(slider('Roughness ', 'roughness'));
-  customSliders.appendChild(slider('Metallic ', 'metallic'));
-  customSliders.appendChild(slider('Transmission ', 'transmission'));
-  lookControls.appendChild(materialMenu);
-  lookControls.appendChild(colorPicker);
-  lookControls.appendChild(customSliders);
-  lookControls.appendChild(lightMenu);
-  lookControls.appendChild(sunSlider);
-  const showLookControls = () => {
-    const pathTraced = s.mode === '0';
-    lookControls.style.display = pathTraced ? 'contents' : 'none';
-    customSliders.style.display = s.material === '6' ? 'contents' : 'none';
-    sunSlider.style.display = s.light === '0' ? '' : 'none';
-  };
-  showLookControls();
-  controls.appendChild(lookControls);
   controls.appendChild(stats);
+  controls.appendChild(timingsButton);
+  controls.appendChild(timingsStatus);
+  controls.appendChild(timingsText);
   controls.appendChild(note);
   controls.appendChild(error);
   updateStats();
 
-  // Camera input: drag to orbit, two fingers to orbit or pinch, wheel to zoom. Pointer reports are
-  // collected and applied once per animation frame, so a two-finger gesture is one step.
-  const gesture = new OrbitGesture();
-  let gestureFrame: number | null = null;
-  const applyGesture = () => {
-    gestureFrame = null;
-    const delta = gesture.take();
-    if (delta.dx === 0 && delta.dy === 0 && delta.zoom === 1) return;
-    Object.assign(camera, applyDelta(camera, delta));
-    nudge();
-  };
-  const scheduleGesture = () => {
-    if (gestureFrame === null) gestureFrame = requestAnimationFrame(applyGesture);
-  };
-  const showGrab = () => {
-    canvas.style.cursor = gesture.fingers > 0 ? 'grabbing' : 'grab';
-  };
-  canvas.addEventListener('pointerdown', e => {
-    gesture.down(e.pointerId, e.clientX, e.clientY);
-    // a pointer the browser no longer tracks cannot be captured, which must not end the gesture
-    try { canvas.setPointerCapture(e.pointerId); } catch { /* not an active pointer */ }
-    scheduleGesture();
-    showGrab();
-  });
-  canvas.addEventListener('pointermove', e => {
-    if (!gesture.has(e.pointerId)) return;
-    gesture.move(e.pointerId, e.clientX, e.clientY);
-    scheduleGesture();
-  });
-  const endPointer = (e: PointerEvent) => {
-    gesture.up(e.pointerId);
-    scheduleGesture();
-    showGrab();
-  };
-  canvas.addEventListener('pointerup', endPointer);
-  canvas.addEventListener('pointercancel', endPointer);
-  // Lifted outside the canvas with capture lost: the pointer must not stay "down" forever.
-  canvas.addEventListener('lostpointercapture', endPointer);
-  canvas.addEventListener('wheel', e => {
-    e.preventDefault();
-    camera.zoom = Math.max(0.4, Math.min(8, camera.zoom * Math.exp(-e.deltaY * 0.0012)));
-    nudge();
-  }, { passive: false });
+  const detachCamera = attachCameraInput(canvas, camera, nudge);
 
   const settleSize = () => {
     sizeTimer = null;
@@ -773,7 +771,7 @@ export function init(container: HTMLElement): () => void {
     closeDevice();
     if (stillTimer) clearTimeout(stillTimer);
     if (sizeTimer) clearTimeout(sizeTimer);
-    if (gestureFrame !== null) cancelAnimationFrame(gestureFrame);
+    detachCamera();
     resize.disconnect();
     coalescer.dispose();
     worker.dispose();

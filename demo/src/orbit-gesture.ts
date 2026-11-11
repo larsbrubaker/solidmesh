@@ -1,6 +1,7 @@
-// The Ray Tracing page's pointer rule (src/demos/ray-trace.ts), kept apart from the DOM so it can
-// be tested: pointers go down, move and come up, and `take()` says how far the camera should
-// orbit and how much it should zoom since last asked. Tested in src/orbit-gesture.test.ts.
+// The Ray Tracing page's pointer rule (src/demos/ray-trace.ts; src/ray-trace-camera-input.ts feeds
+// it the page's pointer events), kept apart from the DOM so it can be tested: pointers go down,
+// move and come up, and `take()` says how far the camera should orbit and how much it should zoom
+// since last asked. Tested in src/orbit-gesture.test.ts.
 //
 // One finger orbits by its movement. Two fingers orbit by the movement of the point midway
 // between them and zoom by the ratio of their distances, so a pair moved together turns the part
