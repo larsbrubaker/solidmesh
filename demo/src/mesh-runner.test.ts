@@ -56,6 +56,28 @@ describe('Coalescer and idle tracking', () => {
     expect(await whenIdleWithin(1000)).toBe(true);
   });
 
+  test('a dropped waiting request is never computed, and only a call to the named function drops', async () => {
+    const { calls, run } = manualRunner();
+    const shown: string[] = [];
+    const c = new Coalescer(() => shown.push('result'), () => shown.push('error'), () => {}, run);
+    c.request('prepare', []);
+    c.request('pass', []);
+    c.dropWaiting('other');
+    c.dropWaiting('pass');
+    calls[0].finish(true);
+    expect(await whenIdleWithin(1000)).toBe(true);
+    expect(calls.map(x => x.fn)).toEqual(['prepare']);
+    expect(shown).toEqual(['result']);
+    c.request('pass', []);
+    c.request('prepare', []);
+    c.dropWaiting('pass');
+    calls[1].finish(true);
+    await tick();
+    expect(calls.map(x => x.fn)).toEqual(['prepare', 'pass', 'prepare']);
+    calls[2].finish(true);
+    expect(await whenIdleWithin(1000)).toBe(true);
+  });
+
   test('a request that never finishes times out instead of hanging', async () => {
     const { calls, run } = manualRunner();
     const c = new Coalescer(() => {}, () => {}, () => {}, run);

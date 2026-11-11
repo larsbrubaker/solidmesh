@@ -1,6 +1,7 @@
 // The main-thread side of src/mesh-worker.ts: one worker for the whole site, a promise per call,
 // and per-page coalescing so a slider dragged faster than the kernel computes only ever queues
-// the latest setting (a superseded request is dropped, never computed).
+// the latest setting (a superseded request is dropped, never computed; `dropWaiting` drops a
+// waiting one a page no longer wants).
 //
 // `whenIdle()` resolves once nothing is computing or queued (`whenIdleWithin` gives up after a
 // timeout); the thumbnail capture (src/capture.ts) waits on it instead of guessing how long a page
@@ -276,6 +277,15 @@ export class Coalescer<R = RunResult> {
       inFlight--;
       settleIdle();
     }
+  }
+
+  /**
+   * Forgets the waiting request if it is a call to `fn`, so it is never computed; the one already
+   * running finishes as usual. The Ray Tracing page uses it when it stops asking for path traced
+   * passes, so a pass queued just before is not computed after.
+   */
+  dropWaiting(fn: string) {
+    if (this.next?.fn === fn) this.next = null;
   }
 
   dispose() {

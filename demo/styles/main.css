@@ -688,8 +688,9 @@ input[type="number"] {
 /* The pill sits at the top like the busy badge; while the badge shows, the badge speaks. */
 .busy-badge.visible ~ .pass-pill { opacity: 0; visibility: hidden; }
 
-/* The Ray Tracing page's reason the picture is drawn on the CPU: over the picture's bottom edge,
-   where it is seen without scrolling on a phone, whose controls sit below the picture. */
+/* The Ray Tracing page's reason the picture is on the CPU, or why the GPU picked is not drawing
+   it: over the picture's bottom edge, where it is seen without scrolling on a phone, whose
+   controls sit below the picture. */
 .route-note {
   position: absolute;
   left: 10px;

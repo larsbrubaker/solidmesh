@@ -1,5 +1,7 @@
-// Tests for src/ray-trace-rules.ts: the renderer choice, the fallback words, the pass count text
-// and the walk that gives every pixel of every sample to the GPU exactly once.
+// Tests for src/ray-trace-rules.ts: the renderer choice, the fallback words and the words for a
+// GPU picked that can't draw, the pass count text and the renderer the pill names, what the page
+// does when it stops drawing, and the walk that gives every pixel of every sample to the GPU
+// exactly once.
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'fs';
@@ -7,8 +9,9 @@ import { join } from 'path';
 import { SliceSizer } from './gpu-bench-rules.ts';
 import {
   CARRIED_COST_MARGIN, COST_BANDS, DISPATCH_CAP_MS, DISPLAY_MIN_MS, GPU_COMPILING_BADGE, type GpuFailure,
-  GpuStageBadge, NO_WEBGPU_MESSAGE, PILOT_PIXELS, SampleWalk, SliceCosts, TrapRecovery, WORKER_TRAPPED_MESSAGE,
-  chooseRoute, displayDue, fallbackMessage, passCountText, pilotSize,
+  GpuStageBadge, NO_WEBGPU_MESSAGE, NO_WEBGPU_WARNING, NothingDrawn, PILOT_PIXELS, SampleWalk, SliceCosts,
+  TrapRecovery, WORKER_TRAPPED_MESSAGE, chooseRoute, displayDue, fallbackMessage, gpuUnavailableMessage,
+  passCountText, passPillText, pilotSize, rendererName, shownRoute, viewRoute,
 } from './ray-trace-rules.ts';
 
 const lost: GpuFailure = { kind: 'lost', detail: 'device lost: reset' };
@@ -26,29 +29,149 @@ describe('chooseRoute', () => {
     expect(chooseRoute('auto', false, null)).toEqual({ route: 'cpu', message: '' });
   });
 
-  test('GPU without WebGPU says so in words and stays on the CPU', () => {
-    expect(chooseRoute('gpu', false, null)).toEqual({ route: 'cpu', message: NO_WEBGPU_MESSAGE });
+  test('GPU without WebGPU says so in words and draws nothing on the CPU', () => {
+    expect(chooseRoute('gpu', false, null)).toEqual({ route: 'none', message: NO_WEBGPU_MESSAGE });
     expect(NO_WEBGPU_MESSAGE).toContain('WebGPU');
-    expect(NO_WEBGPU_MESSAGE).toContain('CPU');
+    expect(NO_WEBGPU_MESSAGE).toContain('Chrome or Edge');
   });
 
   test('CPU is always the CPU, even after a failure and with no words', () => {
     expect(chooseRoute('cpu', true, lost)).toEqual({ route: 'cpu', message: '' });
   });
 
-  test('a lost device moves Auto and GPU to the CPU and does not retry by itself', () => {
-    for (const choice of ['auto', 'gpu'] as const) {
-      const decision = chooseRoute(choice, true, lost);
-      expect(decision.route).toBe('cpu');
-      expect(decision.message).toBe(fallbackMessage(lost));
-    }
+  test('a lost device moves Auto to the CPU and does not retry by itself', () => {
+    const decision = chooseRoute('auto', true, lost);
+    expect(decision.route).toBe('cpu');
+    expect(decision.message).toBe(fallbackMessage(lost));
   });
 
-  test('a scene too large for the GPU uses the CPU and says why', () => {
+  test('a lost device under GPU stops the picture rather than moving it to the CPU', () => {
+    expect(chooseRoute('gpu', true, lost)).toEqual({ route: 'none', message: gpuUnavailableMessage(lost) });
+  });
+
+  test('a scene too large for the GPU under GPU says why and draws nothing on the CPU', () => {
     const decision = chooseRoute('gpu', true, tooLarge);
+    expect(decision.route).toBe('none');
+    expect(decision.message).not.toContain('drawn on the CPU');
+    expect(decision.message).toContain(tooLarge.detail.replace(/\.$/, ''));
+    expect(decision.message).toContain('smaller Detail');
+  });
+
+  test('a scene too large for the GPU under Auto uses the CPU and says why', () => {
+    const decision = chooseRoute('auto', true, tooLarge);
     expect(decision.route).toBe('cpu');
     expect(decision.message).toContain('drawn on the CPU');
     expect(decision.message).toContain(tooLarge.detail.replace(/\.$/, ''));
+  });
+});
+
+describe('a GPU picked explicitly gets the GPU or is told why not', () => {
+  const kinds: GpuFailure['kind'][] = ['lost', 'too-large', 'no-adapter', 'shader', 'trapped', 'error'];
+  const failures: (GpuFailure | 'no WebGPU')[] = [
+    ...kinds.map(kind => ({ kind, detail: kind === 'too-large' ? tooLarge.detail : 'the driver said no.' })),
+    'no WebGPU',
+  ];
+  const decide = (choice: 'auto' | 'gpu', failure: GpuFailure | 'no WebGPU') =>
+    failure === 'no WebGPU' ? chooseRoute(choice, false, null) : chooseRoute(choice, true, failure);
+  const name = (failure: GpuFailure | 'no WebGPU') => (failure === 'no WebGPU' ? failure : failure.kind);
+
+  for (const failure of failures) {
+    test(`${name(failure)}: GPU never goes to the CPU, and says how to get a picture`, () => {
+      const decision = decide('gpu', failure);
+      expect(decision.route).toBe('none');
+      expect(decision.message).not.toBe('');
+      expect(decision.message).toContain('Renderer');
+      expect(decision.message).toMatch(/Auto|CPU/);
+      expect(decision.message).not.toContain('drawn on the CPU');
+      expect(decision.message).not.toContain('..');
+    });
+
+    test(`${name(failure)}: Auto still falls back to the CPU with today's words`, () => {
+      const decision = decide('auto', failure);
+      expect(decision.route).toBe('cpu');
+      const silent = failure === 'no WebGPU' || failure.kind === 'no-adapter';
+      expect(decision.message).toBe(silent ? '' : fallbackMessage(failure as GpuFailure));
+    });
+  }
+
+  test('the advice each failure already gave is kept', () => {
+    expect(gpuUnavailableMessage({ kind: 'too-large', detail: 'x' })).toContain('smaller Detail');
+    expect(gpuUnavailableMessage({ kind: 'trapped', detail: '' })).toContain('smaller Detail');
+    expect(gpuUnavailableMessage({ kind: 'no-adapter', detail: '' })).toContain('graphics driver');
+    expect(gpuUnavailableMessage({ kind: 'no-adapter', detail: '' })).not.toMatch(/reload/i);
+    expect(gpuUnavailableMessage({ kind: 'shader', detail: '' })).not.toMatch(/reload|updat/i);
+    expect(gpuUnavailableMessage({ kind: 'lost', detail: '' })).toMatch(/reload/i);
+    expect(gpuUnavailableMessage({ kind: 'error', detail: 'bad.' })).toContain(': bad.');
+  });
+
+  test('Normals and Depth keep drawing on the CPU under GPU, without the path traced sentence', () => {
+    expect(viewRoute('gpu', true, lost, false)).toEqual({ route: 'cpu', message: '' });
+    expect(viewRoute('gpu', false, null, false)).toEqual({ route: 'cpu', message: '' });
+    expect(viewRoute('auto', true, null, false)).toEqual({ route: 'cpu', message: '' });
+    expect(viewRoute('gpu', true, lost, true)).toEqual(chooseRoute('gpu', true, lost));
+    // Auto's sentence over Normals and Depth is as it was.
+    expect(viewRoute('auto', true, lost, false)).toEqual({ route: 'cpu', message: fallbackMessage(lost) });
+  });
+
+  test('the stats say what is really drawing', () => {
+    expect(rendererName('gpu')).toBe('GPU');
+    expect(rendererName('cpu')).toBe('CPU');
+    expect(rendererName('none')).toContain('GPU');
+    expect(rendererName('none')).not.toContain('CPU');
+  });
+
+  test('a lost device or another error says the way to retry that works while GPU is picked', () => {
+    for (const kind of ['lost', 'error'] as const) {
+      const text = gpuUnavailableMessage({ kind, detail: 'bad.' });
+      expect(text).toContain('To try the GPU again, pick CPU and then GPU in Renderer, or reload the page');
+      expect(text).toContain('to draw it on the CPU, pick Auto or CPU.');
+    }
+    expect(gpuUnavailableMessage(lost)).toBe(
+      'Your graphics card stopped responding, so the GPU stopped drawing the picture. To try the GPU again, pick CPU and then GPU in Renderer, or reload the page; to draw it on the CPU, pick Auto or CPU.');
+  });
+});
+
+describe('shownRoute', () => {
+  test('names the renderer that drew the picture on screen, not the one the page heads to', () => {
+    // Auto fell back while the GPU's picture is still up, and CPU picked mid-refine.
+    expect(shownRoute('gpu', 'cpu')).toBe('gpu');
+    expect(shownRoute('cpu', 'gpu')).toBe('cpu');
+    expect(passPillText(24, 128, shownRoute('gpu', 'cpu'))).toBe('Rendering 24 of 128 on the GPU');
+  });
+
+  test('before anything is drawn it names where the page is heading; once stopped, nothing', () => {
+    expect(shownRoute(null, 'gpu')).toBe('gpu');
+    expect(shownRoute(null, 'cpu')).toBe('cpu');
+    expect(shownRoute('cpu', 'none')).toBe('none');
+    expect(rendererName(shownRoute(null, 'none'))).toBe(rendererName('none'));
+  });
+});
+
+describe('NothingDrawn', () => {
+  test('reaching none from a drawing route blanks, drops and releases once', () => {
+    const stop = new NothingDrawn();
+    expect(stop.reached('cpu', true)).toBeNull();
+    expect(stop.reached('none', true)).toEqual({ warn: null });
+    // Every later kick while stopped changes nothing.
+    expect(stop.reached('none', true)).toBeNull();
+    // Normals drew on the CPU in between: coming back blanks its picture again.
+    expect(stop.reached('cpu', true)).toBeNull();
+    expect(stop.reached('none', true)).toEqual({ warn: null });
+  });
+
+  test('the first kick of a page that cannot draw counts as reaching none', () => {
+    expect(new NothingDrawn().reached('none', true)).toEqual({ warn: null });
+  });
+
+  test('no WebGPU is logged once per Renderer pick, not on every stop', () => {
+    const stop = new NothingDrawn();
+    expect(stop.reached('none', false)).toEqual({ warn: NO_WEBGPU_WARNING });
+    stop.reached('cpu', false);
+    expect(stop.reached('none', false)).toEqual({ warn: null });
+    stop.picked();
+    stop.reached('cpu', false);
+    expect(stop.reached('none', false)).toEqual({ warn: NO_WEBGPU_WARNING });
+    expect(NO_WEBGPU_WARNING).toContain('WebGPU');
   });
 });
 
@@ -82,6 +205,19 @@ describe('passCountText', () => {
   test('says nothing once finished', () => {
     expect(passCountText(128, 128)).toBe('');
     expect(passCountText(200, 128)).toBe('');
+  });
+});
+
+describe('passPillText', () => {
+  test('names the renderer drawing the picture while it refines', () => {
+    expect(passPillText(24, 128, 'gpu')).toBe('Rendering 24 of 128 on the GPU');
+    expect(passPillText(24, 128, 'cpu')).toBe('Rendering 24 of 128 on the CPU');
+  });
+
+  test('says nothing once finished, or when nothing is drawing', () => {
+    expect(passPillText(128, 128, 'gpu')).toBe('');
+    expect(passPillText(128, 128, 'cpu')).toBe('');
+    expect(passPillText(24, 128, 'none')).toBe('');
   });
 });
 
@@ -159,7 +295,7 @@ describe('the words for failures the person cannot fix by reloading', () => {
 
   test('no usable adapter under GPU says so and does not advise a reload', () => {
     const decision = chooseRoute('gpu', true, noAdapter);
-    expect(decision.route).toBe('cpu');
+    expect(decision.route).toBe('none');
     expect(decision.message).toContain('graphics driver');
     expect(decision.message).not.toMatch(/reload/i);
   });

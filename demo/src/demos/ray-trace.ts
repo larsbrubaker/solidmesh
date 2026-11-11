@@ -28,14 +28,20 @@
 // replaces what it is working towards, between slices. A preview frame finishes before the camera
 // moves on, so a slow GPU still shows a whole frame. A still first runs a small pilot of itself,
 // not shown, so the size of its first full-size slices is measured rather than guessed
-// (`SliceCosts` in src/ray-trace-rules.ts). A failure sends the picture to the CPU with a
-// sentence over the picture's bottom edge (`.route-note`) saying what happened, and holds until
-// the person picks a renderer again, so a lost device is never retried in a loop; the Normals and
-// Depth views read hit data on the CPU either way.
+// (`SliceCosts` in src/ray-trace-rules.ts). Under Auto a failure sends the picture to the CPU;
+// under GPU the page stops asking for path traced passes instead, so the CPU never draws what the
+// person asked the GPU for. Either way a sentence over the picture's bottom edge (`.route-note`)
+// says what happened, every failure is logged with `console.warn` for someone debugging a phone
+// remotely, and the failure holds until the person picks a renderer again, so a lost device is
+// never retried in a loop. On stopping (`NothingDrawn`) the page blanks the picture, drops a path
+// traced pass still waiting for the worker and lets the thumbnail capture go. The pass pill and
+// the stats name the renderer that drew the picture on screen (`shownRoute`), and a pass from a
+// renderer the page is no longer on is not drawn. The Normals and Depth views read hit data on
+// the CPU for every Renderer choice.
 //
 // A wasm trap (out of memory packing a large part, say) kills the worker and everything it held,
 // so the page forgets its prepared part and builds it again on the fresh worker, once
-// (`TrapRecovery`), before going on with the CPU route.
+// (`TrapRecovery`). If the trap was the GPU route's, Auto then goes on on the CPU and GPU stops.
 //
 // The thumbnail capture (src/capture.ts) reads the canvas registered with `setCaptureCanvas`, and
 // the page holds it off (`holdBusy`) until the first full-resolution image has CAPTURE_SAMPLES.
@@ -45,8 +51,9 @@ import { Coalescer, SideWorker, WorkerTrapped, holdBusy } from '../mesh-runner.t
 import { OrbitGesture, applyDelta } from '../orbit-gesture.ts';
 import { type ImageSize, mayDraw, sameArgs, sizeChanged } from '../ray-trace-refine.ts';
 import {
-  GPU_COMPILING_BADGE, GPU_PACKING_BADGE, type GpuFailure, GpuStageBadge, type RendererChoice, TrapRecovery,
-  WORKER_TRAPPED_MESSAGE, chooseRoute, displayDue, passCountText, pilotSize,
+  GPU_COMPILING_BADGE, GPU_PACKING_BADGE, type GpuFailure, GpuStageBadge, NothingDrawn, type RendererChoice,
+  type Route, type StopActions, TrapRecovery, WORKER_TRAPPED_MESSAGE, displayDue, passPillText, pilotSize,
+  rendererName, shownRoute, viewRoute,
 } from '../ray-trace-rules.ts';
 import { GpuPathRenderer, type GpuPack } from '../ray-trace-gpu.ts';
 import { type GpuContext, NoGraphicsAdapter, ShaderRefused, hasWebGpu, openGpu } from '../gpu-bench.ts';
@@ -164,6 +171,9 @@ export function init(container: HTMLElement): () => void {
   let prepared: Prepared | null = null;
   let preparingKey = '';
   let lastPass: Pass | null = null;
+  // Which renderer drew `lastPass`: the pill and the stats name it, not the one the page heads to.
+  let lastFrom: Route | null = null;
+  const nothingDrawn = new NothingDrawn();
   let raysTotal = 0;
   let pixelSamplesTotal = 0;
   let msTotal = 0;
@@ -197,8 +207,9 @@ export function init(container: HTMLElement): () => void {
   note.className = 'note-line';
   const error = document.createElement('div');
   error.className = 'error-line';
-  // Why the picture fell back to the CPU, over the picture's bottom edge: on a phone the controls
-  // and the readout sit below the picture, out of sight, and this is the one thing to see.
+  // Why the picture fell back to the CPU, or why the GPU picked is not drawing it, over the
+  // picture's bottom edge: on a phone the controls and the readout sit below the picture, out of
+  // sight, and this is the one thing to see.
   const routeNote = document.createElement('div');
   routeNote.className = 'route-note';
   area.appendChild(routeNote);
@@ -235,7 +246,10 @@ export function init(container: HTMLElement): () => void {
       coalescer.request('ray_trace_prepare', [Number(s.part), Number(s.detail)]);
       return;
     }
-    gpuStage.refresh(usingGpu());
+    const drawing = route().route;
+    const stop = nothingDrawn.reached(drawing, hasWebGpu());
+    if (stop) stopDrawing(stop);
+    gpuStage.refresh(drawing === 'gpu');
     imageSize ??= fullSize();
     const full = imageSize;
     const size = moving
@@ -248,19 +262,40 @@ export function init(container: HTMLElement): () => void {
       Number(s.light), s.sun, SEED, size.w, size.h, moving,
       moving ? 0 : PASS_BUDGET_MS,
     ];
-    if (usingGpu()) {
+    if (drawing === 'gpu') {
       gpuWanted = currentArgs;
       startGpu();
       return;
     }
-    // A CPU pass makes whatever the GPU route was rendering stale.
+    // A CPU pass, or none, makes whatever the GPU route was rendering stale.
     gpuRendering = null;
+    if (drawing === 'none') {
+      // GPU picked and the GPU can't: the sentence over the picture says why, and the CPU is not
+      // asked to draw it instead.
+      updateStats();
+      return;
+    }
     coalescer.request('ray_trace_pass', currentArgs);
   };
 
-  const route = () => chooseRoute(s.renderer as RendererChoice, hasWebGpu(), gpuFailure);
-  /** The GPU route draws only the path traced view: Normals and Depth read hits on the CPU. */
-  const usingGpu = () => s.mode === '0' && route().route === 'gpu';
+  /**
+   * The page has just stopped drawing (GPU picked and the GPU can't): what was on screen came from
+   * another renderer or view, so it goes, a pass waiting for the worker is never computed, and the
+   * thumbnail capture stops waiting for a picture that will not come.
+   */
+  const stopDrawing = (stop: StopActions) => {
+    if (stop.warn) console.warn(stop.warn);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    lastPass = null;
+    lastFrom = null;
+    coalescer.dropWaiting('ray_trace_pass');
+    releaseCapture?.();
+    releaseCapture = null;
+  };
+
+  /** Who draws the view on screen: the GPU route draws only the path traced view. */
+  const route = () => viewRoute(s.renderer as RendererChoice, hasWebGpu(), gpuFailure, s.mode === '0');
+  const usingGpu = () => route().route === 'gpu';
 
   const finishMoving = () => {
     stillTimer = null;
@@ -289,14 +324,14 @@ export function init(container: HTMLElement): () => void {
     const samplesPerSecond = pass && msTotal > 0
       ? (pixelSamplesTotal / (pass.width * pass.height) / msTotal) * 1000
       : 0;
-    const onGpu = usingGpu();
-    // The shader's paths are not counted, so the GPU route shows no rays per second.
-    const raysRow = onGpu ? '' : `<span class="k">Rays/s</span><span class="v">${raysPerSecond ? fmtRays(raysPerSecond) : '…'}</span>`;
+    const drawing = shownRoute(lastFrom, route().route);
+    // The shader's paths are not counted, so only the CPU route shows rays per second.
+    const raysRow = drawing !== 'cpu' ? '' : `<span class="k">Rays/s</span><span class="v">${raysPerSecond ? fmtRays(raysPerSecond) : '…'}</span>`;
     stats.innerHTML = `<div class="stats-grid">
       <span class="k">Triangles</span><span class="v">${prepared ? prepared.triangles.toLocaleString() : '…'}</span>
       <span class="k">Build mesh</span><span class="v">${prepared ? `${fmt(prepared.mesh_ms, 0)} ms` : '…'}</span>
       <span class="k">Build tree</span><span class="v">${prepared ? `${fmt(prepared.bvh_ms, 0)} ms` : '…'}</span>
-      <span class="k">Renderer</span><span class="v">${onGpu ? 'GPU' : 'CPU'}</span>
+      <span class="k">Renderer</span><span class="v">${rendererName(drawing)}</span>
       <span class="k">Samples</span><span class="v">${pass ? `${pass.samples} / ${SAMPLE_CAP}` : '…'}</span>
       <span class="k">Samples/s</span><span class="v">${samplesPerSecond ? fmt(samplesPerSecond, 2) : '…'}</span>
       ${raysRow}
@@ -305,7 +340,7 @@ export function init(container: HTMLElement): () => void {
     note.textContent = prepared ? prepared.note : '';
     routeNote.textContent = route().message;
     routeNote.classList.toggle('visible', routeNote.textContent !== '');
-    pill.textContent = passCountText(moving || !pass ? 0 : pass.samples, SAMPLE_CAP);
+    pill.textContent = passPillText(moving || !pass ? 0 : pass.samples, SAMPLE_CAP, drawing);
     pill.classList.toggle('visible', pill.textContent !== '');
   };
 
@@ -331,12 +366,15 @@ export function init(container: HTMLElement): () => void {
     kick();
   };
 
-  const onPass = (pass: Pass, args: unknown[]) => {
+  /** A pass drawn by `from`: one from a renderer the page has left is not drawn, so a CPU pass
+   * still in flight never shows under GPU's sentence or the pill's "on the GPU". */
+  const onPass = (pass: Pass, args: unknown[], from: Route) => {
     // A pass the page no longer wants: its replacement is already queued, so nothing is lost.
-    if (!mayDraw(args, currentArgs, moving)) return;
+    if (from !== route().route || !mayDraw(args, currentArgs, moving)) return;
     trapRecovery.succeeded();
     draw(pass);
     lastPass = pass;
+    lastFrom = from;
     raysTotal += pass.rays;
     pixelSamplesTotal += pass.pixelSamples;
     msTotal += pass.ms;
@@ -356,7 +394,7 @@ export function init(container: HTMLElement): () => void {
     ({ result, args }) => {
       error.textContent = '';
       if (typeof result === 'string') onPrepared(JSON.parse(result) as Prepared);
-      else onPass(result, args);
+      else onPass(result, args, 'cpu');
     },
     e => {
       if (e instanceof WorkerTrapped) {
@@ -394,9 +432,18 @@ export function init(container: HTMLElement): () => void {
     context?.device.destroy();
   };
 
-  /** Hands the picture to the CPU and says what happened; the failure holds until `choose`. */
-  const failGpu = (failure: GpuFailure) => {
+  /** The failure holds until a Renderer pick; logged for someone debugging a phone remotely. */
+  const noteGpuFailure = (failure: GpuFailure) => {
+    console.warn(`The GPU route stopped (${failure.kind}):`, failure.detail);
     gpuFailure = failure;
+  };
+
+  /**
+   * Stops the GPU route and says what happened: Auto goes on on the CPU, GPU stops asking for path
+   * traced passes (`chooseRoute`).
+   */
+  const failGpu = (failure: GpuFailure) => {
+    noteGpuFailure(failure);
     stopGpu();
     if (failure.kind !== 'too-large') closeDevice();
     updateStats();
@@ -405,10 +452,10 @@ export function init(container: HTMLElement): () => void {
 
   /**
    * The worker crashed and took the part with it: forget the part, so the next request builds it
-   * on the fresh worker, and go on on the CPU if that was the GPU route's doing.
+   * on the fresh worker; if that was the GPU route's doing, Auto goes on on the CPU and GPU stops.
    */
   const workerTrapped = (e: WorkerTrapped, onGpu: boolean) => {
-    if (onGpu) gpuFailure = { kind: 'trapped', detail: e.message };
+    if (onGpu) noteGpuFailure({ kind: 'trapped', detail: e.message });
     const next = trapRecovery.trapped(e.instance);
     stopGpu();
     if (next === 'seen') {
@@ -538,7 +585,7 @@ export function init(container: HTMLElement): () => void {
       if (!live()) return;
       lastGpuDisplay = performance.now();
       lastGpuDisplayCost = lastGpuDisplay - started;
-      onPass({ pixels: decoded.pixels, width, height, samples: renderer.samples, rays: 0, pixelSamples: framePixels, ms: frameMs }, rendering);
+      onPass({ pixels: decoded.pixels, width, height, samples: renderer.samples, rays: 0, pixelSamples: framePixels, ms: frameMs }, rendering, 'gpu');
       frameMs = 0;
       framePixels = 0;
     }
@@ -559,11 +606,8 @@ export function init(container: HTMLElement): () => void {
         // Stopped on purpose, or already handled as a lost device.
         if (generation !== gpuGeneration) return;
         if (e instanceof NoGraphicsAdapter) failGpu({ kind: 'no-adapter', detail: e.message });
-        else if (e instanceof ShaderRefused) {
-          // The page's sentence is for the person; the driver's own words are for a remote debugger.
-          console.warn('The graphics driver refused the path tracing shader:', e.driverText);
-          failGpu({ kind: 'shader', detail: e.driverText });
-        }
+        // The page's sentence is for the person; the driver's own words, logged, are for a remote debugger.
+        else if (e instanceof ShaderRefused) failGpu({ kind: 'shader', detail: e.driverText });
         else failGpu({ kind: 'error', detail: e.message });
       })
       .finally(() => {
@@ -613,6 +657,7 @@ export function init(container: HTMLElement): () => void {
     saveSetting(ROUTE, 'renderer', v);
     // A person picking the renderer is the one thing that re-arms a GPU that failed.
     gpuFailure = null;
+    nothingDrawn.picked();
     rerender();
   }));
 

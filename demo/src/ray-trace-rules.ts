@@ -1,17 +1,23 @@
 // The Ray Tracing page's decisions that need no browser, so `bun test` can run them
-// (src/ray-trace-rules.test.ts): which renderer draws (`chooseRoute`), the words the page says
-// when the GPU can't (`fallbackMessage`), the pass count over the picture (`passCountText`, the
-// same words MatterCAD's Realistic view shows), which pixel and sample each GPU slice covers
-// (`SampleWalk`), how big a slice may be (`SliceCosts`) and the small pilot image a still is
-// measured with first (`pilotSize`), when an image read back from the GPU is
-// worth drawing (`displayDue`), what the badge says while the GPU route gets ready
+// (src/ray-trace-rules.test.ts): which renderer draws (`chooseRoute`, and `viewRoute` for the
+// view on screen), the words the page says when Auto falls back to the CPU (`fallbackMessage`) and
+// when a GPU picked explicitly can't draw (`gpuUnavailableMessage`; the page then draws nothing
+// rather than quietly using the CPU), the pass count over the picture (`passCountText`, the same
+// words MatterCAD's Realistic view shows, and `passPillText`, which adds the renderer drawing it),
+// what the stats call the renderer (`rendererName`) and which renderer the picture on screen came
+// from (`shownRoute`), what the page does on reaching `none` (`NothingDrawn`: blank the picture,
+// drop a waiting pass, let the thumbnail capture go, log once), which pixel and sample each GPU
+// slice covers (`SampleWalk`), how big a slice may be (`SliceCosts`) and the small pilot image a
+// still is measured with first (`pilotSize`), when an image read back from the GPU is worth
+// drawing (`displayDue`), what the badge says while the GPU route gets ready
 // (`GpuStageBadge`) and when a crashed worker gets another try (`TrapRecovery`).
 // src/demos/ray-trace.ts is the page and src/ray-trace-gpu.ts its WebGPU calls.
 
 import { FIRST_SLICE_RAYS, TARGET_MS, WORKGROUP_RAYS } from './gpu-bench-rules.ts';
 
 export type RendererChoice = 'auto' | 'cpu' | 'gpu';
-export type Route = 'cpu' | 'gpu';
+/** Who draws the picture; `none` when the person picked GPU and the GPU can't draw it. */
+export type Route = 'cpu' | 'gpu' | 'none';
 
 /**
  * Why the GPU route stopped: the device was lost (`lost`), the scene doesn't fit this GPU
@@ -30,16 +36,46 @@ export interface RouteDecision {
   message: string;
 }
 
+/** How every sentence for a GPU picked that can't draw ends: the way to a picture on the CPU. */
+const PICK_CPU = 'pick Auto or CPU in Renderer to draw it on the CPU';
+/**
+ * The retry that works for a failure a new start may fix. Picking GPU while GPU is picked changes
+ * nothing, so the way to re-arm it is another Renderer and then GPU.
+ */
+const RETRY = 'To try the GPU again, pick CPU and then GPU in Renderer, or reload the page; to draw it on the CPU, pick Auto or CPU';
+
 /** Chosen GPU on a browser with no WebGPU: says so and what the person can do. */
 export const NO_WEBGPU_MESSAGE =
-  'This browser does not have WebGPU, so the picture is drawn on the CPU. To use your graphics card, open this page in a current version of Chrome or Edge.';
+  `This browser does not have WebGPU, so the GPU cannot draw the picture. To use your graphics card, open this page in a current version of Chrome or Edge, or ${PICK_CPU}.`;
 
 /** A sentence's `detail` without the period it may already end with. */
 function clause(detail: string): string {
   return detail.trim().replace(/\.+$/, '');
 }
 
-/** What the page says when `failure` has moved the picture to the CPU. */
+/**
+ * What the page says when the person picked GPU and `failure` stopped it. Nothing is drawn on the
+ * CPU behind their back, so each sentence says how to get a picture there, beside the advice that
+ * might get the GPU going.
+ */
+export function gpuUnavailableMessage(failure: GpuFailure): string {
+  switch (failure.kind) {
+    case 'lost':
+      return `Your graphics card stopped responding, so the GPU stopped drawing the picture. ${RETRY}.`;
+    case 'too-large':
+      return `This part does not fit your graphics card, so the GPU cannot draw it: ${clause(failure.detail)}. A smaller Detail may fit, or ${PICK_CPU}.`;
+    case 'no-adapter':
+      return `This browser has WebGPU but found no usable graphics adapter, so the GPU cannot draw the picture. Updating your graphics driver may help, or ${PICK_CPU}.`;
+    case 'shader':
+      return `This device's graphics driver could not build the path tracing program, so the GPU cannot draw the picture. To draw it on the CPU, which is slower, pick Auto or CPU in Renderer.`;
+    case 'trapped':
+      return `Preparing this part for your graphics card failed, most likely out of memory, so the GPU cannot draw it. A smaller Detail may fit, or ${PICK_CPU}.`;
+    case 'error':
+      return `The graphics card could not run this render: ${clause(failure.detail)}. ${RETRY}.`;
+  }
+}
+
+/** What the page says when `failure` has moved Auto's picture to the CPU. */
 export function fallbackMessage(failure: GpuFailure): string {
   switch (failure.kind) {
     case 'lost':
@@ -58,17 +94,92 @@ export function fallbackMessage(failure: GpuFailure): string {
 }
 
 /**
- * Which renderer draws, given the Renderer menu, whether the browser has WebGPU, and any failure
- * of the GPU route on this page. Auto uses the GPU wherever it can and says nothing when there is
- * no WebGPU or no usable adapter: nothing went wrong and nothing was asked for. A failure holds
- * until the person picks a renderer again, so a lost device is never retried in a loop.
+ * Which renderer draws the path traced picture, given the Renderer menu, whether the browser has
+ * WebGPU, and any failure of the GPU route on this page. Auto uses the GPU wherever it can, falls
+ * back to the CPU, and says nothing when there is no WebGPU or no usable adapter: nothing went
+ * wrong and nothing was asked for. GPU gets the GPU or nothing (`none`), with a sentence saying
+ * why: a person who asked for the GPU must be able to tell it isn't drawing. A failure holds until
+ * the person picks a renderer again, so a lost device is never retried in a loop.
  */
 export function chooseRoute(choice: RendererChoice, webGpu: boolean, failure: GpuFailure | null): RouteDecision {
   if (choice === 'cpu') return { route: 'cpu', message: '' };
-  if (!webGpu) return { route: 'cpu', message: choice === 'gpu' ? NO_WEBGPU_MESSAGE : '' };
-  if (failure?.kind === 'no-adapter' && choice === 'auto') return { route: 'cpu', message: '' };
+  if (choice === 'gpu') {
+    if (!webGpu) return { route: 'none', message: NO_WEBGPU_MESSAGE };
+    if (failure) return { route: 'none', message: gpuUnavailableMessage(failure) };
+    return { route: 'gpu', message: '' };
+  }
+  if (!webGpu || failure?.kind === 'no-adapter') return { route: 'cpu', message: '' };
   if (failure) return { route: 'cpu', message: fallbackMessage(failure) };
   return { route: 'gpu', message: '' };
+}
+
+/**
+ * Which renderer draws the view on screen. Normals and Depth (`pathTraced` false) are hit data read
+ * on the CPU whatever Renderer says, so they keep drawing when GPU is picked, and a GPU picked
+ * that can't draw has nothing to say over them: its sentence is about the path traced picture.
+ */
+export function viewRoute(choice: RendererChoice, webGpu: boolean, failure: GpuFailure | null, pathTraced: boolean): RouteDecision {
+  const decision = chooseRoute(choice, webGpu, failure);
+  if (pathTraced) return decision;
+  return { route: 'cpu', message: decision.route === 'none' ? '' : decision.message };
+}
+
+/**
+ * Which renderer the pill and the stats name: the one that drew the picture on screen (`shown`,
+ * null when nothing is), not the one the page is heading to, so a fallback or a new pick doesn't
+ * relabel the old picture before the new renderer's first pass lands. Nothing is named once the
+ * page has stopped drawing (`heading` is `none`): its picture is blanked.
+ */
+export function shownRoute(shown: Route | null, heading: Route): Route {
+  return heading === 'none' ? 'none' : (shown ?? heading);
+}
+
+/** What the page does on reaching `none`, when it has just stopped drawing. */
+export interface StopActions {
+  /** Logged with `console.warn` for someone debugging remotely, or null when a failure already was. */
+  warn: string | null;
+}
+
+/** Logged when GPU is picked on a browser that has no WebGPU. */
+export const NO_WEBGPU_WARNING = 'Renderer is GPU but this browser has no WebGPU, so nothing is path traced.';
+
+/**
+ * The moment the page stops drawing. On reaching `none` from any other route it blanks the picture
+ * (whatever was on screen came from another renderer or another view), drops a path traced pass
+ * still waiting for the worker, and lets the thumbnail capture go, since nothing more will draw;
+ * `reached` says so by returning the actions, and null while nothing changes. A GPU failure is
+ * logged where it happens; no WebGPU is no failure, so it is logged here, once per Renderer pick.
+ */
+export class NothingDrawn {
+  private last: Route | null = null;
+  private warned = false;
+
+  /** A Renderer pick: no WebGPU is worth logging again. */
+  picked(): void {
+    this.warned = false;
+  }
+
+  /** The route a kick found for the view on screen, and whether the browser has WebGPU. */
+  reached(route: Route, webGpu: boolean): StopActions | null {
+    const entered = route === 'none' && this.last !== 'none';
+    this.last = route;
+    if (!entered) return null;
+    const warn = !webGpu && !this.warned ? NO_WEBGPU_WARNING : null;
+    if (warn) this.warned = true;
+    return { warn };
+  }
+}
+
+/** What the stats call the renderer drawing the picture. */
+export function rendererName(route: Route): string {
+  switch (route) {
+    case 'gpu':
+      return 'GPU';
+    case 'cpu':
+      return 'CPU';
+    case 'none':
+      return "None: the GPU can't draw it";
+  }
 }
 
 /**
@@ -77,6 +188,17 @@ export function chooseRoute(choice: RendererChoice, webGpu: boolean, failure: Gp
  */
 export function passCountText(samples: number, cap: number): string {
   return samples >= cap ? '' : `Rendering ${samples} of ${cap}`;
+}
+
+/**
+ * The pill over the picture: the pass count and who is drawing it, "Rendering 24 of 128 on the
+ * GPU", so the person can tell without scrolling to the stats; nothing once finished or when
+ * nothing is drawing.
+ */
+export function passPillText(samples: number, cap: number, route: Route): string {
+  const count = passCountText(samples, cap);
+  if (count === '' || route === 'none') return '';
+  return `${count} on the ${route === 'gpu' ? 'GPU' : 'CPU'}`;
 }
 
 export interface PixelSlice {
