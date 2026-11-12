@@ -9,8 +9,11 @@
 //! ([`GPU_SCENE_BUILDER_UNITS_PER_FACE`] units per face for the whole pack, some of it spent in
 //! each stage), or one corner visited while the scene's placement is found. The stages run in
 //! this order: gather faces, measure the bounds and reach of their corners, recentre and size
-//! each face's ray offset, build the tree, build the part records and the first view. Everything
-//! but the tree is sliced to the unit. **The tree build is one call and cannot be paused**,
+//! each face's ray offset, build the tree, then build the part records, the glass contacts and the
+//! first view. The gathering, bounds, reach and recentring are sliced to the unit; the tree and
+//! the last stage are not. The last stage is one call in the same step as the tree and costs in
+//! proportion to the parts and the contact entries (a scene with no glass lying on glass packs no
+//! contacts at all). **The tree build is one call and cannot be paused**,
 //! the same limit the CPU's own tree has (the part's `TraceableRef` is built off the frame
 //! ahead of time): a [`step`](GpuSceneBuilder::step) that reaches the tree does the tree, and
 //! a thread-less host pays for it in one slice however many units it gave. Reaching it is
@@ -23,6 +26,7 @@ use std::sync::Arc;
 
 use solidmesh_math::Vector3;
 
+use super::gpu_contacts::pack_glass_contacts;
 use super::gpu_scene::{
     check_image_buffers, GpuRenderScene, GpuSceneLimits, PartRecord, ScenePlacement,
     CHANNEL_STRIDE, FACE_STRIDE, PART_STRIDE,
@@ -297,6 +301,12 @@ impl<'a> GpuSceneBuilder<'a> {
         let view = view_record(scene, &self.view, &self.placement)?;
         let composited = !matches!(self.view.compositing, GpuCompositing::Plain);
         let srgb_table: [u8; SRGB_TABLE_BYTES] = srgb_table_bytes(scene);
+        let contacts = pack_glass_contacts(
+            scene,
+            &self.faces,
+            self.placement.origin,
+            self.limits.max_storage_binding,
+        )?;
         Ok(GpuRenderScene {
             tree,
             faces: std::mem::take(&mut self.faces),
@@ -308,6 +318,7 @@ impl<'a> GpuSceneBuilder<'a> {
             limits: self.limits,
             placement_origin: self.placement.origin,
             placement_radius: self.placement.radius,
+            contacts,
         })
     }
 }

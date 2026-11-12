@@ -27,9 +27,18 @@
 //! see-through parts is the same question, with the same chance, as whether a sampled ray along
 //! it does. Both estimators are scaled by the same visibility, so the weights stay the ratio of
 //! the two densities at the last vertex, and a shadow ray walks its line by the same rule.
+//!
+//! **Glass lying on glass.** `glass_seam` says what a hit on a glass face covered by another
+//! glass part's face is; the path tracer's header says what light does there.
+//!
+//! **Glass resting on an opaque surface.** `glass_rest` says which vertex a hit there is and when
+//! a bounce goes straight across the contact to the next vertex, which the loop then takes
+//! without tracing. A scene with no glass resting on anything never asks.
 
 use solidmesh_math::{IntersectionType, Ray, Vector3};
 
+use super::glass_rest::{across_contact, resting_vertex, Across};
+use super::glass_seam::{glass_seam, Seam};
 use super::pixel_random::PixelRandom;
 use super::render_scene::RenderScene;
 use super::render_work::RenderWork;
@@ -275,44 +284,107 @@ pub(super) fn trace_path(
     let mut arrival = Arrival::Unweighted;
     let mut scatters = 0_u32;
     let mut line = StraightLine::default();
+    // Glass resting on an opaque surface is decided only in a scene that has some, so every other
+    // scene runs exactly the operations it always did; `glass_rest` keeps a contact with a partly
+    // there part out of it.
+    let rests = !scene.glass_rests().is_empty();
+    // The vertex a bounce across a contact reached, taken next without a trace.
+    let mut across: Option<Across> = None;
 
     work.camera_rays += 1;
     loop {
-        let Some(hit) = scene.parts().trace(&mut ray) else {
-            let escaped = escaped_radiance(scene, settings, ray.direction_normal, arrival);
-            add_to(&mut radiance, multiply(throughput, escaped));
-            break;
-        };
-        // Whether the part is there at all comes before the bounce limit: a path past its last
-        // bounce still sees through what isn't there.
-        if scene.has_see_through_parts() {
-            match line.at_hit(scene, hit.part.index(), random) {
-                AtHit::Stops => {}
-                AtHit::Ended => break,
-                AtHit::PassesThrough => {
-                    ray = continued_ray(&hit.surface_point()?, ray.direction_normal);
-                    work.pass_through_rays += 1;
-                    continue;
+        let (part_index, point, seam, partner) = if let Some(next) = across.take() {
+            if scatters >= settings.max_bounces {
+                break;
+            }
+            (next.part, next.point, None, Some(next.partner))
+        } else {
+            let Some(hit) = scene.parts().trace(&mut ray) else {
+                let escaped = escaped_radiance(scene, settings, ray.direction_normal, arrival);
+                add_to(&mut radiance, multiply(throughput, escaped));
+                break;
+            };
+            // Whether the part is there at all comes before the bounce limit: a path past its last
+            // bounce still sees through what isn't there.
+            let mut present = true;
+            if scene.has_see_through_parts() {
+                match line.at_hit(scene, hit.part.index(), random) {
+                    AtHit::Stops => {}
+                    AtHit::Ended => break,
+                    AtHit::PassesThrough => present = false,
                 }
             }
-        }
-        if scatters >= settings.max_bounces {
-            break;
-        }
+            // A seam between two glass parts is looked at only in a scene that has one, so every
+            // other scene runs exactly the operations it always did.
+            let mut seam = None;
+            if !scene.glass_contacts().is_empty() {
+                match glass_seam(
+                    scene,
+                    &hit,
+                    ray.direction_normal,
+                    present,
+                    &mut line,
+                    random,
+                )? {
+                    Some(Seam::Straight { origin }) => {
+                        ray = Ray::with_limits(
+                            origin,
+                            ray.direction_normal,
+                            0.0,
+                            f64::INFINITY,
+                            IntersectionType::Both,
+                        );
+                        work.pass_through_rays += 1;
+                        continue;
+                    }
+                    Some(Seam::Interface(interface)) => {
+                        seam = Some(interface);
+                        present = true;
+                    }
+                    Some(Seam::Ended) => break,
+                    None => {}
+                }
+            }
+            if !present {
+                ray = continued_ray(&hit.surface_point()?, ray.direction_normal);
+                work.pass_through_rays += 1;
+                continue;
+            }
+            if scatters >= settings.max_bounces {
+                break;
+            }
+            let point = hit.surface_point()?;
+            if rests && seam.is_none() {
+                let (part, point, partner) =
+                    resting_vertex(scene, hit.part.index(), point, ray.direction_normal)?;
+                (part, point, seam, partner)
+            } else {
+                (hit.part.index(), point, seam, None)
+            }
+        };
 
-        let point = hit.surface_point()?;
-        let Some(surface) = scene.surface_at(hit.part.index(), point.base_color) else {
-            break;
+        let surface = match &seam {
+            Some(interface) => interface.surface,
+            None => match scene.surface_at(part_index, point.base_color) {
+                Some(surface) => surface,
+                None => break,
+            },
         };
         let toward_camera = -ray.direction_normal;
         let facing = point.facing(ray.direction_normal);
-        // See the header on why a transmissive surface has its true outside as +z.
-        let frame_normal =
-            if surface.transmission() > 0.0 && surface.metallic() < 1.0 && facing.back_face {
-                -facing.shading
-            } else {
-                facing.shading
-            };
+        // See the header on why a transmissive surface has its true outside as +z; at a seam the
+        // denser glass's side is the inside.
+        let frame_normal = match &seam {
+            Some(interface) if interface.into_denser => facing.shading,
+            Some(_) => -facing.shading,
+            None => {
+                if surface.transmission() > 0.0 && surface.metallic() < 1.0 && facing.back_face {
+                    -facing.shading
+                } else {
+                    facing.shading
+                }
+            }
+        };
         let Some(frame) = LocalFrame::from_normal(frame_normal) else {
             break;
         };
@@ -363,15 +435,35 @@ pub(super) fn trace_path(
             }
         }
 
-        ray = Ray::with_limits(
-            point.next_ray_origin(wi_world),
-            wi_world,
-            0.0,
-            f64::INFINITY,
-            IntersectionType::Both,
-        );
+        if let Some(partner) = partner {
+            if let Some(next) = across_contact(scene, part_index, &point, partner, wi_world)? {
+                // The next vertex is at this same point; the ray only says which way the path
+                // arrives there.
+                ray = Ray::with_limits(
+                    point.position,
+                    wi_world,
+                    0.0,
+                    f64::INFINITY,
+                    IntersectionType::Both,
+                );
+                line.restart();
+                across = Some(next);
+                continue;
+            }
+        }
+        let origin = match &seam {
+            Some(interface) => interface.next_ray_origin(&point, wi_world),
+            None => point.next_ray_origin(wi_world),
+        };
+        ray = Ray::with_limits(origin, wi_world, 0.0, f64::INFINITY, IntersectionType::Both);
         work.bounce_rays += 1;
         line.restart();
+        if let Some(part) = seam
+            .as_ref()
+            .and_then(|interface| interface.absent_part_toward(&point, wi_world))
+        {
+            line.starts_past(part);
+        }
     }
     work.record_path(scatters);
     Ok(radiance)

@@ -15,9 +15,9 @@ use solidmesh_mesh::ray_tracer::flat_tree::{
     gpu_scene_size_bound, pixel_slice_bytes, FlatTreeError, GpuRenderScene, GpuSceneLimits,
     ACCUMULATION_STRIDE, CHANNEL_STRIDE, FACE_STRIDE, GPU_SKY_SEED_SALT, GPU_SUN_SEED_SALT,
     MIN_GPU_SUN_ANGULAR_RADIUS, PART_STRIDE, PATH_ENTRY_POINT, PATH_WGSL, PIXEL_SLICE_BYTES,
-    ROULETTE_OFF, SCATTER_WGSL, SCENE_FLAG_COMPOSITE, SCENE_FLAG_FLOOR, SCENE_FLAG_GRADIENT,
-    SCENE_FLAG_ORTHOGRAPHIC, SCENE_FLAG_SEE_THROUGH, SCENE_FLAG_SUN, SRGB_TABLE_BYTES, TRACE_WGSL,
-    VIEW_RECORD_BYTES, WEBGPU_DEFAULT_MAX_STORAGE_BINDING,
+    ROULETTE_OFF, SCATTER_WGSL, SCENE_FLAG_COMPOSITE, SCENE_FLAG_FLOOR, SCENE_FLAG_GLASS_CONTACTS,
+    SCENE_FLAG_GRADIENT, SCENE_FLAG_ORTHOGRAPHIC, SCENE_FLAG_SEE_THROUGH, SCENE_FLAG_SUN,
+    SRGB_TABLE_BYTES, TRACE_WGSL, VIEW_RECORD_BYTES, WEBGPU_DEFAULT_MAX_STORAGE_BINDING,
 };
 use solidmesh_mesh::ray_tracer::{
     Environment, LightSetup, LightStrategy, MeshSurface, PathTraceSettings, PlacedPart,
@@ -130,6 +130,7 @@ fn the_records_match_the_buffers_byte_for_byte() {
         &[
             ("eye", 0),
             ("forward", 16),
+            ("contact_block", 28),
             ("right", 32),
             ("up", 48),
             ("width", 64),
@@ -191,7 +192,9 @@ fn the_records_match_the_buffers_byte_for_byte() {
         }
     };
     assert_eq!(stride_of("faces"), FACE_STRIDE as u32);
-    assert_eq!(stride_of("parts"), PART_STRIDE as u32);
+    // The part buffer is read as words so the glass contact block can follow the records; the
+    // records themselves are the `Part` layout pinned above.
+    assert_eq!(stride_of("parts"), 4);
     assert_eq!(stride_of("accumulation"), ACCUMULATION_STRIDE as u32);
     assert_eq!(stride_of("channels"), CHANNEL_STRIDE as u32);
 }
@@ -235,6 +238,10 @@ fn the_shader_constants_are_the_rust_constants() {
     assert_eq!(
         literal(&module, "PATH_FLAG_FLOOR"),
         Literal::U32(SCENE_FLAG_FLOOR)
+    );
+    assert_eq!(
+        literal(&module, "PATH_FLAG_GLASS_CONTACTS"),
+        Literal::U32(SCENE_FLAG_GLASS_CONTACTS)
     );
     let halves = |salt: u64| [salt as u32, (salt >> 32) as u32];
     assert_eq!(

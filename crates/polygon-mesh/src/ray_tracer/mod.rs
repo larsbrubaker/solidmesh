@@ -85,6 +85,10 @@ pub use material::{
     Primitive, SolidMaterial,
 };
 pub use minimal_triangle::{MinimalTriangle, VertexFunc};
+#[doc(hidden)]
+pub use path_tracer::ContactSearchWork;
+#[doc(hidden)]
+pub use path_tracer::PathVertexAt;
 pub use path_tracer::{
     display_byte, linear_to_srgb, pixel_jitter, tone_map, AccumulatedPixel, Environment,
     LightSetup, LightStrategy, PathTraceSettings, PathTracer, PixelRandom, RenderCamera,

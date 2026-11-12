@@ -10,10 +10,19 @@
 //! its surface: a half-there part is half coverage of a surface that is all surface, not a tint.
 //! The opacities are 1 unless a caller says otherwise; `see_through` says what a ray does with
 //! them, and a scene with every part at opacity 1 renders exactly as if none of this existed.
+//!
+//! **Glass on glass.** Building the scene finds, once, where faces of glass parts lie on each
+//! other (`glass_contacts`), so the path loop knows at a hit whether a glass face meets air or
+//! another glass. A scene where no glass face lies on another keeps an empty table.
+//!
+//! **Glass resting on an opaque part.** The same search between glass parts and the other parts
+//! finds where glass rests on an opaque surface (`glass_rest` says what a path does there). A
+//! scene with no glass, or no glass resting on anything, keeps an empty table.
 
 use solidmesh_math::{Color, Ray};
 
 use super::display::srgb_to_linear;
+use super::glass_contacts::{ContactSearchWork, GlassContacts};
 use super::lights::LightSetup;
 use super::see_through::{continued_ray, StraightLine};
 use crate::ray_tracer::{PlacedParts, RayTracerError, ScatteringSurface};
@@ -25,6 +34,10 @@ pub struct RenderScene {
     /// What fraction of each part is present, empty when every part is fully present.
     opacities: Vec<f64>,
     lights: LightSetup,
+    /// Where faces of glass parts lie on each other.
+    contacts: GlassContacts,
+    /// Where faces of glass parts lie on faces of opaque parts.
+    rests: GlassContacts,
     /// Every 8-bit channel value, decoded, so a hit doesn't take a power per color.
     srgb_to_linear: [f64; 256],
 }
@@ -48,11 +61,14 @@ impl RenderScene {
                 "a render scene needs exactly one surface for each part",
             ));
         }
+        let (contacts, rests) = GlassContacts::find_both(&parts, &surfaces);
         Ok(RenderScene {
             parts,
             surfaces,
             opacities: Vec::new(),
             lights,
+            contacts,
+            rests,
             srgb_to_linear: decoded_table(),
         })
     }
@@ -64,6 +80,8 @@ impl RenderScene {
             surfaces: Vec::new(),
             opacities: Vec::new(),
             lights,
+            contacts: GlassContacts::default(),
+            rests: GlassContacts::default(),
             srgb_to_linear: decoded_table(),
         }
     }
@@ -92,6 +110,28 @@ impl RenderScene {
             opacities
         };
         Ok(self)
+    }
+
+    /// Where faces of glass parts lie on each other.
+    pub(crate) fn glass_contacts(&self) -> &GlassContacts {
+        &self.contacts
+    }
+
+    /// Where faces of glass parts lie on faces of opaque parts.
+    pub(crate) fn glass_rests(&self) -> &GlassContacts {
+        &self.rests
+    }
+
+    /// What finding where glass faces lie on each other took when this scene was built.
+    pub fn glass_contact_search_work(&self) -> ContactSearchWork {
+        self.contacts.work()
+    }
+
+    /// What finding where glass faces lie on faces of opaque parts took when this scene was
+    /// built, after the glass-on-glass search: its triangles are those it carried into world space
+    /// itself, a glass part the first search already carried counting there and not here.
+    pub fn glass_rest_search_work(&self) -> ContactSearchWork {
+        self.rests.work()
     }
 
     /// The parts.
@@ -154,7 +194,7 @@ impl RenderScene {
     }
 
     /// The surface of part `part_index`, its base color multiplied by `face_color`.
-    pub(super) fn surface_at(
+    pub(crate) fn surface_at(
         &self,
         part_index: usize,
         face_color: Color,

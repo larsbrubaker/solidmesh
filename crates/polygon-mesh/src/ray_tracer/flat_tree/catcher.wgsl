@@ -26,6 +26,13 @@
 // it and is blocked, and just outside it the ray goes up past the wall exactly as it would from a
 // point on the floor.
 //
+// **Glass resting on the floor.** A glass face lying in the floor's plane over its square
+// (`path_rests_on_floor`, mirrored by `floor_rest.rs`) is met before the floor by a ray leaving
+// the glass through it, whichever of the two is nearer in `f32`, and a bounce out of it goes to
+// the floor right under it (`path_floor_point_under`) with no ray traced; light the floor sends
+// back up from there meets that glass face again. `path.wgsl`'s loop carries the step across, the
+// way the CPU's `glass_rest` does for glass on any opaque face.
+//
 // **An orthographic eye slides** in front of the parts (`gpu_scene.rs`) and that can put the floor
 // behind the ray's start: all rays of an orthographic camera are the same lines either way, so the
 // catcher reads a distance to the floor that may be negative there. A perspective eye never slides
@@ -92,6 +99,35 @@ fn path_floor_point(ray: Ray, t: f32) -> PathPoint {
     return PathPoint(position, up, up, path_floor_offset(position), PATH_FLOOR_PART, 0xFFFFFFu);
 }
 
+// The floor point right under `position`: where a path leaving glass resting on the floor meets it.
+fn path_floor_point_under(position: vec3<f32>) -> PathPoint {
+    let at = vec3<f32>(position.x, position.y, path_view.floor_plane.z);
+    let up = vec3<f32>(0.0f, 0.0f, 1.0f);
+    return PathPoint(at, up, up, path_floor_offset(at), PATH_FLOOR_PART, 0xFFFFFFu);
+}
+
+// The contact rule for a face on the floor (`floor_rest.rs`, where a test pins these).
+const PATH_FLOOR_REST_ROUNDING_STEPS: f32 = 2.0f;
+const PATH_FLOOR_REST_ANTI_PARALLEL: f32 = 0.999999f;
+
+// Whether `point`, on a face of the tree, lies on the floor: its normal straight down, over the
+// floor's square and within two rounding steps of its plane (`rests_on_floor_f32` in Rust).
+fn path_rests_on_floor(point: PathPoint) -> bool {
+    if !path_floor_active {
+        return false;
+    }
+    if point.geometric.z > -PATH_FLOOR_REST_ANTI_PARALLEL {
+        return false;
+    }
+    let from_center = abs(point.position.xy - path_view.floor_plane.xy);
+    if from_center.x > path_view.floor_plane.w || from_center.y > path_view.floor_plane.w {
+        return false;
+    }
+    let tolerance = PATH_FLOOR_REST_ROUNDING_STEPS
+        * max(point.ray_offset, path_floor_offset(point.position));
+    return abs(point.position.z - path_view.floor_plane.z) <= tolerance;
+}
+
 fn path_floor_surface() -> Surface {
     let base = path_view.floor_base;
     let rest = path_view.floor_rest;
@@ -133,7 +169,7 @@ fn path_coverage_along(origin_ray: Ray) -> f32 {
             return 1.0f - uncovered;
         }
         let point = path_surface_point(hit);
-        let opacity = parts[point.part].opacity;
+        let opacity = path_part_opacity(point.part);
         if opacity >= 1.0f {
             return 1.0f;
         }

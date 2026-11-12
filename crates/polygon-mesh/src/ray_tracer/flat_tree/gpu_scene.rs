@@ -1,7 +1,10 @@
 //! Packs a whole [`RenderScene`] for the WGSL path loop ([`PATH_WGSL`]): one [`FlatTree`] over
 //! every placed part's world triangles, a [`FaceRecord`] for each triangle in the order the
 //! tree's `source_index` numbers them (its part, corner normals, geometric normal, continuing-ray
-//! offset and color), a [`PartRecord`] per part (its surface and opacity), and the uniform records
+//! offset and color), a [`PartRecord`] per part (its surface and opacity), the glass contacts
+//! (`gpu_contacts.rs`: where a glass face lies on another, appended to the part buffer, nothing
+//! when none does), and the
+//! uniform records
 //! the view holds (`gpu_view.rs`: [`GpuView`] and [`ViewRecord`], and the sRGB table). Byte
 //! layouts are the WGSL structs of `path.wgsl`, written field by field in little-endian order as
 //! `layout.rs` does; a test pins them against naga's own layout of the shader.
@@ -64,6 +67,7 @@
 
 use solidmesh_math::Vector3;
 
+use super::gpu_contacts::GpuGlassContacts;
 use super::gpu_pack::GpuSceneBuilder;
 use super::gpu_view::{
     view_record, GpuCompositing, GpuView, ViewRecord, SRGB_TABLE_BYTES, VIEW_RECORD_BYTES,
@@ -168,7 +172,10 @@ pub struct GpuSceneSizes {
 /// The most a scene of `triangle_count` triangles and `part_count` parts can need, with node and
 /// triangle counts at their worst, for a caller to refuse a scene before allocating. A flat tree
 /// has at most one fewer node than leaf runs and at most one run per triangle. `pixel_count` is
-/// the image's area; `compositing` says whether a view will use the coverage channels.
+/// the image's area; `compositing` says whether a view will use the coverage channels. The part
+/// bytes are the part records alone: the glass contact block a scene with glass lying on glass
+/// appends to them (`gpu_contacts.rs`) depends on which faces touch, which counts cannot bound, so
+/// a caller sizing the part buffer for such a scene reads [`GpuRenderScene::sizes`] after packing.
 pub fn gpu_scene_size_bound(
     triangle_count: u64,
     part_count: u64,
@@ -220,6 +227,7 @@ pub struct GpuRenderScene {
     pub(super) limits: GpuSceneLimits,
     pub(super) placement_origin: Vector3,
     pub(super) placement_radius: f64,
+    pub(super) contacts: GpuGlassContacts,
 }
 
 impl GpuRenderScene {
@@ -308,13 +316,26 @@ impl GpuRenderScene {
         bytes
     }
 
-    /// The part buffer's bytes.
+    /// The part buffer's bytes: the part records, then the glass contact block where the scene
+    /// has one (`gpu_contacts.rs`), so a scene without contacts packs only its records.
     pub fn part_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(self.parts.len() * PART_STRIDE);
         for part in &self.parts {
             bytes.extend_from_slice(&part.to_le_bytes());
         }
+        bytes.extend_from_slice(&self.contacts.to_le_bytes());
         bytes
+    }
+
+    /// The glass contacts (`gpu_contacts.rs`): empty for a scene where no glass lies on glass.
+    pub fn glass_contacts(&self) -> &GpuGlassContacts {
+        &self.contacts
+    }
+
+    /// The glass contact block's bytes, the tail of [`GpuRenderScene::part_bytes`]: empty for a
+    /// scene without contacts.
+    pub fn contact_bytes(&self) -> Vec<u8> {
+        self.contacts.to_le_bytes()
     }
 
     /// The per-view uniform's bytes: the only buffer a change of view writes.
@@ -340,7 +361,8 @@ impl GpuRenderScene {
             node_bytes: tree.node_bytes,
             triangle_bytes: tree.triangle_bytes,
             face_bytes: self.faces.len() as u64 * FACE_STRIDE as u64,
-            part_bytes: self.parts.len() as u64 * PART_STRIDE as u64,
+            part_bytes: self.parts.len() as u64 * PART_STRIDE as u64
+                + self.contacts.to_words().len() as u64 * 4,
             accumulation_bytes: pixels * ACCUMULATION_STRIDE as u64,
             channel_bytes: if self.composited {
                 pixels * CHANNEL_STRIDE as u64

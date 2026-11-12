@@ -44,6 +44,22 @@ pub const SCENE_FLAG_GRADIENT: u32 = 8;
 pub const SCENE_FLAG_COMPOSITE: u32 = 16;
 /// [`ViewRecord::flags`]: the view has a shadow-catching floor.
 pub const SCENE_FLAG_FLOOR: u32 = 32;
+/// [`ViewRecord::flags`]: some glass face lies on another (`gpu_contacts.rs`); clear, the shader
+/// never reads the contact buffer.
+pub const SCENE_FLAG_GLASS_CONTACTS: u32 = 64;
+
+/// The word in the part buffer where the glass contact block (`gpu_contacts.rs`) starts, right
+/// after the part records; 0 for a scene without contacts, which appends no block.
+fn contact_block_start(scene: &RenderScene) -> Result<u32, FlatTreeError> {
+    if scene.glass_contacts().is_empty() {
+        return Ok(0);
+    }
+    u32::try_from(scene.parts().parts().len() * (super::PART_STRIDE / 4)).map_err(|_| {
+        FlatTreeError::NotRepresentable {
+            reason: "more parts than a 32-bit word index into the part buffer can reach",
+        }
+    })
+}
 
 /// [`ViewRecord::roulette_after`] when Russian roulette is off.
 pub const ROULETTE_OFF: u32 = u32::MAX;
@@ -138,7 +154,11 @@ impl GpuView {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ViewRecord {
     pub eye: [f32; 4],
-    pub forward: [f32; 4],
+    /// The view direction.
+    pub forward: [f32; 3],
+    /// The word in the part buffer where the glass contact block (`gpu_contacts.rs`) starts, 0
+    /// without contacts; it fills the fourth lane after `forward`.
+    pub contact_block: u32,
     pub right: [f32; 4],
     pub up: [f32; 4],
     pub width: u32,
@@ -175,8 +195,14 @@ impl ViewRecord {
             bytes[offset..offset + 4].copy_from_slice(&word.to_le_bytes());
             offset += 4;
         };
-        let lanes = [self.eye, self.forward, self.right, self.up];
-        for lane in lanes {
+        for value in self.eye {
+            put(value.to_bits());
+        }
+        for value in self.forward {
+            put(value.to_bits());
+        }
+        put(self.contact_block);
+        for lane in [self.right, self.up] {
             for value in lane {
                 put(value.to_bits());
             }
@@ -341,6 +367,9 @@ pub(super) fn view_record(
     if scene.has_see_through_parts() {
         flags |= SCENE_FLAG_SEE_THROUGH;
     }
+    if !scene.glass_contacts().is_empty() {
+        flags |= SCENE_FLAG_GLASS_CONTACTS;
+    }
     if gradient {
         flags |= SCENE_FLAG_GRADIENT;
     }
@@ -409,7 +438,8 @@ pub(super) fn view_record(
     let settings = &view.settings;
     Ok(ViewRecord {
         eye,
-        forward: direction(basis.forward),
+        forward: narrow3(basis.forward),
+        contact_block: contact_block_start(scene)?,
         right: direction(basis.right),
         up: direction(basis.up),
         width: view.image.0,

@@ -13,6 +13,20 @@ mod flat_tree_shader_tests;
 mod flat_tree_support;
 #[path = "ray_tracer/flat_tree_tests.rs"]
 mod flat_tree_tests;
+#[path = "ray_tracer/glass_on_floor_opacity_tests.rs"]
+mod glass_on_floor_opacity_tests;
+#[path = "ray_tracer/glass_on_floor_tests.rs"]
+mod glass_on_floor_tests;
+#[path = "ray_tracer/glass_on_floor_tie_measure_tests.rs"]
+mod glass_on_floor_tie_measure_tests;
+#[path = "ray_tracer/glass_rest_search_tests.rs"]
+mod glass_rest_search_tests;
+#[path = "ray_tracer/glass_tray_support.rs"]
+mod glass_tray_support;
+#[path = "ray_tracer/gpu_glass_contact_grid_tests.rs"]
+mod gpu_glass_contact_grid_tests;
+#[path = "ray_tracer/gpu_glass_contact_pack_tests.rs"]
+mod gpu_glass_contact_pack_tests;
 #[path = "ray_tracer/gpu_view_tests.rs"]
 mod gpu_view_tests;
 #[path = "ray_tracer/minimal_triangle_tests.rs"]
@@ -25,8 +39,18 @@ mod part_opacity_tests;
 mod path_camera_ray_tests;
 #[path = "ray_tracer/path_shader_inlining_tests.rs"]
 mod path_shader_inlining_tests;
+#[path = "ray_tracer/path_shader_seam_tests.rs"]
+mod path_shader_seam_tests;
 #[path = "ray_tracer/path_shader_tests.rs"]
 mod path_shader_tests;
+#[path = "ray_tracer/path_tracer_glass_contact_measure_tests.rs"]
+mod path_tracer_glass_contact_measure_tests;
+#[path = "ray_tracer/path_tracer_glass_contact_search_tests.rs"]
+mod path_tracer_glass_contact_search_tests;
+#[path = "ray_tracer/path_tracer_glass_contact_tests.rs"]
+mod path_tracer_glass_contact_tests;
+#[path = "ray_tracer/path_tracer_glass_shadow_tests.rs"]
+mod path_tracer_glass_shadow_tests;
 #[path = "ray_tracer/path_tracer_golden_tests.rs"]
 mod path_tracer_golden_tests;
 #[path = "ray_tracer/path_tracer_measure_tests.rs"]
@@ -37,8 +61,12 @@ mod path_tracer_partial_glass_tests;
 mod path_tracer_render_tests;
 #[path = "ray_tracer/path_tracer_scene_tests.rs"]
 mod path_tracer_scene_tests;
+#[path = "ray_tracer/path_tracer_speckle_measure_tests.rs"]
+mod path_tracer_speckle_measure_tests;
 #[path = "ray_tracer/path_tracer_support.rs"]
 mod path_tracer_support;
+#[path = "ray_tracer/path_tracer_touching_glass_tests.rs"]
+mod path_tracer_touching_glass_tests;
 #[path = "ray_tracer/path_tracer_transport_tests.rs"]
 mod path_tracer_transport_tests;
 #[path = "ray_tracer/polygon_trace_tests.rs"]

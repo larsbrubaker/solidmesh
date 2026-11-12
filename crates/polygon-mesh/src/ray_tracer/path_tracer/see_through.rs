@@ -16,7 +16,8 @@
 //! see-through parts, which ends a line that can't otherwise end: a stack of see-through parts of
 //! any depth, or a broken face whose continuing ray starts where it was. A line past the cap ends
 //! there, as a path past the bounce limit does: a path's estimate loses what it still carries and
-//! a shadow ray counts as blocked. Opaque surfaces don't count against the cap.
+//! a shadow ray counts as blocked. Opaque surfaces don't count against the cap; a pass straight
+//! through a seam between two glass parts (`glass_seam`) counts as one crossing.
 //!
 //! Decisions are drawn only for a partly-there part, and never for one at opacity 0 or 1, so a
 //! scene of opaque and invisible parts draws no random number to decide.
@@ -71,6 +72,22 @@ impl StraightLine {
             self.passed.push(part);
             Crossing::First
         }
+    }
+
+    /// Records that this line starts inside `part`, which the line before found not there, so
+    /// the part's far surface is passed as the rest of it was.
+    pub(super) fn starts_past(&mut self, part: usize) {
+        self.passed.push(part);
+    }
+
+    /// Counts a pass straight through a seam between two glass parts, which crosses two
+    /// surfaces at once as one; false once the line has gone through as many as it may.
+    pub(super) fn count_pass(&mut self) -> bool {
+        if self.crossings >= MAX_CROSSINGS_PER_LINE {
+            return false;
+        }
+        self.crossings += 1;
+        true
     }
 
     /// Decides what the line does at a hit on part `part_index`, drawing from `random`.

@@ -14,6 +14,10 @@
 //! - `render_scene`: [`RenderScene`], the parts, one surface and optional opacity per part, and
 //!   the lights.
 //! - `see_through`: how a ray goes past a part that is only partly there.
+//! - `glass_contacts`: where faces of glass parts lie on each other, found when the scene is
+//!   built.
+//! - `glass_seam`: what a path does at a glass face another glass part's face lies on.
+//! - `glass_rest`: what a path does where a glass face rests on an opaque part's face.
 //! - `camera`: [`RenderCamera`], perspective or orthographic, from eye, target and up.
 //! - `pixel_random`: [`PixelRandom`], each pixel's random stream, and the jitter inside the pixel.
 //! - `integrator`: the path loop; [`PathTraceSettings`] and [`LightStrategy`] are its knobs.
@@ -52,6 +56,18 @@
 //! past that ends, losing whatever it still carries, as with the bounce limit.
 //! [`RenderScene::coverage_along`] says what a camera ray's coverage is, without sampling.
 //!
+//! **Glass lying on glass.** Where a face of one glass part lies on a face of another (found when
+//! the scene is built, within the coordinates' rounding), the two are one boundary, not two
+//! boundaries with air between. Glass of the same surface on both sides is no boundary at all: a
+//! path goes straight on into the other part, with no bounce used, no random number drawn and
+//! nothing it carries changed, so touching parts light as their union. Different glasses meet at
+//! one interface of their relative index, with no air gap that could mirror light at a seam.
+//! Where the faces don't cover each other the glass meets air as always, and glass parts that
+//! overlap in volume are not lying on each other: their inner faces still show. A scene with no
+//! glass face on another renders exactly as if none of this existed. Partly there glass keeps the
+//! seams from gaining light but still loses some, as a single partly there glass part does
+//! (`glass_seam`'s header says why).
+//!
 //! **Rough glass loses energy.** The scattering model's rough glass is single-scatter only (its
 //! header says so), and the integrator returns exactly what the model gives it.
 //!
@@ -67,6 +83,9 @@
 
 mod camera;
 mod display;
+mod glass_contacts;
+mod glass_rest;
+mod glass_seam;
 mod integrator;
 mod lights;
 mod pixel_random;
@@ -78,6 +97,10 @@ mod see_through;
 
 pub use camera::RenderCamera;
 pub use display::{display_byte, linear_to_srgb, tone_map};
+pub use glass_contacts::ContactSearchWork;
+pub(crate) use glass_contacts::{covers, dominant_axis, flatten, ContactFace};
+pub use glass_rest::PathVertexAt;
+pub(crate) use glass_seam::{seam_surface, SKIP_TOLERANCES as SEAM_SKIP_TOLERANCES};
 pub use integrator::{LightStrategy, PathTraceSettings};
 pub use lights::{Environment, LightSetup, Sun};
 pub use pixel_random::{pixel_jitter, PixelRandom};

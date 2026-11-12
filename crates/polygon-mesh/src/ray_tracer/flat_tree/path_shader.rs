@@ -1,5 +1,5 @@
-//! The GPU path loop's source: [`PATH_WGSL`] is `trace.wgsl`, `scatter.wgsl`, `path.wgsl` and
-//! `catcher.wgsl` concatenated, with the compute entry point [`PATH_ENTRY_POINT`]. A caller
+//! The GPU path loop's source: [`PATH_WGSL`] is `trace.wgsl`, `scatter.wgsl`, `path.wgsl`,
+//! `catcher.wgsl` and `seam.wgsl` (glass lying on glass) concatenated, with the compute entry point [`PATH_ENTRY_POINT`]. A caller
 //! compiles it once with the three bind groups `path.wgsl`'s header lists; a
 //! [`super::GpuRenderScene`] packs the buffers and [`super::pixel_slice_bytes`] the per-dispatch
 //! uniform. `TRACE_WGSL` and `SCATTER_WGSL` keep their own entry-point-free or check-only uses
@@ -14,6 +14,8 @@ pub const PATH_WGSL: &str = concat!(
     include_str!("path.wgsl"),
     "\n",
     include_str!("catcher.wgsl"),
+    "\n",
+    include_str!("seam.wgsl"),
 );
 
 /// The compute entry point of [`PATH_WGSL`].

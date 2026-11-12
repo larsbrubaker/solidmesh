@@ -1,11 +1,12 @@
 // The path loop in WGSL: one sample per pixel of a pixel range, added into an RGBA accumulation
 // buffer, the same estimator `path_tracer/integrator.rs` computes on the CPU. It follows
-// `trace.wgsl` and `scatter.wgsl` (`PATH_WGSL` is the three concatenated); `gpu_scene.rs` packs the
-// buffers and pins these records. Bindings:
+// `trace.wgsl` and `scatter.wgsl` (`PATH_WGSL` is them, this, `catcher.wgsl` and `seam.wgsl`);
+// `gpu_scene.rs` packs the buffers and pins these records. Bindings:
 //
 //   group 0: 0 the tree's nodes, 1 its triangles (`trace.wgsl`)
 //   group 1: 0 the albedo table (`scatter.wgsl`)
-//   group 2: 0 `faces`, 1 `parts`, 2 `accumulation` (`read_write`), 3 `path_view` (uniform,
+//   group 2: 0 `faces`, 1 `parts` (the part records as words, then the glass contact block where
+//            the scene has one, from the word `path_view.contact_block` holds), 2 `accumulation` (`read_write`), 3 `path_view` (uniform,
 //            the only buffer a change of view writes), 4 `path_slice` (uniform: `{ first_pixel,
 //            pixel_count, sample_index }`), 5 `channels` (`read_write`, the coverage channels),
 //            6 `path_srgb` (uniform, fixed at pack)
@@ -48,11 +49,16 @@
 //   decoding `RenderScene` holds, narrowed once.
 //
 // Everything else is the CPU loop in the CPU's order. A see-through part's verdict comes first,
-// then the bounce limit, then the sun, then the sampled bounce, the leak rejections, roulette and
-// the next ray, and every value the CPU takes as a `max`, `min` or density guard is guarded the
+// then, in a scene with glass lying on glass, the seam (`seam.wgsl`, `glass_seam.rs`: straight on
+// past both faces, one interface, or the line's end; glass resting on the floor instead takes its
+// own face first and a bounce out of it, or back up off the floor under it, goes across the
+// contact with no trace: `catcher.wgsl`, the CPU's `glass_rest.rs`; glass resting on an opaque
+// part of the tree is traced as any two faces are), then the bounce limit, then the sun, then
+// the sampled bounce, the leak rejections, roulette and the next ray, and every value the CPU takes as a `max`, `min` or density guard is guarded the
 // same way (see `path_power_heuristic` for the one guard WGSL needs beyond it). The loop is a
 // `loop` with bounded iterations: each ends by escape, a stop, the bounce limit, or the per-line
-// crossing cap of `MAX_CROSSINGS_PER_LINE`, and each shadow ray likewise.
+// crossing cap of `MAX_CROSSINGS_PER_LINE`, which a straight pass through a seam counts against,
+// and each shadow ray likewise.
 //
 // **Each function that traverses the tree is called from one place.** A GPU driver copies a
 // function into every place it is called, so every call site of `path_radiance`,
@@ -91,6 +97,7 @@ const PATH_FLAG_SUN: u32 = 4u;
 const PATH_FLAG_GRADIENT: u32 = 8u;
 const PATH_FLAG_COMPOSITE: u32 = 16u;
 const PATH_FLAG_FLOOR: u32 = 32u;
+const PATH_FLAG_GLASS_CONTACTS: u32 = 64u;
 
 // What a line does at a hit.
 const LINE_STOPS: u32 = 0u;
@@ -120,8 +127,10 @@ struct Part {
 struct PathView {
     // xyz the eye, w `tan(fov / 2)` or the orthographic half extent.
     eye: vec4<f32>,
+    forward: vec3<f32>,
+    // The word in `parts` where the glass contact block starts (`seam.wgsl`), 0 without contacts.
+    contact_block: u32,
     // Each xyz, w unused.
-    forward: vec4<f32>,
     right: vec4<f32>,
     up: vec4<f32>,
     // The image's size in pixels: which pixel an index means.
@@ -172,12 +181,35 @@ struct PathChannels {
 }
 
 @group(2) @binding(0) var<storage, read> faces: array<Face>;
-@group(2) @binding(1) var<storage, read> parts: array<Part>;
+// The part records as words, so the glass contact block (`seam.wgsl`) can follow them in the
+// same buffer; `path_part_surface` and `path_part_opacity` read a `Part` back from them.
+@group(2) @binding(1) var<storage, read> parts: array<u32>;
 @group(2) @binding(2) var<storage, read_write> accumulation: array<vec4<f32>>;
 @group(2) @binding(3) var<uniform> path_view: PathView;
 @group(2) @binding(4) var<uniform> path_slice: PathSlice;
 @group(2) @binding(5) var<storage, read_write> channels: array<PathChannels>;
 @group(2) @binding(6) var<uniform> path_srgb: PathSrgb;
+
+const PATH_PART_WORDS: u32 = 10u;
+
+fn path_part_surface(part: u32) -> Surface {
+    let at = part * PATH_PART_WORDS;
+    return Surface(
+        bitcast<f32>(parts[at]),
+        bitcast<f32>(parts[at + 1u]),
+        bitcast<f32>(parts[at + 2u]),
+        bitcast<f32>(parts[at + 3u]),
+        bitcast<f32>(parts[at + 4u]),
+        bitcast<f32>(parts[at + 5u]),
+        bitcast<f32>(parts[at + 6u]),
+        bitcast<f32>(parts[at + 7u]),
+        parts[at + 8u],
+    );
+}
+
+fn path_part_opacity(part: u32) -> f32 {
+    return bitcast<f32>(parts[part * PATH_PART_WORDS + 9u]);
+}
 
 // ---- The sample's random stream and the parts one straight line has gone through. Private, not
 // passed around, because `surface_sample` and the shadow ray both need them in the same order.
@@ -251,7 +283,7 @@ fn line_has_passed(part: u32) -> bool {
 
 // `StraightLine::at_hit`: whether the part is there, deciding once per part along the line.
 fn line_at_hit(part: u32) -> u32 {
-    let opacity = parts[part].opacity;
+    let opacity = path_part_opacity(part);
     if opacity >= 1.0f {
         return LINE_STOPS;
     }
@@ -511,7 +543,7 @@ fn path_surface_at(part: u32, color: u32) -> Surface {
     if part == PATH_FLOOR_PART {
         return path_floor_surface();
     }
-    var surface = parts[part].surface;
+    var surface = path_part_surface(part);
     if (color & 0xFFFFFFu) != 0xFFFFFFu {
         let r = color & 255u;
         let g = (color >> 8u) & 255u;
@@ -525,6 +557,12 @@ fn path_surface_at(part: u32, color: u32) -> Surface {
 
 // ---- The path (`trace_path`).
 
+// What the next vertex is when a bounce crossed a contact between glass and the floor: none (trace
+// the ray), the floor under the glass, or the glass face over the floor.
+const PATH_ACROSS_NONE: u32 = 0u;
+const PATH_ACROSS_FLOOR: u32 = 1u;
+const PATH_ACROSS_GLASS: u32 = 2u;
+
 fn path_radiance(camera_ray: Ray) -> vec3<f32> {
     var ray = camera_ray;
     var radiance = vec3<f32>(0.0f);
@@ -536,43 +574,110 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
     var arrival_pdf = 0.0f;
     var scatters = 0u;
     line_restart();
+    // Glass resting on the floor (`catcher.wgsl`'s `path_rests_on_floor`): the vertex a bounce
+    // across the contact reaches next without a trace, and the glass face's hit.
+    var across = PATH_ACROSS_NONE;
+    var rest_hit: Hit;
 
     loop {
-        let hit = trace_closest(ray);
-        let floor_t = path_floor_distance(ray);
-        let floor_first = floor_t >= 0.0f && (hit.triangle == NO_HIT || floor_t < hit.t);
-        if hit.triangle == NO_HIT && !floor_first {
-            radiance += throughput * path_escaped(ray.direction, arrival_sampled, arrival_pdf);
-            break;
-        }
+        var hit: Hit;
+        var floor_first: bool;
         var point: PathPoint;
-        if floor_first {
-            point = path_floor_point(ray, floor_t);
+        // This vertex is glass resting on the floor or the floor under it; a bounce out of its
+        // face goes straight to the other.
+        var resting = false;
+        if across == PATH_ACROSS_FLOOR {
+            hit = rest_hit;
+            floor_first = true;
+            point = path_floor_point_under(ray.origin);
+            resting = true;
+        } else if across == PATH_ACROSS_GLASS {
+            hit = rest_hit;
+            floor_first = false;
+            point = path_surface_point(rest_hit);
+            resting = true;
         } else {
-            point = path_surface_point(hit);
+            hit = trace_closest(ray);
+            let floor_t = path_floor_distance(ray);
+            floor_first = floor_t >= 0.0f && (hit.triangle == NO_HIT || floor_t < hit.t);
+            if hit.triangle == NO_HIT && !floor_first {
+                radiance += throughput * path_escaped(ray.direction, arrival_sampled, arrival_pdf);
+                break;
+            }
+            if floor_first {
+                point = path_floor_point(ray, floor_t);
+            } else {
+                point = path_surface_point(hit);
+            }
+            // A ray inside glass meets the glass's own face before the floor it rests on, whichever
+            // of the two is nearer in `f32` (`leaves_onto_floor_f32` in Rust). Only for glass at
+            // opacity 1, as on the CPU, whatever other parts' opacity: there the line's decision
+            // is a stop that draws nothing, so skipping it moves no random number. The rest is
+            // taken before the seam, where the CPU decides the seam first; the two differ only at
+            // a glass face on the floor's plane covered by another glass part's face there (glass
+            // reaching up to the floor from below, glass on top): here the rest, there the seam.
+            if hit.triangle != NO_HIT {
+                let glass = path_surface_point(hit);
+                if dot(ray.direction, glass.geometric) > 0.0f
+                    && path_part_opacity(glass.part) >= 1.0f && path_rests_on_floor(glass)
+                    && has_glass(path_part_surface(glass.part)) {
+                    floor_first = false;
+                    point = glass;
+                    resting = true;
+                    rest_hit = hit;
+                }
+            }
         }
+        across = PATH_ACROSS_NONE;
         // Whether the part is there at all comes before the bounce limit: a path past its last
         // bounce still sees through what isn't there. The floor is always there.
-        if !floor_first && (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u {
+        var present = true;
+        if !floor_first && !resting && (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u {
             let verdict = line_at_hit(point.part);
             if verdict == LINE_ENDED {
                 break;
             }
-            if verdict == LINE_PASSES {
-                ray = path_ray_from(path_next_origin(point, ray.direction), ray.direction);
+            present = verdict != LINE_PASSES;
+        }
+        // A seam between two glass parts is looked at only in a scene that has one
+        // (`seam.wgsl`), so every other scene runs exactly the operations it always did.
+        var seam = seam_none();
+        if !floor_first && !resting && (path_view.flags & PATH_FLAG_GLASS_CONTACTS) != 0u {
+            seam = seam_at(point, hit.source_index, ray.direction, present);
+            if seam.kind == SEAM_ENDED {
+                break;
+            }
+            if seam.kind == SEAM_STRAIGHT {
+                ray = path_ray_from(seam_origin(point, ray.direction, seam.skip), ray.direction);
                 continue;
             }
+            if seam.kind == SEAM_INTERFACE {
+                present = true;
+            }
+        }
+        if !present {
+            ray = path_ray_from(path_next_origin(point, ray.direction), ray.direction);
+            continue;
         }
         if scatters >= path_view.max_bounces {
             break;
         }
 
-        let surface = path_surface_at(point.part, point.color);
+        let at_seam = seam.kind == SEAM_INTERFACE;
+        var surface: Surface;
+        if at_seam {
+            surface = seam.surface;
+        } else {
+            surface = path_surface_at(point.part, point.color);
+        }
         let toward_camera = -ray.direction;
         let facing = path_facing(point, ray.direction);
         // A transmissive surface keeps its true outside as +z: that is how the model tells a ray
-        // entering the solid from one leaving it.
-        let frame_normal = select(facing.shading, -facing.shading, has_glass(surface) && facing.back_face);
+        // entering the solid from one leaving it. At a seam the denser glass's side is the inside.
+        var frame_normal = select(facing.shading, -facing.shading, has_glass(surface) && facing.back_face);
+        if at_seam {
+            frame_normal = select(-facing.shading, facing.shading, seam.into_denser);
+        }
         let frame = path_frame(frame_normal);
         if !frame.found {
             break;
@@ -614,8 +719,24 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
             throughput /= survival;
         }
 
-        ray = path_ray_from(path_next_origin(point, wi_world), wi_world);
+        if resting && dot(wi_world, point.geometric) > 0.0f {
+            // The next vertex is across the contact at this same point; the ray only says which
+            // way the path arrives there and where.
+            ray = path_ray_from(point.position, wi_world);
+            across = select(PATH_ACROSS_FLOOR, PATH_ACROSS_GLASS, floor_first);
+            line_restart();
+            continue;
+        }
+        if at_seam {
+            ray = path_ray_from(seam_origin(point, wi_world, seam.skip), wi_world);
+        } else {
+            ray = path_ray_from(path_next_origin(point, wi_world), wi_world);
+        }
         line_restart();
+        let absent = seam_absent_toward(seam, point, wi_world);
+        if absent != SEAM_NO_PART {
+            line_starts_past(absent);
+        }
     }
     return radiance;
 }
@@ -654,9 +775,9 @@ fn path_camera_ray(x: f32, y: f32) -> Ray {
     if (path_view.flags & PATH_FLAG_ORTHOGRAPHIC) != 0u {
         let origin = path_view.eye.xyz + path_view.right.xyz * (horizontal * scale)
             + path_view.up.xyz * (vertical * scale);
-        return path_ray_from(origin, path_view.forward.xyz);
+        return path_ray_from(origin, path_view.forward);
     }
-    let direction = path_view.forward.xyz + path_view.right.xyz * (horizontal * scale)
+    let direction = path_view.forward + path_view.right.xyz * (horizontal * scale)
         + path_view.up.xyz * (vertical * scale);
     // `normalize` and not `unit_direction`, whose early return for a vector already close to unit
     // length is taken only by the rays within a tenth of a pixel of the view's axis. On the NVIDIA
