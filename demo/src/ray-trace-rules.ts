@@ -268,6 +268,38 @@ export const DISPATCH_CAP_MS = 250;
 export const STRAY_ALLOWANCE_MS = 50;
 /** How much costlier a carried bound or estimate is assumed to be, for a view that moved. */
 export const CARRIED_COST_MARGIN = 2;
+/**
+ * The most the earlier whole waits of the stretches one slice merges may sum to (ms). While the
+ * same pixels cost about the same next pass, the sum bounds the merged slice's wait (a floor is
+ * paid once, not once a stretch), so the aim can sit well above a phone's floors; it is set so
+ * the sum, 30 percent more for a pass that runs slower, and the 25 ms a slice waits after a
+ * picture is shown still stay under DISPATCH_CAP_MS with room.
+ */
+export const SLICE_AIM_MS = 100;
+/**
+ * A merged slice that waited more than this many times the sum that justified it did not save a
+ * floor: the device may cost a long dispatch more than its parts (it time-slices them), so a cut
+ * is made at the boundary nearest the merge's middle; halves that together waited less than the
+ * whole over this factor are cut apart the same way.
+ */
+export const MERGE_TOLERANCE = 1.15;
+/**
+ * How many passes a new cut holds (`CUT_FIRST_PASSES`) before merging across it is tried again,
+ * and the most a cut that keeps coming back can hold (`CUT_MOST_PASSES`). A cut is a guess, from
+ * one or two waits that jitter or a spike may have made: a guess jitter made is gone after one
+ * retry, while one a device keeps earning is retried less and less often (the lifetime doubles),
+ * so the retries cost a superlinear device a long slice every 64 passes at most.
+ */
+export const CUT_FIRST_PASSES = 4;
+export const CUT_MOST_PASSES = 64;
+/**
+ * An own proof that waited more than this (ms) is halved rather than taken whole: half again the
+ * aim, so that a stretch whose floor alone is near the aim (a slow phone's) is still taken whole,
+ * while a slice that came back long is cut before a pass three times slower could take it past
+ * twice the cap.
+ */
+export const SPLIT_OVER_MS = SLICE_AIM_MS * 1.5;
+
 /** The smallest time a measurement counts as (ms): the browser's clock is no finer. */
 const MIN_MEASURED_MS = 0.1;
 /** About how many pixels a pilot image has. */
@@ -293,23 +325,53 @@ interface Proof {
   to: number;
   rate: number;
   ms: number;
+  /** Traced by this picture at this size, rather than carried from the pilot or a preview. */
+  own: boolean;
+  /** What is left of a proof a later slice covered only part of. */
+  rest?: boolean;
+  /** One of two halves that together waited less than the proof they were cut from: cut again. */
+  again?: boolean;
+  /** The wait of the proof of exactly this stretch before it, if there was one (ms). */
+  prev?: number;
 }
 
 /**
  * How many pixels the next GPU slice may cover. What a pixel costs depends on where it is, sky
- * next to glass by a factor of a hundred or more, and a dispatch also costs a few milliseconds of
- * its own, which jitter. So two things are kept apart:
+ * next to glass by a factor of a hundred or more, and a slice's wait is not its pixels' work alone:
+ * on a phone's GPU it is a floor set by what the slice's pixels show (about 3 ms for sky, 13 to
+ * 20 ms over most of a part, 25 to 33 ms over its costliest rows, measured on a Pixel 7) plus work
+ * in proportion to its pixels. The floor follows the pixels, not the submission (an empty dispatch
+ * returns in about 4 ms), and it is paid once a slice, so only whole waits of real slices are used.
+ * A picture's stretches are covered two ways:
  *
- * - **Upper bounds.** Every dispatch, however short, proves that its pixels cost at most its whole
- *   wait over their count; the fixed cost is never taken off. The image is covered by the newest
- *   such proofs, and no slice is issued whose cost by them exceeds DISPATCH_CAP_MS (less
- *   STRAY_ALLOWANCE_MS for a wait the GPU didn't cause). A stretch nothing has proven may be
- *   entered by FIRST_SLICE_RAYS pixels at a time, no more, which is how a cold image (the pilot)
- *   covers itself. Within one proven stretch the cost is taken as even: what is not bounded is a
- *   costly feature inside a stretch that was proven by a cheap average.
- * - **Estimates** of each band's cost, learned only from dispatches over NOISE_FLOOR_MS, aim a
- *   slice at TARGET_MS. Where the bands ahead have none yet, the slice doubles while the last came
- *   back under half the target, and holds otherwise.
+ * - **The first coverage** of a stretch, from what the pilot or the last preview proved. Every
+ *   dispatch proves that its pixels cost at most its whole wait over their count, and the image is
+ *   covered by the newest such proofs; no slice is issued whose cost by them exceeds
+ *   DISPATCH_CAP_MS (less STRAY_ALLOWANCE_MS for a wait the GPU didn't cause). A stretch nothing
+ *   has proven may be entered by FIRST_SLICE_RAYS pixels at a time, no more, which is how a cold
+ *   image (the pilot) covers itself. Within one carried proof the cost is taken as even: what is
+ *   not bounded is a costly feature inside a stretch that was proven by a cheap average. Estimates
+ *   of each band's cost, learned only from dispatches over NOISE_FLOOR_MS, aim a slice at
+ *   TARGET_MS; where the bands ahead have none yet, the slice doubles while the last came back
+ *   under half the target, and holds otherwise. A preview is one pass, so it is all first coverage.
+ * - **Stretches this picture has traced** (its own proofs, each within the cap). A slice over
+ *   them waits about the sum of their whole waits or less while the same pixels cost about the
+ *   same next pass (a merged slice pays one floor where its parts paid several), with no
+ *   assumption that cost is even, so it takes whole own proofs while that sum stays within
+ *   SLICE_AIM_MS, and ends on a proof's end. Merging continues pass by pass until waits sit between
+ *   about half the aim and the aim. A stretch whose wait alone is over the aim is taken alone; one
+ *   over SPLIT_OVER_MS (a pass that ran slow, or the wait after a picture is shown) is halved and
+ *   what is left of it taken whole, so its next slice is bounded by its own wait, at most the cap.
+ *   One over the cap proves only that its stretch is costly somewhere, so it is covered again by
+ *   the first rule, which cuts it to slices that isolate the cost. Where a device costs a long
+ *   dispatch more than its parts, a merge that came back over MERGE_TOLERANCE times its sum is cut
+ *   at its middle, and halves that together waited clearly less than the whole did (and than it
+ *   did the pass before, so one spike does not count) are cut apart. A cut holds for
+ *   CUT_FIRST_PASSES passes; then merging across it is tried again, and the cut goes if that merge
+ *   comes back within its sum or returns for twice as long, up to CUT_MOST_PASSES, if not. What holds: a slice over own stretches is issued with a bound of at most the aim, or
+ *   of one stretch's own wait under the cap, and passes the cap only where its pixels cost more
+ *   this pass than its bound said they did; where a stretch's floor alone is near the aim, few
+ *   stretches merge and the slices there stay near the size the first coverage made them.
  *
  * A still starts from its pilot's proofs and estimates, scaled to its size (same rays a pixel, so
  * the same cost a pixel), and a preview from the last preview's, with CARRIED_COST_MARGIN for the
@@ -322,6 +384,14 @@ export class SliceCosts {
   private last = FIRST_SLICE_RAYS;
   private lastMs = 0;
   private largest = 0;
+  /** Boundaries a merge has been refused across, for the rest of this picture. */
+  private cuts = new Map<number, { until: number; life: number }>();
+  /** Whole passes this image has reported, the clock cuts lapse by. */
+  private passes = 0;
+  /** The merge just sized: its stretch, the sum that justified it and the boundaries inside. */
+  private merging: { first: number; end: number; sum: number; inner: number[] } | null = null;
+  /** The proof just halved: its stretch, its wait, and the first half's wait once measured. */
+  private halving: { first: number; mid: number; end: number; ms: number; half: number | null } | null = null;
 
   /** `carry` is the pilot (margin 1) or the previous preview (CARRIED_COST_MARGIN). */
   constructor(
@@ -337,6 +407,7 @@ export class SliceCosts {
       to: proof.to === from.pixels ? pixels : Math.round(proof.to * scale),
       rate: proof.rate * margin,
       ms: proof.ms * scale * margin,
+      own: false,
     })).filter(proof => proof.to > proof.from);
     this.estimates = from.estimates.map(estimate => estimate * margin);
     this.last = Math.max(FIRST_SLICE_RAYS, Math.round(from.largest * scale));
@@ -419,8 +490,102 @@ export class SliceCosts {
     return at - first;
   }
 
-  /** The most pixels a slice starting at `first` should cover. */
+  /**
+   * The own proof `first` lies in, when it was traced by this picture and within the cap: a
+   * stretch over the cap is costly somewhere and its cost is not known to be even, so it is
+   * covered again as a first coverage is.
+   */
+  private owned(first: number): number {
+    const index = this.proofs.findIndex(proof => proof.to > first);
+    if (index < 0) return -1;
+    const proof = this.proofs[index];
+    return proof.from <= first && proof.own && proof.ms <= DISPATCH_CAP_MS ? index : -1;
+  }
+
+  /**
+   * Pixels from `first` over own proofs by strict sums: whole proofs while the sum of their whole
+   * waits stays within SLICE_AIM_MS, never across a refused boundary. It ends on a proof's end,
+   * so the next slice starts aligned; the first proof is taken whole even past the aim, and one
+   * over SPLIT_OVER_MS, or cut again because its halves saved time, is halved, what is left of a
+   * halved one then taken whole, so the half that held the cost shows itself next pass.
+   */
+  private strictReach(index: number, first: number): { reach: number; sum: number; inner: number[] } {
+    const lead = this.proofs[index];
+    let reach: number;
+    let sum = 0;
+    const inner: number[] = [];
+    if ((lead.ms > SPLIT_OVER_MS || lead.again) && (lead.rest || lead.to - first >= 2 * WORKGROUP_RAYS)) {
+      reach = lead.rest
+        ? lead.to - first
+        : Math.max(WORKGROUP_RAYS, Math.floor((lead.to - first) / 2 / WORKGROUP_RAYS) * WORKGROUP_RAYS);
+      sum = lead.ms;
+    } else {
+      let at = first;
+      for (let i = index; i < this.proofs.length; i++) {
+        const proof = this.proofs[i];
+        if (i > index && (proof.from !== at || this.live(at))) break;
+        if (!proof.own || proof.ms > SPLIT_OVER_MS) break;
+        if (i > index && sum + proof.ms > SLICE_AIM_MS) break;
+        if (i > index) inner.push(at);
+        sum += proof.ms;
+        at = proof.to;
+      }
+      reach = at - first;
+    }
+    // A proof made by a refused merge still ends at the boundaries it was refused across.
+    for (const at of this.cuts.keys()) if (at > first && at < first + reach && this.live(at)) reach = at - first;
+    return { reach, sum, inner: inner.filter(at => at < first + reach) };
+  }
+
+  /** Whether a cut holds at `at` this pass. */
+  private live(at: number): boolean {
+    const cut = this.cuts.get(at);
+    return cut !== undefined && this.passes < cut.until;
+  }
+
+  /** Cuts at `at`: for CUT_FIRST_PASSES, or twice as long as last time it was cut, up to CUT_MOST_PASSES. */
+  private cut(at: number): void {
+    const before = this.cuts.get(at);
+    const life = before ? Math.min(CUT_MOST_PASSES, before.life * 2) : CUT_FIRST_PASSES;
+    this.cuts.set(at, { until: this.passes + life, life });
+  }
+
+  /** How many cuts hold this pass. */
+  get liveCuts(): number {
+    let count = 0;
+    for (const at of this.cuts.keys()) if (this.live(at)) count += 1;
+    return count;
+  }
+
+  /** The aim in force for a slice starting at `first` (ms), for the timings report. */
+  aimAt(first: number): number {
+    return this.owned(first) >= 0 ? SLICE_AIM_MS : TARGET_MS;
+  }
+
+  /**
+   * The most pixels a slice starting at `first` should cover. Over own stretches it notes the
+   * merge or the halving the size makes, which `report` of the same slice then judges, so each
+   * call is to be followed by the report of the slice it sized.
+   */
   sizeAt(first: number): number {
+    const own = this.owned(first);
+    if (own >= 0) {
+      const { reach, sum, inner } = this.strictReach(own, first);
+      const whole = Math.floor(reach / WORKGROUP_RAYS) * WORKGROUP_RAYS;
+      let size = Math.min(Math.max(WORKGROUP_RAYS, this.maxPixels), first + reach === this.pixels ? reach : Math.max(WORKGROUP_RAYS, whole));
+      // Less than a workgroup left over would be a dispatch of its own for nothing.
+      const rest = this.pixels - first;
+      if (rest - size < WORKGROUP_RAYS && rest <= this.maxPixels) size = rest;
+      this.merging = inner.length > 0 ? { first, end: first + size, sum, inner: inner.filter(at => at < first + size) } : null;
+      const lead = this.proofs[own];
+      if (this.halving?.mid !== first) {
+        this.halving = lead.from === first && !lead.rest && first + size < lead.to
+          ? { first, mid: first + size, end: lead.to, ms: Math.min(lead.ms, lead.prev ?? lead.ms), half: null }
+          : null;
+      }
+      return size;
+    }
+    this.merging = null;
     const aimed = this.aim(first);
     const grown = this.lastMs < TARGET_MS / 2 ? this.last * 2 : this.last;
     const size = this.clamped(Math.min(aimed.whole ? aimed.reach : Math.max(aimed.reach, grown), this.allowed(first)));
@@ -432,17 +597,48 @@ export class SliceCosts {
   /** Tells it that pixels `[first, first + count)` took `ms`. */
   report(first: number, count: number, ms: number): void {
     const end = first + count;
+    const merged = this.merging;
+    this.merging = null;
+    const halved = this.halving;
+    let again = false;
+    if (halved && halved.first === first && halved.mid === end) halved.half = ms;
+    else if (halved && halved.half !== null && halved.mid === first && halved.end === end) {
+      // Both halves together waited clearly less than the whole did, and than it did the pass
+      // before (so one spike does not count): this device may cost a long dispatch more than
+      // its parts, so the halves are cut again and not merged back while the cut holds.
+      again = halved.half + ms < halved.ms / MERGE_TOLERANCE;
+      if (again) this.cut(halved.mid);
+      this.halving = null;
+    } else this.halving = null;
+    if (merged && merged.first === first && merged.end === end) {
+      const retried = merged.inner.filter(at => this.cuts.has(at));
+      if (ms > merged.sum * MERGE_TOLERANCE) {
+        // A lapsed cut the merge tried again comes back for twice as long; otherwise only the
+        // boundary nearest the middle is cut, so a refusal jitter caused costs one boundary and a
+        // device that does cost long dispatches more is cut down a halving a pass.
+        if (retried.length > 0) for (const at of retried) this.cut(at);
+        else {
+          const middle = (first + end) / 2;
+          let nearest = merged.inner[0];
+          for (const at of merged.inner) if (Math.abs(at - middle) < Math.abs(nearest - middle)) nearest = at;
+          this.cut(nearest);
+        }
+      } else for (const at of retried) this.cuts.delete(at);
+    }
     // The newest proof of a stretch replaces what covered it; a stretch only partly covered keeps
     // its own proof for the rest.
     const kept: Proof[] = [];
+    let prev: number | undefined;
     for (const proof of this.proofs) {
+      if (proof.from === first && proof.to === end) prev = proof.ms;
       if (proof.to <= first || proof.from >= end) kept.push(proof);
       else {
-        if (proof.from < first) kept.push({ ...proof, to: first });
-        if (proof.to > end) kept.push({ ...proof, from: end });
+        if (proof.from < first) kept.push({ ...proof, to: first, rest: true });
+        if (proof.to > end) kept.push({ ...proof, from: end, rest: true });
       }
     }
-    kept.push({ from: first, to: end, rate: Math.max(ms, MIN_MEASURED_MS) / count, ms: Math.max(ms, MIN_MEASURED_MS) });
+    kept.push({ from: first, to: end, rate: Math.max(ms, MIN_MEASURED_MS) / count, ms: Math.max(ms, MIN_MEASURED_MS), own: true, prev });
+    if (again) for (const proof of kept) if (proof.from >= halved!.first && proof.to <= halved!.end) proof.again = true;
     this.proofs = kept.sort((a, b) => a.from - b.from);
 
     if (ms >= NOISE_FLOOR_MS) {
@@ -473,6 +669,7 @@ export class SliceCosts {
       this.lastMs = ms;
     }
     this.largest = Math.max(this.largest, count);
+    if (end === this.pixels) this.passes += 1;
   }
 }
 

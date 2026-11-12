@@ -8,7 +8,9 @@
 // src/ray-trace-rules.ts), and a still first runs a small pilot of itself (`pilot`) so that no
 // full-size slice enters a stretch nothing has measured, because the operating system resets a GPU that a long dispatch holds
 // up, and that comes to a lost device on phones and on desktops. Each submission waits for the one
-// before it, so the slice uniform is written once per submission. `SampleWalk`
+// before it, so the slice uniform is written once per submission. The first submission after the
+// pipeline is made is an empty dispatch, so the pipeline's first-use cost (tens to hundreds of ms
+// on a phone) is not charged to the first pixels traced. `SampleWalk`
 // (src/ray-trace-rules.ts) gives each pixel of each sample exactly once, since the accumulation
 // buffer can't refuse a repeat. Accumulation is allocated for the largest image asked for and the
 // preview's smaller images use the start of it, so a preview changing size costs no reallocation.
@@ -51,6 +53,8 @@ export interface SliceDone {
   count: number;
   /** A whole sample was finished by this slice. */
   finishedSample: boolean;
+  /** The whole wait the slice was aimed at (ms). */
+  aimMs: number;
 }
 
 export class GpuPathRenderer {
@@ -70,6 +74,8 @@ export class GpuPathRenderer {
   private parts: any = null;
   private accumulation: any = null;
   private staging: any = null;
+  /** The empty dispatch that takes the pipeline's first use has been run. */
+  private warmed = false;
   private stop: (reason: Error) => void = () => {};
   private readonly stopped: Promise<never>;
 
@@ -185,9 +191,19 @@ export class GpuPathRenderer {
   /** Traces the next slice and waits for the GPU; null when every sample is given. */
   async step(): Promise<SliceDone | null> {
     if (!this.walk || !this.costs) return null;
+    const device = this.context.device;
+    if (!this.warmed) {
+      // One workgroup told to trace no pixels: the shader returns at once and writes nothing.
+      device.queue.writeBuffer(this.sliceUniform, 0, new Uint32Array([0, 0, 0, 0]));
+      const warm = device.createCommandEncoder();
+      dispatchPath(warm, this.pipeline, this.groups, WORKGROUP_RAYS);
+      device.queue.submit([warm.finish()]);
+      await Promise.race([device.queue.onSubmittedWorkDone(), this.stopped]);
+      this.warmed = true;
+    }
+    const aimMs = this.costs.aimAt(this.walk.position);
     const slice = this.walk.next(this.costs.sizeAt(this.walk.position));
     if (!slice) return null;
-    const device = this.context.device;
     device.queue.writeBuffer(this.sliceUniform, 0, new Uint32Array([slice.first, slice.count, slice.sample, 0]));
     const encoder = device.createCommandEncoder();
     dispatchPath(encoder, this.pipeline, this.groups, slice.count);
@@ -196,7 +212,7 @@ export class GpuPathRenderer {
     await Promise.race([device.queue.onSubmittedWorkDone(), this.stopped]);
     const ms = performance.now() - before;
     this.costs.report(slice.first, slice.count, ms);
-    return { ms, count: slice.count, finishedSample: this.walk.atSampleStart };
+    return { ms, count: slice.count, finishedSample: this.walk.atSampleStart, aimMs };
   }
 
   /** The accumulation so far, a `vec4<f32>` per pixel of the current image. */

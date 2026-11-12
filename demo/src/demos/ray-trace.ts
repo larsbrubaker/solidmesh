@@ -673,6 +673,7 @@ export function init(container: HTMLElement): () => void {
       if (!slice) return;
       // The slice's own submission time, ending now.
       timed('slices', rendering, performance.now() - slice.ms, slice.count);
+      stillOf(rendering)?.sliced(slice.ms, slice.finishedSample, slice.aimMs);
       frameMs += slice.ms;
       framePixels += slice.count;
       if (!displayDue(performance.now(), lastGpuDisplay, lastGpuDisplayCost, renderer.done, rendering[16] === true, slice.finishedSample)) continue;

@@ -81,12 +81,34 @@ describe('timingsReport', () => {
       '  Shader build (pipeline creation): none in this still (the last took 4200.0 ms, before it began)',
       '  Pilot: 30.0 ms',
       '  GPU slices: 3, total wait 60.0 ms; median 40000 pixels, 20.0 ms; largest 60000 pixels, 30.0 ms',
+      '  GPU slices a pass: no whole pass yet',
       '  Read-backs: 2, total 12.0 ms, median 6.0 ms',
       '  Decodes in the worker: 2, total 20.0 ms, median 10.0 ms',
       '  View requests to the worker: 2, total 10.0 ms',
       '  Remainder of the wall time, not covered above: 68.0 ms',
       'Moving previews: 3 frames by the GPU; median 70.0 ms and slowest 100.0 ms from one frame shown to the next; median size 8800 pixels',
     ].join('\n'));
+  });
+
+  test('slices a pass and the whole wait a pass, by median over whole passes, and the aim in force', () => {
+    const still = new StillTimings(0, [], 400, 300);
+    still.drew('gpu', 3, 360000, 0, 0, 128, 1000);
+    // Three whole passes of 2, 3 and 4 slices (waits 200, 330 and 400 ms), then part of a fourth.
+    for (const [ms, ends] of [[100, false], [100, true], [110, false], [110, false], [110, true],
+      [100, false], [100, false], [100, false], [100, true], [90, false]] as const) still.sliced(ms, ends, 100);
+    still.sliced(5, false, 100);
+    expect(still.passSlices.median).toBe(3);
+    expect(still.passWaits.median).toBe(330);
+    const line = timingsReport(inputs({ still, now: 2000 })).split('\n').find(l => l.startsWith('  GPU slices a pass:'));
+    expect(line).toBe('  GPU slices a pass: median 3 over 3 passes, median whole wait 330.0 ms a pass; the latest slice was sized by earlier waits, merging stretches while they sum to at most 100.0 ms');
+  });
+
+  test('before a pass is whole the line says so, with the aim once a slice has run', () => {
+    const still = new StillTimings(0, [], 400, 300);
+    still.drew('gpu', 0, 0, 0, 0, 128, 1000);
+    still.sliced(30, false, 30);
+    const line = timingsReport(inputs({ still, now: 2000 })).split('\n').find(l => l.startsWith('  GPU slices a pass:'));
+    expect(line).toBe('  GPU slices a pass: no whole pass yet; the latest slice was aimed at 30.0 ms, as on a first pass');
   });
 
   test('an unfinished still on the CPU, no previews yet, CPU route lines', () => {

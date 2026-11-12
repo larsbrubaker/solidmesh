@@ -17,6 +17,7 @@
 
 import type { GpuFailure, Route } from './ray-trace-rules.ts';
 import { rendererName } from './ray-trace-rules.ts';
+import { TARGET_MS } from './gpu-bench-rules.ts';
 import { sameArgs } from './ray-trace-refine.ts';
 
 /** How many of the most recent values a median is taken over. */
@@ -112,6 +113,13 @@ export class StillTimings {
     reads: new StepTimes(), decodes: new StepTimes(), views: new StepTimes(),
   };
   readonly slicePixels = new Durations();
+  /** For each whole pass the GPU traced in this still, its slices and the sum of their waits (ms). */
+  readonly passSlices = new Durations();
+  readonly passWaits = new Durations();
+  /** The whole wait the latest slice was aimed at (ms); null before the first. */
+  aimMs: number | null = null;
+  private passCount = 0;
+  private passWait = 0;
 
   constructor(
     readonly startedAt: number, readonly args: readonly unknown[], readonly width: number, readonly height: number,
@@ -121,6 +129,22 @@ export class StillTimings {
   /** A GPU step from `startedAt` to `endedAt`; `pixels` for a slice. */
   record(kind: StepKind, startedAt: number, endedAt: number, pixels = 0): void {
     if (this.steps[kind].add(startedAt, endedAt, this.startedAt) && kind === 'slices') this.slicePixels.add(pixels);
+  }
+
+  /**
+   * A GPU slice of this still waited `ms`, sized to `aimMs` (`SliceCosts.aimAt`);
+   * `finishedSample` when it ended a pass. A pass counts once a slice ends it, with every slice
+   * this still was told of since the pass before ended.
+   */
+  sliced(ms: number, finishedSample: boolean, aimMs: number): void {
+    this.aimMs = aimMs;
+    this.passCount += 1;
+    this.passWait += ms;
+    if (!finishedSample) return;
+    this.passSlices.add(this.passCount);
+    this.passWaits.add(this.passWait);
+    this.passCount = 0;
+    this.passWait = 0;
   }
 
   /**
@@ -246,6 +270,19 @@ export function remainderLine(left: number): string {
   return `  Remainder of the wall time: none; the steps above add up to ${ms(-left)} more than the wall time, so some of them overlapped`;
 }
 
+/** Slices a whole pass took and its whole wait, by median, and the aim slices are sized to. */
+function passesText(still: StillTimings): string {
+  // `SliceCosts.aimAt` answers TARGET_MS where a slice is sized by band estimates (a stretch's
+  // first coverage) and SLICE_AIM_MS where it merges stretches already traced.
+  const aim = still.aimMs === null
+    ? ''
+    : still.aimMs === TARGET_MS
+      ? `; the latest slice was aimed at ${ms(still.aimMs)}, as on a first pass`
+      : `; the latest slice was sized by earlier waits, merging stretches while they sum to at most ${ms(still.aimMs)}`;
+  if (still.passSlices.count === 0) return `no whole pass yet${aim}`;
+  return `median ${int(still.passSlices.median)} over ${still.passSlices.count} passes, median whole wait ${ms(still.passWaits.median)} a pass${aim}`;
+}
+
 function gpuLines(still: StillTimings, wall: number, inputs: TimingsInputs): string[] {
   const t = still.steps;
   const covered = Object.values(t).reduce((sum, steps) => sum + steps.inside.total, 0);
@@ -259,6 +296,7 @@ function gpuLines(still: StillTimings, wall: number, inputs: TimingsInputs): str
     `  Shader build (pipeline creation): ${oncePerPart(t.shader, inputs.lastShaderMs)}`,
     `  Pilot: ${step(t.pilot)}`,
     `  GPU slices: ${slices}`,
+    `  GPU slices a pass: ${passesText(still)}`,
     `  Read-backs: ${step(t.reads)}`,
     `  Decodes in the worker: ${step(t.decodes)}`,
     `  View requests to the worker: ${step(t.views, false)}`,
