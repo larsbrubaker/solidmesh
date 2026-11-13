@@ -34,6 +34,11 @@
 //! **Glass resting on an opaque surface.** `glass_rest` says which vertex a hit there is and when
 //! a bounce goes straight across the contact to the next vertex, which the loop then takes
 //! without tracing. A scene with no glass resting on anything never asks.
+//!
+//! **A see-through part resting on an opaque surface.** `see_through_rest` says which of the two
+//! faces a traced hit there is met as, and where a line passing the part lands; a vertex reached
+//! across a contact is met as a traced hit would be, its part's presence decided first, so the
+//! line decides a see-through part across the contact exactly as it would at a traced face.
 
 use solidmesh_math::{IntersectionType, Ray, Vector3};
 
@@ -43,6 +48,7 @@ use super::pixel_random::PixelRandom;
 use super::render_scene::RenderScene;
 use super::render_work::RenderWork;
 use super::see_through::{continued_ray, AtHit, StraightLine};
+use super::see_through_rest::{met_first, on_rest_contact, onto_rest};
 use crate::ray_tracer::{LocalFrame, RayTracerError, ScatteringSurface, SurfacePoint};
 
 /// Which of the ways of reaching the sun a render uses. [`LightStrategy::Combined`] is the one to
@@ -294,6 +300,19 @@ pub(super) fn trace_path(
     work.camera_rays += 1;
     loop {
         let (part_index, point, seam, partner) = if let Some(next) = across.take() {
+            // The part across the contact is met as a traced hit on it would be; a fully there
+            // part asks nothing.
+            if scene.has_see_through_parts() {
+                match line.at_hit(scene, next.part, random) {
+                    AtHit::Stops => {}
+                    AtHit::Ended => break,
+                    AtHit::PassesThrough => {
+                        // `ray` starts where the line goes on, past both faces of the contact.
+                        work.pass_through_rays += 1;
+                        continue;
+                    }
+                }
+            }
             if scatters >= settings.max_bounces {
                 break;
             }
@@ -304,20 +323,33 @@ pub(super) fn trace_path(
                 add_to(&mut radiance, multiply(throughput, escaped));
                 break;
             };
+            // Where a see-through part rests on an opaque surface, which of the two faces the
+            // line meets first is the contact's to say, not the trace's; every other scene skips
+            // this and runs exactly the operations it always did.
+            let mut met = None;
+            // On either face of such a contact, whichever the trace returned.
+            let mut at_rest = false;
+            if !scene.see_through_rests().is_empty() {
+                let traced = hit.surface_point()?;
+                at_rest = on_rest_contact(scene, hit.part.index(), &traced);
+                met = met_first(scene, hit.part.index(), &traced, &ray)?;
+            }
+            let hit_part = met.as_ref().map_or(hit.part.index(), |(part, _)| *part);
             // Whether the part is there at all comes before the bounce limit: a path past its last
             // bounce still sees through what isn't there.
             let mut present = true;
             if scene.has_see_through_parts() {
-                match line.at_hit(scene, hit.part.index(), random) {
+                match line.at_hit(scene, hit_part, random) {
                     AtHit::Stops => {}
                     AtHit::Ended => break,
                     AtHit::PassesThrough => present = false,
                 }
             }
             // A seam between two glass parts is looked at only in a scene that has one, so every
-            // other scene runs exactly the operations it always did.
+            // other scene runs exactly the operations it always did, and never on a face of a
+            // see-through part's resting contact, so the tie outcome doesn't decide it.
             let mut seam = None;
-            if !scene.glass_contacts().is_empty() {
+            if !at_rest && !scene.glass_contacts().is_empty() {
                 match glass_seam(
                     scene,
                     &hit,
@@ -346,20 +378,32 @@ pub(super) fn trace_path(
                 }
             }
             if !present {
-                ray = continued_ray(&hit.surface_point()?, ray.direction_normal);
+                let point = match met {
+                    Some((_, point)) => point,
+                    None => hit.surface_point()?,
+                };
+                // A line leaving the part onto an opaque surface it rests on lands there.
+                if let Some(next) = onto_rest(scene, hit_part, &point, ray.direction_normal)? {
+                    across = Some(next);
+                    continue;
+                }
+                ray = continued_ray(&point, ray.direction_normal);
                 work.pass_through_rays += 1;
                 continue;
             }
             if scatters >= settings.max_bounces {
                 break;
             }
-            let point = hit.surface_point()?;
+            let point = match met {
+                Some((_, point)) => point,
+                None => hit.surface_point()?,
+            };
             if rests && seam.is_none() {
                 let (part, point, partner) =
-                    resting_vertex(scene, hit.part.index(), point, ray.direction_normal)?;
+                    resting_vertex(scene, hit_part, point, ray.direction_normal)?;
                 (part, point, seam, partner)
             } else {
-                (hit.part.index(), point, seam, None)
+                (hit_part, point, seam, None)
             }
         };
 
@@ -437,10 +481,11 @@ pub(super) fn trace_path(
 
         if let Some(partner) = partner {
             if let Some(next) = across_contact(scene, part_index, &point, partner, wi_world)? {
-                // The next vertex is at this same point; the ray only says which way the path
-                // arrives there.
+                // The next vertex is at this same point; the ray says which way the path arrives
+                // there, and starts where the line goes on should a see-through part across the
+                // contact not be there.
                 ray = Ray::with_limits(
-                    point.position,
+                    point.next_ray_origin(wi_world),
                     wi_world,
                     0.0,
                     f64::INFINITY,

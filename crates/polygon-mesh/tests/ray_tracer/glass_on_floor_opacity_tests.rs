@@ -1,12 +1,13 @@
 //! Glass resting on the floor with part opacity in the scene: the resting rule is decided per
-//! contact, by the two parts' own opacity, on both routes. A half-there part elsewhere in the scene
-//! leaves the glass's decisions as they were and no path reaches the ground below the floor; glass
-//! that is itself half there, or a floor that is, keeps the contact out of it (the path decides at
-//! whichever face a trace returns, its presence drawn by the line), to the bit; a glass box lifted
-//! a modelled 0.05 off a floor of half side 200 is a real gap on both routes, while over one of
-//! half side 40,000 the CPU takes it as resting (the contact tolerance follows the floor
-//! triangle's size, a documented limit); and the shader's loop carries the rule and its step
-//! across the contact, which nothing else would notice being removed.
+//! contact, on both routes. A half-there part elsewhere in the scene leaves the glass's decisions
+//! as they were and no path reaches the ground below the floor; glass that is itself half there
+//! and found there leaves through its bottom by its exit event with the floor across, as fully
+//! there glass does, while glass on a floor that is half there keeps the contact out of it (the
+//! path decides at the face a trace returns), to the bit; a glass box lifted a modelled 0.05 off a
+//! floor of half side 200 is a real gap on both routes, while over one of half side 40,000 the CPU
+//! takes it as resting (the contact tolerance follows the floor triangle's size, a documented
+//! limit); and the shader's loop carries the rule and its step across the contact, which nothing
+//! else would notice being removed.
 
 use solidmesh_math::{Matrix4X4, Ray, Vector3};
 use solidmesh_mesh::ray_tracer::flat_tree::PATH_WGSL;
@@ -119,13 +120,17 @@ fn a_half_there_part_elsewhere_leaves_glass_on_the_floor_resting() {
     );
 }
 
-/// What a half-there glass box on the floor, and a glass box on a half-there floor, render as:
-/// traced as any two faces, with no contact used. Pinned before the rule was decided per contact.
-const HALF_THERE_GLASS_ON_FLOOR_DIGEST: u64 = 0x6125_995c_abcc_e5a7;
+/// What a half-there glass box on the floor, and a glass box on a half-there floor, render as.
+/// The second was pinned before the rule was decided per contact and uses no contact. The first
+/// moved from 0.3.0's 0x6125_995c_abcc_e5a7 when lines through the glass came to meet its bottom
+/// first on both tie outcomes, found there to leave it by its exit event with the floor across,
+/// and found not there to land on the floor (`see_through_rest`, `glass_rest`): in 0.3.0 a line
+/// refracted out of the bottom was traced from below the floor and reached the ground under it.
+const HALF_THERE_GLASS_ON_FLOOR_DIGEST: u64 = 0x24d8_dc07_8ad6_1290;
 const GLASS_ON_HALF_THERE_FLOOR_DIGEST: u64 = 0x771d_004f_60e3_2798;
 
 #[test]
-fn half_there_glass_or_floor_is_traced_as_any_two_faces() {
+fn half_there_glass_rests_and_glass_on_a_half_there_floor_does_not() {
     let cases = [
         (
             "half-there glass",
@@ -148,23 +153,38 @@ fn half_there_glass_or_floor_is_traced_as_any_two_faces() {
     for ((name, _, digest), got) in cases.iter().zip(&digests) {
         assert_eq!(got, digest, "{name}: got {got:#018x}");
     }
-    for (name, opacities, _) in cases {
-        let scene = glass_floor_scene(0.0, false, &opacities, furnace());
-        for (at, ray) in bottom_rays().iter().enumerate() {
-            let vertex = scene.path_vertex_at(ray.clone()).unwrap().unwrap();
-            let mut traced = ray.clone();
-            let hit = scene.parts().trace(&mut traced).unwrap();
-            assert_eq!(
-                (vertex.part, vertex.face, vertex.across),
-                (
-                    hit.part.index(),
-                    hit.surface_point().unwrap().face_index,
-                    None
-                ),
-                "{name}: ray {at} was not decided at the face the trace returned"
-            );
-        }
+    // Half-there glass found there: its own exit event, the floor across, decided once.
+    let glass = glass_floor_scene(0.0, false, &[0.5, 1.0], furnace());
+    for (at, ray) in bottom_rays().iter().enumerate() {
+        let there = glass.line_vertex_at(ray.clone(), &[]).unwrap().unwrap();
+        assert_eq!(
+            (
+                there.vertex.part,
+                there.vertex.back_face,
+                there.vertex.across
+            ),
+            (0, true, Some(1)),
+            "half-there glass: ray {at} took {there:?}"
+        );
+        assert_eq!(there.decided, vec![0], "half-there glass: ray {at}");
     }
+    // Glass on a half-there floor: the face the trace returned, no contact.
+    let floor = glass_floor_scene(0.0, false, &[1.0, 0.5], furnace());
+    for (at, ray) in bottom_rays().iter().enumerate() {
+        let vertex = floor.path_vertex_at(ray.clone()).unwrap().unwrap();
+        let mut traced = ray.clone();
+        let hit = floor.parts().trace(&mut traced).unwrap();
+        assert_eq!(
+            (vertex.part, vertex.face, vertex.across),
+            (
+                hit.part.index(),
+                hit.surface_point().unwrap().face_index,
+                None
+            ),
+            "half-there floor: ray {at} was not decided at the face the trace returned"
+        );
+    }
+    // The GPU route's rule for glass at opacity 1 leaves half-there glass to the see-through rule.
     let gpu = gpu_pack_with(&one_box(0.0), &[], &[0.5], 200.0);
     for (at, ray) in bottom_rays().iter().enumerate() {
         assert_eq!(
@@ -300,12 +320,26 @@ fn the_shader_loop_decides_glass_resting_on_the_floor_and_steps_across() {
     ] {
         assert!(flat.contains(gate), "the path loop no longer has `{gate}`");
     }
-    // The presence gate is the loop's one use of the scene-wide see-through flag; a second one
-    // would gate some other step on part opacity anywhere in the scene.
+    // The scene-wide see-through flag only skips the steps for see-through parts in a scene that
+    // has none: the presence gate, the tie rule on the floor and the part across from the floor.
+    // Any other use would gate some other step on part opacity anywhere in the scene.
+    let gates = [
+        "if !floor_first && !resting && (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u {",
+        "if hit.triangle != NO_HIT && !resting && (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u {",
+        "resting = true; if (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u { meets = \
+         path_part_opacity(point.part) < 1.0f; resting = !meets; }",
+    ];
+    for gate in gates {
+        assert_eq!(
+            flat.matches(gate).count(),
+            1,
+            "the path loop no longer has `{gate}`"
+        );
+    }
     assert_eq!(
         body.matches("PATH_FLAG_SEE_THROUGH").count(),
-        1,
-        "the path loop reads the scene-wide see-through flag other than at the presence gate"
+        gates.len(),
+        "the path loop reads the scene-wide see-through flag other than at its three gates"
     );
     for consumed in [
         "if across == PATH_ACROSS_FLOOR { hit = rest_hit; floor_first = true; point = \

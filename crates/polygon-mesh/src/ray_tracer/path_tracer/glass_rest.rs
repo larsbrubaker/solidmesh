@@ -29,15 +29,26 @@
 //! face inside the footprint's rounding, is taken into the glass's surface the same way, so light
 //! never reaches the opaque surface under the glass without crossing the glass's surface.
 //!
-//! **Only between fully there parts.** A contact is used only where the glass part and the part
-//! under it are both at opacity 1, whatever any other part's opacity: a part elsewhere in the
-//! scene being partly there changes nothing about glass resting on the floor. This is exact
-//! because at opacity 1 the line's decision of whether a part is there (`see_through`) is a stop
-//! that draws no random number and counts no crossing, so taking the contact's vertex in place
-//! of a traced hit's decision, or the vertex across without one, leaves every random draw and the
-//! line's record where they were. Where either part is partly there the contact is left out and
-//! the path decides at whichever face a trace returns, the part's presence drawn by the line, as
-//! any two faces are.
+//! **Glass there on this crossing, on a fully there surface.** A contact is used only where the
+//! part under the glass is at opacity 1, and the glass is there on this crossing: the hit is
+//! asked about only after the line found its part there, which at opacity 1 is a stop that draws
+//! no random number and counts no crossing, and below 1 is the line's one draw at that face
+//! (`see_through_rest` makes the glass's face the one met first on either tie outcome). So
+//! see-through glass found there leaves through its resting face by the same exit event and step
+//! across as fully there glass. A hit on the opaque face is taken as the glass's face only for
+//! glass at opacity 1, whose presence needs no draw. A part elsewhere in the scene being partly
+//! there changes nothing, and a surface less than fully there under glass is no contact: the path
+//! decides at whichever face a trace returns, as any two faces.
+//!
+//! **Random draws.** Glass at opacity 1 on a surface at opacity 1 passes the gate exactly where it
+//! always did, so every draw stays where it was. For see-through glass on a fully there surface
+//! the presence is drawn once per crossing at the glass's face as before; found there, its exit
+//! event draws as that vertex always drew, and what moves is the path after it: the bounce out of
+//! the face now goes across to the surface at the same point, untraced, where before it was traced
+//! from past the surface into whatever lay below, and the surface's vertex then draws as any
+//! vertex. Light the surface sends back up meets the glass across the contact, its presence drawn
+//! there (one draw, where glass a modelled gap above would draw it), and found there enters it by
+//! Fresnel from outside.
 //!
 //! **A seam comes first.** At a traced hit the path loop decides a glass-on-glass seam
 //! (`glass_seam`) first and takes the rest only where there is none; the GPU loop (`path.wgsl`)
@@ -104,8 +115,8 @@ impl RenderScene {
 /// The face across a contact from a vertex.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct Partner {
-    part: usize,
-    face: i32,
+    pub(super) part: usize,
+    pub(super) face: i32,
 }
 
 /// A vertex reached across a contact, without a trace.
@@ -134,11 +145,18 @@ pub(super) fn resting_vertex(
     let Some(contact) = scene.glass_rests().covering(part, face, point.position) else {
         return Ok((part, point, None));
     };
-    if !fully_there(scene, part) || !fully_there(scene, contact.part) {
+    let here_glass = scene.surface(part).is_some_and(is_glass);
+    // The hit part was found there by the line before this is asked; the part across, never asked
+    // here, has to be there for everyone (see the header).
+    let (glass_there, under_there) = if here_glass {
+        (true, fully_there(scene, contact.part))
+    } else {
+        (fully_there(scene, contact.part), fully_there(scene, part))
+    };
+    if !glass_there || !under_there {
         return Ok((part, point, None));
     }
     let toward_normal = direction.dot(point.geometric_normal);
-    let here_glass = scene.surface(part).is_some_and(is_glass);
     let partner_face = face_number(contact.face)?;
     if here_glass && toward_normal > 0.0 {
         return Ok((

@@ -1,6 +1,8 @@
 // The shadow-catcher floor and the coverage channels in WGSL, the part of `PATH_WGSL` that runs when
 // `PathView.flags` carries `PATH_FLAG_COMPOSITE`. It follows `path.wgsl` (`path_shader.rs`
-// concatenates them) and shares its records; `gpu_view.rs` packs the floor into `PathView`.
+// concatenates them, with `see_through.wgsl` between) and shares its records; `gpu_view.rs` packs
+// the floor into `PathView`. It also holds what every path uses about the floor: the floor's own
+// intersection and the rules for a part resting on it.
 //
 // What a composited sample produces is a coverage (how much of the line the parts cover: 1 on an
 // opaque part, 0 on nothing, in between where the line goes through see-through parts) and the
@@ -32,6 +34,15 @@
 // the floor right under it (`path_floor_point_under`) with no ray traced; light the floor sends
 // back up from there meets that glass face again. `path.wgsl`'s loop carries the step across, the
 // way the CPU's `glass_rest` does for glass on any opaque face.
+//
+// **A see-through part resting on the floor** (`path_see_through_on_floor`, mirrored by
+// `see_through_on_floor_f32`) has its face and the floor met each from its own side first,
+// whichever is nearer in `f32`, so the part's presence is decided at its face on either outcome;
+// a line passing the part out through that face lands on the floor right under it with no ray
+// traced, and light the floor sends back up meets the part there, its presence decided as at a
+// traced face. The CPU's `see_through_rest` does the same for a see-through part on any opaque
+// part of its scene; here a see-through part resting on an opaque part of the tree is traced as
+// any two faces are.
 //
 // **An orthographic eye slides** in front of the parts (`gpu_scene.rs`) and that can put the floor
 // behind the ray's start: all rays of an orthographic camera are the same lines either way, so the
@@ -128,6 +139,32 @@ fn path_rests_on_floor(point: PathPoint) -> bool {
     return abs(point.position.z - path_view.floor_plane.z) <= tolerance;
 }
 
+// Whether `point`, on a face of a part less than fully there, lies on the floor.
+fn path_see_through_on_floor(point: PathPoint) -> bool {
+    return path_part_opacity(point.part) < 1.0f && path_rests_on_floor(point);
+}
+
+// Whether the path loop meets the floor first at a traced hit at `over` along `direction`, the
+// floor `floor_t` along the ray and nearer in `f32` when `floor_first`: a see-through part's face
+// on the floor and the floor are each met from their own side first, a line leaving the part
+// meeting the face and any other line the floor (`see_through_floor_first_f32` in Rust).
+fn path_see_through_floor_first(over: PathPoint, direction: vec3<f32>, floor_t: f32,
+    floor_first: bool) -> bool {
+    if !path_see_through_on_floor(over) {
+        return floor_first;
+    }
+    let leaving = dot(direction, over.geometric) > 0.0f;
+    return !leaving && (floor_first || floor_t >= 0.0f);
+}
+
+// Whether a line that found the part at `point` there, along `direction`, leaves see-through
+// glass through its face on the floor: the glass's exit event, with the floor across
+// (`there_glass_leaves_onto_floor_f32` in Rust).
+fn path_there_glass_leaves_onto_floor(point: PathPoint, direction: vec3<f32>) -> bool {
+    return dot(direction, point.geometric) > 0.0f && path_see_through_on_floor(point)
+        && has_glass(path_part_surface(point.part));
+}
+
 fn path_floor_surface() -> Surface {
     let base = path_view.floor_base;
     let rest = path_view.floor_rest;
@@ -155,36 +192,77 @@ fn path_catcher_distance(ray: Ray) -> f32 {
 
 // ---- Coverage along a line, deterministic.
 
-// How much of `origin_ray` the parts cover (`RenderScene::coverage_along`): a part counted once
-// however many of its surfaces the line crosses, and its limit `t_max` applying to the first
-// stretch only, since a continuing line starts anew past the surface it went through.
+// How much of `origin_ray` the parts cover (`RenderScene::coverage_along`, mirrored by
+// `coverage_along_f32`, whose module header states the rule and its limits): a part counted once
+// however many of its surfaces the line crosses, and its limit `t_max` holding for the whole line,
+// so a camera line ended at the floor counts nothing below it. A stretch past a surface is traced
+// to its next face wherever that lies, `left` short of the end. Once a face lies more than its
+// surface offset past the end, or a stretch starts past it, the walk goes on to the line's last
+// face, flipping each part it had not passed before the end in or out of the list kept after the
+// passed parts in `line_passed` (`line_flip_past`); the line's end lies inside each part left
+// there, crossed an odd number of times past the end, and each counts as a part met before the
+// end does. Only a stretch past a see-through part can reach past `left`, so both tests sit behind
+// the flag.
 fn path_coverage_along(origin_ray: Ray) -> f32 {
     line_restart();
     var ray = origin_ray;
     let direction = origin_ray.direction;
+    let bounded = origin_ray.t_max < PATH_FAR;
+    let end = origin_ray.origin + direction * origin_ray.t_max;
+    let see_through = (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u;
+    var left = origin_ray.t_max;
     var uncovered = 1.0f;
+    var past = false;
+    var odd = 0u;
     loop {
         let hit = trace_closest(ray);
         if hit.triangle == NO_HIT {
-            return 1.0f - uncovered;
+            break;
         }
         let point = path_surface_point(hit);
-        let opacity = path_part_opacity(point.part);
+        past = past || (see_through && hit.t > left + point.ray_offset);
+        if past {
+            if line_crossings >= MAX_CROSSINGS_PER_LINE {
+                return 1.0f;
+            }
+            line_crossings += 1u;
+            if !line_has_passed(point.part) {
+                odd = line_flip_past(point.part, odd);
+            }
+        } else {
+            let opacity = path_part_opacity(point.part);
+            if opacity >= 1.0f {
+                return 1.0f;
+            }
+            if line_crossings >= MAX_CROSSINGS_PER_LINE {
+                return 1.0f;
+            }
+            line_crossings += 1u;
+            if !line_has_passed(point.part) {
+                line_passed[line_passed_count] = point.part;
+                line_passed_count += 1u;
+                uncovered *= 1.0f - opacity;
+            }
+        }
+        ray = path_ray_from(path_next_origin(point, direction), direction);
+        if bounded && !past {
+            left = dot(end - ray.origin, direction);
+            if left <= 0.0f {
+                if !see_through {
+                    return 1.0f - uncovered;
+                }
+                past = true;
+            }
+        }
+    }
+    for (var index = 0u; index < odd; index += 1u) {
+        let opacity = path_part_opacity(line_passed[line_passed_count + index]);
         if opacity >= 1.0f {
             return 1.0f;
         }
-        if line_crossings >= MAX_CROSSINGS_PER_LINE {
-            return 1.0f;
-        }
-        line_crossings += 1u;
-        if !line_has_passed(point.part) {
-            line_passed[line_passed_count] = point.part;
-            line_passed_count += 1u;
-            uncovered *= 1.0f - opacity;
-        }
-        ray = path_ray_from(path_next_origin(point, direction), direction);
+        uncovered *= 1.0f - opacity;
     }
-    return 1.0f;
+    return 1.0f - uncovered;
 }
 
 // ---- The light that reaches a floor point.

@@ -18,6 +18,7 @@
 //!   built.
 //! - `glass_seam`: what a path does at a glass face another glass part's face lies on.
 //! - `glass_rest`: what a path does where a glass face rests on an opaque part's face.
+//! - `see_through_rest`: what a line does where a see-through part rests on an opaque part's face.
 //! - `camera`: [`RenderCamera`], perspective or orthographic, from eye, target and up.
 //! - `pixel_random`: [`PixelRandom`], each pixel's random stream, and the jitter inside the pixel.
 //! - `integrator`: the path loop; [`PathTraceSettings`] and [`LightStrategy`] are its knobs.
@@ -94,6 +95,7 @@ mod render_surface;
 mod render_work;
 mod renderer;
 mod see_through;
+mod see_through_rest;
 
 pub use camera::RenderCamera;
 pub use display::{display_byte, linear_to_srgb, tone_map};
@@ -109,3 +111,4 @@ pub use render_surface::{AccumulatedPixel, RenderSurface, RenderTile, TileRect};
 pub use render_work::{RenderWork, BOUNCE_HISTOGRAM_BINS};
 pub use renderer::PathTracer;
 pub use see_through::MAX_CROSSINGS_PER_LINE;
+pub use see_through_rest::LineVertexAt;

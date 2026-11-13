@@ -17,10 +17,16 @@
 //! any depth, or a broken face whose continuing ray starts where it was. A line past the cap ends
 //! there, as a path past the bounce limit does: a path's estimate loses what it still carries and
 //! a shadow ray counts as blocked. Opaque surfaces don't count against the cap; a pass straight
-//! through a seam between two glass parts (`glass_seam`) counts as one crossing.
+//! through a seam between two glass parts (`glass_seam`) counts as one crossing. A coverage line
+//! walked on past its end counts every surface it crosses there, opaque ones too
+//! (`RenderScene::coverage_along`).
 //!
 //! Decisions are drawn only for a partly-there part, and never for one at opacity 0 or 1, so a
 //! scene of opaque and invisible parts draws no random number to decide.
+//!
+//! **Where the part rests on an opaque surface** the line meets the two faces in a fixed order,
+//! and a line passing the part out through its face onto the surface lands there with no trace:
+//! `see_through_rest`.
 
 use solidmesh_math::{IntersectionType, Ray, Vector3};
 
@@ -74,6 +80,11 @@ impl StraightLine {
         }
     }
 
+    /// Whether this line has gone through `part`.
+    pub(super) fn has_passed(&self, part: usize) -> bool {
+        self.passed.contains(&part)
+    }
+
     /// Records that this line starts inside `part`, which the line before found not there, so
     /// the part's far surface is passed as the rest of it was.
     pub(super) fn starts_past(&mut self, part: usize) {
@@ -97,6 +108,19 @@ impl StraightLine {
         part_index: usize,
         random: &mut PixelRandom,
     ) -> AtHit {
+        // A draw in [0, 1) is below `opacity` with probability `opacity`.
+        self.at_hit_with(scene, part_index, |opacity| random.next_unit() < opacity)
+    }
+
+    /// [`StraightLine::at_hit`] with whether the part is found there decided by `there`, given
+    /// the part's opacity, and asked only where a path draws: a first crossing of a part whose
+    /// opacity is above 0 and below 1.
+    pub(super) fn at_hit_with(
+        &mut self,
+        scene: &RenderScene,
+        part_index: usize,
+        there: impl FnOnce(f64) -> bool,
+    ) -> AtHit {
         let opacity = scene.part_opacity(part_index).unwrap_or(1.0);
         if opacity >= 1.0 {
             return AtHit::Stops;
@@ -105,9 +129,8 @@ impl StraightLine {
             Crossing::Capped => AtHit::Ended,
             Crossing::AlreadyPassed => AtHit::PassesThrough,
             Crossing::First => {
-                // A draw in [0, 1) is below `opacity` with probability `opacity`. At opacity 0
-                // nothing is drawn: the part isn't there for anyone.
-                if opacity > 0.0 && random.next_unit() < opacity {
+                // At opacity 0 nothing is asked: the part isn't there for anyone.
+                if opacity > 0.0 && there(opacity) {
                     self.passed.pop();
                     AtHit::Stops
                 } else {

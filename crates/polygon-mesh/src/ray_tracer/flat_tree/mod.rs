@@ -9,14 +9,17 @@
 //! ([`TRACE_WGSL`], from `trace.wgsl`) with the ray and hit records it adds. `scatter_shader` is
 //! the WGSL port of the scattering model ([`SCATTER_WGSL`]) and the entry point that checks it
 //! against the CPU model, reading [`SurfaceRecord`] and [`albedo_table_bytes`]. `gpu_scene` and
-//! `gpu_pack` pack a whole render scene ([`GpuRenderScene`], [`GpuSceneBuilder`]) and `gpu_view` the
-//! camera, lights, settings and floor ([`GpuView`]), with `gpu_contacts` the glass faces lying on
-//! glass ([`GpuGlassContacts`]), for the path loop [`PATH_WGSL`] (`path_shader`,
-//! `path.wgsl`, `catcher.wgsl`), which renders one sample per pixel of a slice into accumulation
-//! buffers on the GPU: the same estimator as the CPU's `path_tracer`, and the shadow-catcher floor
-//! and coverage channels a compositing caller needs. `floor_rest` is the path loop's test for glass
-//! resting on that floor, in Rust ([`rests_on_floor_f32`], and [`leaves_onto_floor_f32`] for the
-//! hits the loop takes it at), so a caller can check the GPU rule without a graphics card.
+//! `gpu_pack` pack a whole render scene ([`GpuRenderScene`], [`GpuSceneBuilder`]) and `gpu_view`
+//! the camera, lights, settings and floor ([`GpuView`]), with `gpu_contacts` the glass faces lying
+//! on glass ([`GpuGlassContacts`]), for the path loop [`PATH_WGSL`] (`path_shader`, `path.wgsl`,
+//! `see_through.wgsl`, `catcher.wgsl`), which renders one sample per pixel of a slice into
+//! accumulation buffers on the GPU: the same estimator as the CPU's `path_tracer`, and the
+//! shadow-catcher floor and coverage channels a compositing caller needs. `floor_rest` is the path
+//! loop's test for glass resting on that floor, in Rust ([`rests_on_floor_f32`], and
+//! [`leaves_onto_floor_f32`] for the hits the loop takes it at), and for a see-through part resting
+//! on it ([`see_through_on_floor_f32`]), so a caller can check the GPU rule without a graphics
+//! card; `coverage_line` is the catcher's coverage along a camera line in Rust
+//! ([`coverage_along_f32`]), to hold against the CPU's line for line.
 //!
 //! This module is the one place geometry narrows from `f64` to `f32`, because WGSL has no `f64`
 //! and a GPU read of `f32` is the point of the buffers. Everything upstream stays `f64` in a
@@ -102,6 +105,7 @@
 //! traversal does not re-check them.
 
 mod build;
+mod coverage_line;
 mod floor_rest;
 mod gpu_contacts;
 mod gpu_pack;
@@ -119,8 +123,12 @@ pub use super::scattering::{
     albedo_table_bytes, SurfaceRecord, ALBEDO_ENTRY_COUNT, ALBEDO_ENTRY_STRIDE, SURFACE_HAS_GLASS,
     SURFACE_INDEX_MATCHED, SURFACE_RECORD_STRIDE, SURFACE_SMOOTH,
 };
+pub use coverage_line::{
+    catcher_distance_f32, coverage_along_f32, MAX_CROSSINGS_PER_LINE_F32, PATH_FAR_F32,
+};
 pub use floor_rest::{
-    floor_offset_f32, leaves_onto_floor_f32, rests_on_floor_f32, FLOOR_OFFSET_STEPS,
+    floor_offset_f32, leaves_onto_floor_f32, rests_on_floor_f32, see_through_floor_first_f32,
+    see_through_on_floor_f32, there_glass_leaves_onto_floor_f32, FLOOR_OFFSET_STEPS,
     FLOOR_REST_ANTI_PARALLEL, FLOOR_REST_ROUNDING_STEPS,
 };
 pub use gpu_contacts::{

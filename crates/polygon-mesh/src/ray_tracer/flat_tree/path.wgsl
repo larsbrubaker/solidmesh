@@ -1,6 +1,7 @@
 // The path loop in WGSL: one sample per pixel of a pixel range, added into an RGBA accumulation
 // buffer, the same estimator `path_tracer/integrator.rs` computes on the CPU. It follows
-// `trace.wgsl` and `scatter.wgsl` (`PATH_WGSL` is them, this, `catcher.wgsl` and `seam.wgsl`);
+// `trace.wgsl` and `scatter.wgsl` (`PATH_WGSL` is them, this, `see_through.wgsl`, `catcher.wgsl`
+// and `seam.wgsl`);
 // `gpu_scene.rs` packs the buffers and pins these records. Bindings:
 //
 //   group 0: 0 the tree's nodes, 1 its triangles (`trace.wgsl`)
@@ -53,7 +54,9 @@
 // past both faces, one interface, or the line's end; glass resting on the floor instead takes its
 // own face first and a bounce out of it, or back up off the floor under it, goes across the
 // contact with no trace: `catcher.wgsl`, the CPU's `glass_rest.rs`; glass resting on an opaque
-// part of the tree is traced as any two faces are), then the bounce limit, then the sun, then
+// part of the tree is traced as any two faces are; a see-through part resting on the floor is met
+// from each face's own side first and a line passing it out onto the floor lands there, the
+// CPU's `see_through_rest.rs`), then the bounce limit, then the sun, then
 // the sampled bounce, the leak rejections, roulette and the next ray, and every value the CPU takes as a `max`, `min` or density guard is guarded the
 // same way (see `path_power_heuristic` for the one guard WGSL needs beyond it). The loop is a
 // `loop` with bounded iterations: each ends by escape, a stop, the bounce limit, or the per-line
@@ -211,8 +214,9 @@ fn path_part_opacity(part: u32) -> f32 {
     return bitcast<f32>(parts[part * PATH_PART_WORDS + 9u]);
 }
 
-// ---- The sample's random stream and the parts one straight line has gone through. Private, not
-// passed around, because `surface_sample` and the shadow ray both need them in the same order.
+// ---- The sample's random stream (and the parts one straight line has gone through, in
+// `see_through.wgsl`). Private, not passed around, because `surface_sample` and the shadow ray both
+// need them in the same order.
 
 var<private> path_rng_state: u32;
 var<private> path_rng_increment: u32;
@@ -258,49 +262,6 @@ fn path_next_unit3() -> vec3<f32> {
     let b = path_next_unit();
     let c = path_next_unit();
     return vec3<f32>(a, b, c);
-}
-
-// One straight line's crossings (`see_through.rs`'s `StraightLine`). A path and the shadow rays
-// from its vertices never use this at the same time: a shadow ray runs between the verdict that
-// ended the last straight line and the restart for the next.
-var<private> line_passed: array<u32, MAX_CROSSINGS_PER_LINE>;
-var<private> line_passed_count: u32;
-var<private> line_crossings: u32;
-
-fn line_restart() {
-    line_passed_count = 0u;
-    line_crossings = 0u;
-}
-
-fn line_has_passed(part: u32) -> bool {
-    for (var index = 0u; index < line_passed_count; index += 1u) {
-        if line_passed[index] == part {
-            return true;
-        }
-    }
-    return false;
-}
-
-// `StraightLine::at_hit`: whether the part is there, deciding once per part along the line.
-fn line_at_hit(part: u32) -> u32 {
-    let opacity = path_part_opacity(part);
-    if opacity >= 1.0f {
-        return LINE_STOPS;
-    }
-    if line_crossings >= MAX_CROSSINGS_PER_LINE {
-        return LINE_ENDED;
-    }
-    line_crossings += 1u;
-    if line_has_passed(part) {
-        return LINE_PASSES;
-    }
-    line_passed[line_passed_count] = part;
-    line_passed_count += 1u;
-    if opacity > 0.0f && path_next_unit() < opacity {
-        line_passed_count -= 1u;
-        return LINE_STOPS;
-    }
-    return LINE_PASSES;
 }
 
 // ---- A point on a surface (`surface_point.rs`, `placed_part.rs`).
@@ -575,7 +536,9 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
     var scatters = 0u;
     line_restart();
     // Glass resting on the floor (`catcher.wgsl`'s `path_rests_on_floor`): the vertex a bounce
-    // across the contact reaches next without a trace, and the glass face's hit.
+    // across the contact reaches next without a trace, and the glass face's hit. Every step for
+    // a see-through part on the floor sits behind the scene's see-through flag, so a scene with
+    // none runs the operations it ran before those steps, and the flag's tests.
     var across = PATH_ACROSS_NONE;
     var rest_hit: Hit;
 
@@ -586,6 +549,8 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
         // This vertex is glass resting on the floor or the floor under it; a bounce out of its
         // face goes straight to the other.
         var resting = false;
+        // This vertex is a see-through part across the contact from the floor, decided first.
+        var meets = false;
         if across == PATH_ACROSS_FLOOR {
             hit = rest_hit;
             floor_first = true;
@@ -596,6 +561,10 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
             floor_first = false;
             point = path_surface_point(rest_hit);
             resting = true;
+            if (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u {
+                meets = path_part_opacity(point.part) < 1.0f;
+                resting = !meets;
+            }
         } else {
             hit = trace_closest(ray);
             let floor_t = path_floor_distance(ray);
@@ -610,9 +579,10 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
                 point = path_surface_point(hit);
             }
             // A ray inside glass meets the glass's own face before the floor it rests on, whichever
-            // of the two is nearer in `f32` (`leaves_onto_floor_f32` in Rust). Only for glass at
-            // opacity 1, as on the CPU, whatever other parts' opacity: there the line's decision
-            // is a stop that draws nothing, so skipping it moves no random number. The rest is
+            // of the two is nearer in `f32` (`leaves_onto_floor_f32` in Rust). Here for glass at
+            // opacity 1, whatever other parts' opacity: there the line's decision is a stop that
+            // draws nothing, so skipping it moves no random number; see-through glass is taken
+            // once its presence is drawn, below. The rest is
             // taken before the seam, where the CPU decides the seam first; the two differ only at
             // a glass face on the floor's plane covered by another glass part's face there (glass
             // reaching up to the floor from below, glass on top): here the rest, there the seam.
@@ -627,6 +597,19 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
                     rest_hit = hit;
                 }
             }
+            // A see-through part's face on the floor and the floor are each met from their own
+            // side first, whichever is nearer in `f32` (`catcher.wgsl`).
+            if hit.triangle != NO_HIT && !resting
+                && (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u {
+                let over = path_surface_point(hit);
+                let taken = path_see_through_floor_first(over, ray.direction, floor_t, floor_first);
+                if taken && !floor_first {
+                    point = path_floor_point(ray, floor_t);
+                } else if !taken && floor_first {
+                    point = over;
+                }
+                floor_first = taken;
+            }
         }
         across = PATH_ACROSS_NONE;
         // Whether the part is there at all comes before the bounce limit: a path past its last
@@ -638,6 +621,13 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
                 break;
             }
             present = verdict != LINE_PASSES;
+            // See-through glass found there, leaving through its face on the floor: its exit
+            // event, the floor across, as for glass at opacity 1.
+            if present && path_there_glass_leaves_onto_floor(point, ray.direction) {
+                resting = true;
+                rest_hit = hit;
+            }
+            resting = resting || meets;
         }
         // A seam between two glass parts is looked at only in a scene that has one
         // (`seam.wgsl`), so every other scene runs exactly the operations it always did.
@@ -656,6 +646,13 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
             }
         }
         if !present {
+            // Leaving the part onto the floor it rests on: the floor under it is next, untraced.
+            if dot(ray.direction, point.geometric) > 0.0f && path_see_through_on_floor(point) {
+                ray = path_ray_from(point.position, ray.direction);
+                rest_hit = hit;
+                across = PATH_ACROSS_FLOOR;
+                continue;
+            }
             ray = path_ray_from(path_next_origin(point, ray.direction), ray.direction);
             continue;
         }

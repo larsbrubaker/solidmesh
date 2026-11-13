@@ -91,6 +91,14 @@ mod scattering_energy_tests;
 mod scattering_support;
 #[path = "ray_tracer/scattering_tests.rs"]
 mod scattering_tests;
+#[path = "ray_tracer/see_through_coverage_end_tests.rs"]
+mod see_through_coverage_end_tests;
+#[path = "ray_tracer/see_through_coverage_tests.rs"]
+mod see_through_coverage_tests;
+#[path = "ray_tracer/see_through_glass_on_floor_tests.rs"]
+mod see_through_glass_on_floor_tests;
+#[path = "ray_tracer/see_through_on_floor_tests.rs"]
+mod see_through_on_floor_tests;
 #[path = "ray_tracer/surface_builder_tests.rs"]
 mod surface_builder_tests;
 #[path = "ray_tracer/surface_hit_continuation_tests.rs"]

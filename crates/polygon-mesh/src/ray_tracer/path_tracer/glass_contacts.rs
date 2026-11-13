@@ -3,7 +3,10 @@
 //! glass parts lying on it, and answers at a hit whether the point is covered by one of them.
 //! The same search, run between each glass part and each part that is not glass
 //! ([`GlassContacts::find_both`] builds both tables), gives a second table of where glass rests on
-//! an opaque surface, a floor most of all (`glass_rest` says what a path does there).
+//! an opaque surface, a floor most of all (`glass_rest` says what a path does there). A third,
+//! built when a caller sets part opacities ([`GlassContacts::find_see_through_rests`]), pairs each
+//! part less than fully there with each fully there part that is not glass: where a see-through
+//! part rests on an opaque surface (`see_through_rest`).
 //!
 //! **What counts as a contact.** Two triangles of different glass parts are in contact when
 //! their normals point opposite ways (cosine below `-ANTI_PARALLEL`), every corner of each lies
@@ -259,6 +262,31 @@ impl GlassContacts {
             GlassContacts::search(parts, (&glass, &opaque), pairs, &mut built)
         };
         (contacts, rests)
+    }
+
+    /// Where faces of parts that are less than fully there (`opacities` below 1) lie on faces of
+    /// fully there parts that are not glass, by the same rule and search (`see_through_rest` says
+    /// what a path does there). Each entry of a see-through part's face is an opaque face and each
+    /// entry of an opaque face a see-through one. Empty when `opacities` is empty or no such pair
+    /// touches.
+    pub(crate) fn find_see_through_rests(
+        parts: &PlacedParts,
+        surfaces: &[ScatteringSurface],
+        opacities: &[f64],
+    ) -> GlassContacts {
+        let count = parts.parts().len();
+        let opacity_at = |at: usize| opacities.get(at).copied().unwrap_or(1.0);
+        let see_through: Vec<usize> = (0..count).filter(|&at| opacity_at(at) < 1.0).collect();
+        let under: Vec<usize> = (0..count)
+            .filter(|&at| opacity_at(at) >= 1.0 && !surfaces.get(at).is_some_and(is_glass))
+            .collect();
+        if see_through.is_empty() || under.is_empty() {
+            return GlassContacts::default();
+        }
+        let mut built: Vec<Option<Vec<WorldTriangle>>> = (0..count).map(|_| None).collect();
+        let pairs = (0..see_through.len())
+            .flat_map(|first| (0..under.len()).map(move |second| (first, second)));
+        GlassContacts::search(parts, (&see_through, &under), pairs, &mut built)
     }
 
     /// The contacts between parts `firsts[i]` and `seconds[j]` for each pair `(i, j)` of `pairs`

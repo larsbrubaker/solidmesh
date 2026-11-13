@@ -29,6 +29,16 @@
 //! only at a hit that is both a glass face resting on the floor's plane and covered there by
 //! another glass part's face, a glass part reaching up to the floor from below with glass on top:
 //! there the GPU takes the rest and the CPU the seam.
+//!
+//! **A see-through part resting on the floor** ([`see_through_on_floor_f32`], the shader's
+//! `path_see_through_on_floor`): a face of a part less than fully there that rests on the floor by
+//! the same rule. The loop meets that face and the floor each from its own side first, and a line
+//! that found the part not there and leaves through the face lands on the floor right under it,
+//! as the CPU's `see_through_rest` does for a see-through part on any opaque face
+//! ([`see_through_floor_first_f32`] is which of the two the loop meets first). A line that
+//! found see-through glass there and leaves through that face takes the glass's exit event with
+//! the floor across ([`there_glass_leaves_onto_floor_f32`]), as glass at opacity 1 does; the
+//! presence was drawn once, at that face, and the analytic floor is always there.
 
 use super::gpu_scene::{FaceRecord, PartRecord};
 use crate::ray_tracer::flat_tree::SURFACE_HAS_GLASS;
@@ -73,6 +83,41 @@ pub fn rests_on_floor_f32(
     (position[2] - floor_plane[2]).abs() <= tolerance
 }
 
+/// Whether a hit at `position` on `face` of `part` is a see-through part resting on the floor
+/// `floor_plane`: the part less than fully there and the face on the floor, tested in that order
+/// as `path_see_through_on_floor` tests them.
+pub fn see_through_on_floor_f32(
+    position: [f32; 3],
+    face: &FaceRecord,
+    part: &PartRecord,
+    floor_plane: [f32; 4],
+) -> bool {
+    part.opacity < 1.0 && rests_on_floor_f32(position, face.geometric, face.ray_offset, floor_plane)
+}
+
+/// Whether the path loop meets the floor first at a traced hit at `position` on `face` of `part`
+/// along `direction`, the floor `floor_t` along the ray (negative where it misses) and nearer in
+/// `f32` when `floor_first`: on a see-through part's face on the floor `floor_plane`, a line
+/// leaving the part meets the face first and any other line the floor; elsewhere the nearer one.
+/// The shader's `path_see_through_floor_first`, in its order.
+pub fn see_through_floor_first_f32(
+    direction: [f32; 3],
+    position: [f32; 3],
+    face: &FaceRecord,
+    part: &PartRecord,
+    floor_plane: [f32; 4],
+    (floor_t, floor_first): (f32, bool),
+) -> bool {
+    if !see_through_on_floor_f32(position, face, part, floor_plane) {
+        return floor_first;
+    }
+    let leaving = direction[0] * face.geometric[0]
+        + direction[1] * face.geometric[1]
+        + direction[2] * face.geometric[2]
+        > 0.0;
+    !leaving && (floor_first || floor_t >= 0.0)
+}
+
 /// Whether the path loop takes a hit at `position` on `face` of `part`, reached along
 /// `direction`, as glass leaving onto the floor `floor_plane`: the ray leaves through the face,
 /// the part is fully there, the face rests on the floor and the part is glass, tested in that
@@ -91,5 +136,26 @@ pub fn leaves_onto_floor_f32(
     leaving
         && part.opacity >= 1.0
         && rests_on_floor_f32(position, face.geometric, face.ray_offset, floor_plane)
+        && (part.surface.flags & SURFACE_HAS_GLASS) != 0
+}
+
+/// Whether the path loop takes a hit at `position` on `face` of `part`, reached along
+/// `direction` by a line that found the part there, as see-through glass leaving onto the floor
+/// `floor_plane`: its exit event with the floor across, as glass at opacity 1 has it. The ray
+/// leaves through the face, the part is less than fully there, the face rests on the floor and
+/// the part is glass, tested in that order as `path_there_glass_leaves_onto_floor` tests them.
+pub fn there_glass_leaves_onto_floor_f32(
+    direction: [f32; 3],
+    position: [f32; 3],
+    face: &FaceRecord,
+    part: &PartRecord,
+    floor_plane: [f32; 4],
+) -> bool {
+    let leaving = direction[0] * face.geometric[0]
+        + direction[1] * face.geometric[1]
+        + direction[2] * face.geometric[2]
+        > 0.0;
+    leaving
+        && see_through_on_floor_f32(position, face, part, floor_plane)
         && (part.surface.flags & SURFACE_HAS_GLASS) != 0
 }
