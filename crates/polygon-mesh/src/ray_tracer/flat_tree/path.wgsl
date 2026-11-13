@@ -1,8 +1,9 @@
 // The path loop in WGSL: one sample per pixel of a pixel range, added into an RGBA accumulation
 // buffer, the same estimator `path_tracer/integrator.rs` computes on the CPU. It follows
-// `trace.wgsl` and `scatter.wgsl` (`PATH_WGSL` is them, this, `see_through.wgsl`, `catcher.wgsl`
-// and `seam.wgsl`);
-// `gpu_scene.rs` packs the buffers and pins these records. Bindings:
+// `trace.wgsl` and `scatter.wgsl` (`PATH_WGSL` is them, this, `see_through.wgsl` (the parts one
+// straight line has gone through), `sun.wgsl` (the sky, the sun and the shadow ray toward it),
+// `catcher.wgsl` and `seam.wgsl`); `gpu_scene.rs` packs the buffers and pins these records.
+// Bindings:
 //
 //   group 0: 0 the tree's nodes, 1 its triangles (`trace.wgsl`)
 //   group 1: 0 the albedo table (`scatter.wgsl`)
@@ -12,12 +13,15 @@
 //            pixel_count, sample_index }`), 5 `channels` (`read_write`, the coverage channels),
 //            6 `path_srgb` (uniform, fixed at pack)
 //
-// Entry point `path_trace_main`, workgroup size 64: invocation `id.x` handles pixel
-// `first_pixel + id.x` (row order from the bottom left, `y * width + x`), so a caller time-slices by
-// choosing the range and dispatching `ceil(count / 64)` workgroups. Limits used: 7 storage buffers
-// in the compute stage, 3 uniform buffers, 3 bind groups, 64 invocations per workgroup, about
-// 2.1 KB of private memory and 1.2 KB of function memory per invocation. WebGPU's defaults are 8, 12, 4,
-// 256 and the 8 KB its compilers must accept, so nothing here asks for more than a phone gives.
+// Entry point `path_trace_main`, workgroup size 64: invocation `id.x` handles pixel `first_pixel +
+// id.x` (row order from the bottom left, `y * width + x`), so a caller time-slices by choosing the
+// range and dispatching `ceil(count / 64)` workgroups; an invocation past the range runs the
+// range's last pixel and writes nothing (the entry point says why). Limits used: 7 storage buffers
+// in the compute stage, 3 uniform buffers, 3 bind groups, 64 invocations per workgroup, about 2.1
+// KB of private memory and 1.2 KB of function memory per invocation (those two measured when the
+// loop was first written, in 0.2.4, and not measured again since `PathVertex` and the sun's records
+// grew in 0.4.0). WebGPU's defaults are 8, 12, 4, 256 and the 8 KB its compilers must accept, so
+// nothing here asks for more than a phone gives.
 //
 // The color and the coverage channels are two buffers and not one 48-byte record: a browser's
 // default 128 MB storage binding holds a 1440p image's 16-byte colors and 32-byte channels apart,
@@ -61,16 +65,18 @@
 // same way (see `path_power_heuristic` for the one guard WGSL needs beyond it). The loop is a
 // `loop` with bounded iterations: each ends by escape, a stop, the bounce limit, or the per-line
 // crossing cap of `MAX_CROSSINGS_PER_LINE`, which a straight pass through a seam counts against,
-// and each shadow ray likewise.
+// and each shadow ray likewise, its line restarted at most `PATH_MAX_GLASS_CROSSINGS` times by
+// the glass it crosses (`sun.wgsl`).
 //
 // **Each function that traverses the tree is called from one place.** A GPU driver copies a
 // function into every place it is called, so every call site of `path_radiance`,
-// `path_coverage_along` or `path_sun_reachable` adds a whole copy of the traversal to the compiled
+// `path_coverage_along` or `path_sun_line` adds a whole copy of the traversal to the compiled
 // program. A phone's driver (Arm Mali) refuses the program once the traversal is copied a few times
 // over, and a desktop driver takes seconds longer to build it. So the plain and composited samples
 // share the one `path_radiance` call in `path_trace_main`, a composited sample asks its lines'
 // coverage in one loop (`catcher.wgsl`), and the shadow ray to the sun runs one `trace` whether it
-// stops at the first hit or walks see-through parts. `path_shader_inlining_tests` counts them.
+// stops at the first hit, walks see-through parts or walks straight through glass.
+// `path_shader_inlining_tests` counts them.
 
 // ---- Constants, equal to their Rust counterparts in `gpu_scene.rs` and `see_through.rs`.
 
@@ -101,6 +107,8 @@ const PATH_FLAG_GRADIENT: u32 = 8u;
 const PATH_FLAG_COMPOSITE: u32 = 16u;
 const PATH_FLAG_FLOOR: u32 = 32u;
 const PATH_FLAG_GLASS_CONTACTS: u32 = 64u;
+// The sun goes straight through this scene's glass (`sun.wgsl`, `SunThroughGlass::Straight`).
+const PATH_FLAG_SUN_STRAIGHT: u32 = 128u;
 
 // What a line does at a hit.
 const LINE_STOPS: u32 = 0u;
@@ -352,152 +360,6 @@ fn path_to_world(frame: PathFrame, local: vec3<f32>) -> vec3<f32> {
     return frame.tangent * local.x + frame.bitangent * local.y + frame.normal * local.z;
 }
 
-// ---- Lights (`lights.rs`).
-
-fn path_smoothstep(t_in: f32) -> f32 {
-    let t = clamp(t_in, 0.0f, 1.0f);
-    return t * t * (3.0f - 2.0f * t);
-}
-
-fn path_environment(direction: vec3<f32>) -> vec3<f32> {
-    if (path_view.flags & PATH_FLAG_GRADIENT) == 0u {
-        return path_view.env_zenith.xyz;
-    }
-    if direction.z >= 0.0f {
-        return mix(path_view.env_horizon.xyz, path_view.env_zenith.xyz, path_smoothstep(direction.z));
-    }
-    return mix(path_view.env_horizon.xyz, path_view.env_ground.xyz, path_smoothstep(-direction.z));
-}
-
-fn path_has_sun() -> bool {
-    return (path_view.flags & PATH_FLAG_SUN) != 0u;
-}
-
-fn path_sun_contains(direction: vec3<f32>) -> bool {
-    let chord = direction - path_view.sun_direction.xyz;
-    return dot(chord, chord) <= path_view.sun_bitangent.w;
-}
-
-fn path_sun_sample(u: vec2<f32>) -> vec3<f32> {
-    let versine = path_view.sun_direction.w;
-    let height = u.x * versine;
-    let sin_angle = sqrt(max(height * (2.0f - height), 0.0f));
-    let turn = cos_sin_of_turn(u.y);
-    return path_view.sun_tangent.xyz * (sin_angle * turn.x)
-        + path_view.sun_bitangent.xyz * (sin_angle * turn.y)
-        + path_view.sun_direction.xyz * (1.0f - height);
-}
-
-// `pdf^2 / (pdf^2 + other^2)` from their ratio, as `integrator.rs` does. WGSL may assume no float
-// is infinite, so a ratio whose square would overflow f32 is answered directly: its weight is at
-// most 1e-36, nothing an f32 sum can keep.
-fn path_power_heuristic(pdf: f32, other: f32) -> f32 {
-    if pdf > 0.0f {
-        let ratio = other / pdf;
-        if ratio >= 1e18f {
-            return 0.0f;
-        }
-        return 1.0f / (1.0f + ratio * ratio);
-    }
-    return 0.0f;
-}
-
-// The sun radiance a ray that left the scene sees, `escaped_radiance`.
-fn path_escaped(direction: vec3<f32>, sampled: bool, pdf: f32) -> vec3<f32> {
-    var radiance = path_environment(direction);
-    if path_has_sun() && path_sun_contains(direction) {
-        var weight = 1.0f;
-        if sampled && path_view.strategy != PATH_STRATEGY_SURFACE_ONLY {
-            if path_view.strategy == PATH_STRATEGY_NEXT_EVENT_ONLY {
-                weight = 0.0f;
-            } else {
-                weight = path_power_heuristic(pdf, path_view.sun_tangent.w);
-            }
-        }
-        radiance += path_view.sun_radiance.xyz * weight;
-    }
-    return radiance;
-}
-
-// ---- One bounce's pieces (`integrator.rs`).
-
-fn path_largest_channel(c: vec3<f32>) -> f32 {
-    return max(max(c.x, c.y), c.z);
-}
-
-fn path_sides_agree(geometric: vec3<f32>, wo_world: vec3<f32>, wi_world: vec3<f32>, wo_z: f32, wi_z: f32) -> bool {
-    let local_same_side = wo_z * wi_z > 0.0f;
-    let geometric_same_side = dot(wo_world, geometric) * dot(wi_world, geometric) > 0.0f;
-    return local_same_side == geometric_same_side;
-}
-
-// Whether the shadow ray reaches the sun. With no see-through parts any hit blocks it, so the one
-// traversal below stops at the first hit; with them it walks the line hit by hit. One `trace` call
-// serves both (see `path.wgsl`'s header on call sites).
-fn path_sun_reachable(origin_ray: Ray) -> bool {
-    if path_floor_distance(origin_ray) >= 0.0f {
-        return false;
-    }
-    let see_through = (path_view.flags & PATH_FLAG_SEE_THROUGH) != 0u;
-    if see_through {
-        line_restart();
-    }
-    var ray = origin_ray;
-    let direction = origin_ray.direction;
-    loop {
-        let hit = trace(ray, !see_through);
-        if hit.triangle == NO_HIT {
-            return true;
-        }
-        if !see_through {
-            return false;
-        }
-        let point = path_surface_point(hit);
-        let verdict = line_at_hit(point.part);
-        if verdict != LINE_PASSES {
-            return false;
-        }
-        ray = path_ray_from(path_next_origin(point, direction), direction);
-    }
-    return false;
-}
-
-struct PathVertex {
-    point: PathPoint,
-    surface: Surface,
-    frame: PathFrame,
-    toward_camera: vec3<f32>,
-    wo: vec3<f32>,
-}
-
-// The sun's contribution at this vertex, or zero.
-fn path_sample_sun(vertex: PathVertex) -> vec3<f32> {
-    if !path_has_sun() || path_view.strategy == PATH_STRATEGY_SURFACE_ONLY {
-        return vec3<f32>(0.0f);
-    }
-    let u0 = path_next_unit();
-    let u1 = path_next_unit();
-    let wi_world = path_sun_sample(vec2<f32>(u0, u1));
-    let wi = path_to_local(vertex.frame, wi_world);
-    if !path_sides_agree(vertex.point.geometric, vertex.toward_camera, wi_world, vertex.wo.z, wi.z) {
-        return vec3<f32>(0.0f);
-    }
-    let bsdf = surface_evaluate(vertex.surface, vertex.wo, wi);
-    if path_largest_channel(bsdf) <= 0.0f {
-        return vec3<f32>(0.0f);
-    }
-    let shadow = path_ray_from(path_next_origin(vertex.point, wi_world), wi_world);
-    if !path_sun_reachable(shadow) {
-        return vec3<f32>(0.0f);
-    }
-    let pdf_light = path_view.sun_tangent.w;
-    var weight = 1.0f;
-    if path_view.strategy == PATH_STRATEGY_COMBINED {
-        weight = path_power_heuristic(pdf_light, surface_pdf(vertex.surface, vertex.wo, wi));
-    }
-    return bsdf * path_view.sun_radiance.xyz * (abs(wi.z) / pdf_light * weight);
-}
-
 // The surface of `part` at a face of `color`: base times the decoded face color, for a colored
 // face (the CPU's white-face shortcut gives the same answer, since white decodes to 1).
 fn path_surface_at(part: u32, color: u32) -> Surface {
@@ -533,6 +395,11 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
     var eta_scale = 1.0f;
     var arrival_sampled = false;
     var arrival_pdf = 0.0f;
+    // The rest of the record of how the path got to its ray (`SunPath` in `glass_chain.rs`), and
+    // whether that ray travels inside glass; written once per event, after its shadow ray, and
+    // only with `PATH_FLAG_SUN_STRAIGHT` (`sun.wgsl`). The camera is in air.
+    let straight = (path_view.flags & PATH_FLAG_SUN_STRAIGHT) != 0u;
+    var sun_path = PathSunState(1.0f, false, false, false);
     var scatters = 0u;
     line_restart();
     // Glass resting on the floor (`catcher.wgsl`'s `path_rests_on_floor`): the vertex a bounce
@@ -570,7 +437,8 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
             let floor_t = path_floor_distance(ray);
             floor_first = floor_t >= 0.0f && (hit.triangle == NO_HIT || floor_t < hit.t);
             if hit.triangle == NO_HIT && !floor_first {
-                radiance += throughput * path_escaped(ray.direction, arrival_sampled, arrival_pdf);
+                radiance += throughput * path_escaped(ray.direction, arrival_sampled, arrival_pdf,
+                    sun_path.last_glass, sun_path.chain);
                 break;
             }
             if floor_first {
@@ -681,8 +549,10 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
         }
         let wo = path_to_local(frame, toward_camera);
 
-        let vertex = PathVertex(point, surface, frame, toward_camera, wo);
-        radiance += throughput * path_sample_sun(vertex);
+        let vertex = PathVertex(point, surface, frame, toward_camera, wo, seam, resting, floor_first,
+            rest_hit);
+        let shadow = path_sample_sun(vertex, sun_path.chain, sun_path.in_glass);
+        radiance += throughput * shadow.light;
 
         let drawn = surface_sample(surface, wo, path_next_unit3());
         if !drawn.found {
@@ -707,6 +577,14 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
         scatters += 1u;
         arrival_sampled = !drawn.is_specular;
         arrival_pdf = drawn.pdf;
+        if straight {
+            // A sample is weighed on escape by its own lobe's part of the density.
+            if !drawn.is_specular {
+                arrival_pdf = select(drawn.other_pdf, drawn.glass_pdf, drawn.from_glass);
+            }
+            sun_path = path_sun_after(sun_path, drawn, at_seam, has_glass(surface),
+                shadow.receiver_pdf);
+        }
 
         if path_view.roulette_after != PATH_ROULETTE_OFF && scatters >= path_view.roulette_after {
             let survival = min(path_largest_channel(throughput) * eta_scale, PATH_MAX_SURVIVAL);
@@ -788,10 +666,17 @@ fn path_camera_ray(x: f32, y: f32) -> Ray {
 
 @compute @workgroup_size(64)
 fn path_trace_main(@builtin(global_invocation_id) id: vec3<u32>) {
-    if id.x >= path_slice.pixel_count {
-        return;
-    }
-    let index = path_slice.first_pixel + id.x;
+    // An invocation past the range traces the range's last pixel again and writes nothing, rather
+    // than returning here. In Chrome on Direct3D 12 (an NVIDIA RTX 5070) a dispatch whose last
+    // workgroup returned here in 63 of its 64 invocations hung the device, and wrapping the body
+    // in an `if` on the range hung it just the same; with every invocation running to the end it
+    // does not. So nothing skips the trace: only the writes below test `live`. The cost is small
+    // and bounded: at most 63 invocations, all in the dispatch's last workgroup, retrace the
+    // range's last pixel alongside the invocation that owns it, the same path in step, and drop
+    // what they found. An empty range (`pixel_count` 0, never dispatched) would wrap the `- 1u`,
+    // which leaves `min` at `id.x` and every write skipped.
+    let live = id.x < path_slice.pixel_count;
+    let index = path_slice.first_pixel + min(id.x, path_slice.pixel_count - 1u);
     let x = index % path_view.width;
     let y = index / path_view.width;
     let sample_index = path_slice.sample_index;
@@ -816,7 +701,9 @@ fn path_trace_main(@builtin(global_invocation_id) id: vec3<u32>) {
         value = path_radiance(ray);
     }
     if composite {
-        path_composite_finish(index, plan, value, ray);
+        if live {
+            path_composite_finish(index, plan, value, ray);
+        }
         return;
     }
 
@@ -824,7 +711,7 @@ fn path_trace_main(@builtin(global_invocation_id) id: vec3<u32>) {
     let sum = prior.xyz + value;
     let usable = path_finite3(value) && value.x >= 0.0f && value.y >= 0.0f && value.z >= 0.0f
         && path_finite3(sum);
-    if usable {
+    if live && usable {
         accumulation[index] = vec4<f32>(sum, prior.w + 1.0f);
     }
 }

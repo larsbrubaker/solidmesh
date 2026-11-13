@@ -39,20 +39,33 @@
 //! faces a traced hit there is met as, and where a line passing the part lands; a vertex reached
 //! across a contact is met as a traced hit would be, its part's presence decided first, so the
 //! line decides a see-through part across the contact exactly as it would at a traced face.
+//!
+//! **The sun through glass.** [`PathTraceSettings::sun_through_glass`] says how sunlight reaches
+//! what lies behind glass. `glass_chain` keeps the record of how the path got to its ray, which
+//! weighs the sun's disc on escape and a vertex's glass share of the sun, and says why each light
+//! path is counted once; `sun_toward` shares a vertex's BSDF toward a sun direction between the
+//! other lobes and the glass lobe; `sun_through_glass` walks a vertex's one line toward the sun.
 
 use solidmesh_math::{IntersectionType, Ray, Vector3};
 
-use super::glass_rest::{across_contact, resting_vertex, Across};
-use super::glass_seam::{glass_seam, Seam};
+use super::glass_chain::{power_heuristic, Event, SunPath, SunThroughGlass};
+use super::glass_rest::{across_contact, resting_vertex, Across, Partner};
+use super::glass_seam::{glass_seam, Interface, Seam};
+use super::lights::Sun;
 use super::pixel_random::PixelRandom;
 use super::render_scene::RenderScene;
 use super::render_work::RenderWork;
 use super::see_through::{continued_ray, AtHit, StraightLine};
 use super::see_through_rest::{met_first, on_rest_contact, onto_rest};
+use super::sun_through_glass::{exact_reach, sun_reach, sun_reach_inside, ShadowVertex};
+use super::sun_toward::{bent_sun, in_glass_after, Toward};
 use crate::ray_tracer::{LocalFrame, RayTracerError, ScatteringSurface, SurfacePoint};
 
 /// Which of the ways of reaching the sun a render uses. [`LightStrategy::Combined`] is the one to
-/// render with; the other two exist so the three can be checked against each other.
+/// render with; the other two exist so the three can be checked against each other. Under
+/// [`SunThroughGlass::Straight`] the split between the straight line through glass and exact
+/// transport through it is the model's, which no strategy changes (`glass_chain`): a shadow ray
+/// whose line crosses glass counts its share under all three.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LightStrategy {
     /// Next-event estimation and surface sampling, each weighted by the other's density.
@@ -61,7 +74,8 @@ pub enum LightStrategy {
     /// Only next-event estimation reaches the sun (a delta lobe still reaches it by sampling, the
     /// only way it can).
     NextEventOnly,
-    /// Only surface sampling reaches the sun.
+    /// Only surface sampling reaches the sun along a line that crosses nothing; under
+    /// [`SunThroughGlass::Straight`] a shadow ray still brings its share through glass.
     SurfaceSamplingOnly,
 }
 
@@ -77,6 +91,9 @@ pub struct PathTraceSettings {
     pub russian_roulette_after: Option<u32>,
     /// How paths reach the sun.
     pub strategy: LightStrategy,
+    /// How sunlight reaches what lies behind glass. The GPU route reads it too
+    /// (`SCENE_FLAG_SUN_STRAIGHT`): its shader mirrors both settings in `f32`.
+    pub sun_through_glass: SunThroughGlass,
 }
 
 impl Default for PathTraceSettings {
@@ -86,6 +103,7 @@ impl Default for PathTraceSettings {
             max_bounces: 32,
             russian_roulette_after: Some(3),
             strategy: LightStrategy::Combined,
+            sun_through_glass: SunThroughGlass::Straight,
         }
     }
 }
@@ -93,28 +111,6 @@ impl Default for PathTraceSettings {
 /// The highest chance a path survives roulette, so that even a fully white path is eventually
 /// ended rather than running to the bounce limit.
 const MAX_SURVIVAL: f64 = 0.95;
-
-/// How the path got to the current ray.
-#[derive(Clone, Copy)]
-enum Arrival {
-    /// A camera ray, or a delta lobe's: nothing else could have found this direction, so a light
-    /// here counts in full.
-    Unweighted,
-    /// A surface sample with density `pdf`, weighted against the sun's density.
-    Sampled { pdf: f64 },
-}
-
-/// The power heuristic of `pdf` against `other`: `pdf^2 / (pdf^2 + other^2)`, from their ratio
-/// so that large densities can't overflow the squares into an infinite division. In [0, 1] for
-/// any input the scattering model and a `Sun` can produce; zero against zero weighs nothing.
-fn power_heuristic(pdf: f64, other: f64) -> f64 {
-    if pdf > 0.0 {
-        let ratio = other / pdf;
-        1.0 / (1.0 + ratio * ratio)
-    } else {
-        0.0
-    }
-}
 
 fn multiply(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] * b[0], a[1] * b[1], a[2] * b[2]]
@@ -139,19 +135,13 @@ fn escaped_radiance(
     scene: &RenderScene,
     settings: &PathTraceSettings,
     direction: Vector3,
-    arrival: Arrival,
+    path: SunPath,
 ) -> [f64; 3] {
     let lights = scene.lights();
     let mut radiance = lights.environment.radiance(direction);
     if let Some(sun) = &lights.sun {
         if sun.contains(direction) {
-            let weight = match (settings.strategy, arrival) {
-                (_, Arrival::Unweighted) | (LightStrategy::SurfaceSamplingOnly, _) => 1.0,
-                (LightStrategy::NextEventOnly, Arrival::Sampled { .. }) => 0.0,
-                (LightStrategy::Combined, Arrival::Sampled { pdf }) => {
-                    power_heuristic(pdf, sun.pdf())
-                }
-            };
+            let weight = path.sun_weight(settings.strategy, sun.pdf());
             add_to(&mut radiance, scaled(sun.radiance(), weight));
         }
     }
@@ -177,58 +167,58 @@ fn sides_agree(
 /// What one vertex needs to shade the sun: its surface and frame, and the direction back along
 /// the path.
 struct Vertex<'a> {
+    part: usize,
     point: &'a SurfacePoint,
+    seam: Option<&'a Interface>,
+    partner: Option<Partner>,
     surface: &'a ScatteringSurface,
     frame: &'a LocalFrame,
     toward_camera: Vector3,
     wo: Vector3,
     is_first_hit: bool,
+    /// Whether the ray that arrived here travels inside glass.
+    in_glass: bool,
+    /// How the path got here.
+    path: SunPath,
 }
 
-/// Whether the sun is seen along `shadow_ray`. With no see-through part in the scene the first
-/// hit found answers it. With one, the line is followed nearest hit first, deciding at each part
-/// as a path would, so the chance the sun is seen is the product of what each part leaves.
-fn sun_reachable(
-    scene: &RenderScene,
-    mut shadow_ray: Ray,
-    random: &mut PixelRandom,
-    work: &mut RenderWork,
-) -> Result<bool, RayTracerError> {
-    if !scene.has_see_through_parts() {
-        shadow_ray.is_shadow_ray = true;
-        return Ok(scene.parts().trace(&mut shadow_ray).is_none());
-    }
-    let direction = shadow_ray.direction_normal;
-    let mut line = StraightLine::default();
-    loop {
-        let Some(hit) = scene.parts().trace(&mut shadow_ray) else {
-            return Ok(true);
-        };
-        match line.at_hit(scene, hit.part.index(), random) {
-            AtHit::Stops | AtHit::Ended => return Ok(false),
-            AtHit::PassesThrough => {
-                shadow_ray = continued_ray(&hit.surface_point()?, direction);
-                work.pass_through_rays += 1;
-            }
+impl Vertex<'_> {
+    /// Where a line toward the sun leaves this vertex from.
+    fn shadow(&self) -> ShadowVertex<'_> {
+        ShadowVertex {
+            part: self.part,
+            point: self.point,
+            seam: self.seam,
+            partner: self.partner,
         }
     }
 }
 
 /// Traces a shadow ray toward the sun and returns what it brings, when the strategy uses
-/// next-event estimation. The surface is evaluated first so a direction it passes nothing along
-/// costs no ray.
+/// next-event estimation or, with `straight`, the line crosses glass (`glass_chain`). The
+/// surface is evaluated first so a direction it passes nothing along costs no ray. `straight` is
+/// whether the render mixes the straight line in for this scene's glass. `receiver_sun_pdf`, the
+/// sun's density the vertex's own `w_b` is taken against, is set where it is not the sun's own
+/// (a receiver inside glass).
 fn sample_sun(
     scene: &RenderScene,
     settings: &PathTraceSettings,
+    straight: bool,
     vertex: &Vertex<'_>,
+    receiver_sun_pdf: &mut f64,
     random: &mut PixelRandom,
     work: &mut RenderWork,
 ) -> Result<Option<[f64; 3]>, RayTracerError> {
     let Some(sun) = scene.lights().sun.as_ref() else {
         return Ok(None);
     };
-    if settings.strategy == LightStrategy::SurfaceSamplingOnly {
+    // Under Straight surface sampling still walks the line, whose share through glass is the
+    // model's, not the strategy's.
+    if settings.strategy == LightStrategy::SurfaceSamplingOnly && !straight {
         return Ok(None);
+    }
+    if straight && vertex.in_glass && vertex.seam.is_none() && vertex.partner.is_none() {
+        return sample_sun_inside(scene, settings, sun, vertex, receiver_sun_pdf, random, work);
     }
     let wi_world = sun.sample([random.next_unit(), random.next_unit()]);
     let wi = vertex.frame.to_local(wi_world);
@@ -245,31 +235,141 @@ fn sample_sun(
     if largest_channel(bsdf) <= 0.0 {
         return Ok(None);
     }
-    let shadow_ray = Ray::with_limits(
-        vertex.point.next_ray_origin(wi_world),
-        wi_world,
-        0.0,
-        f64::INFINITY,
-        IntersectionType::Both,
+    let pdf_light = sun.pdf();
+    if !straight {
+        if vertex.is_first_hit {
+            work.first_hit_shadow_rays += 1;
+        } else {
+            work.later_shadow_rays += 1;
+        }
+        if !exact_reach(scene, vertex.point, wi_world, random, work)? {
+            return Ok(None);
+        }
+        let weight = if settings.strategy == LightStrategy::Combined {
+            power_heuristic(pdf_light, vertex.surface.pdf(vertex.wo, wi))
+        } else {
+            1.0
+        };
+        return Ok(Some(scaled(
+            multiply(bsdf, sun.radiance()),
+            wi.z.abs() / pdf_light * weight,
+        )));
+    }
+    let toward = Toward::of(
+        settings.strategy,
+        vertex.wo.z,
+        wi.z,
+        bsdf,
+        pdf_light,
+        sun.radiance(),
+        lobe_densities(vertex, wi),
+        vertex.path.chain(),
     );
+    let Some(mode) = toward.mode() else {
+        return Ok(None);
+    };
+    count_shadow_ray(vertex, work);
+    let Some(reach) = sun_reach(scene, &vertex.shadow(), wi_world, mode, random, work)? else {
+        return Ok(None);
+    };
+    Ok(toward.light(settings.strategy, &reach))
+}
+
+/// `sample_sun` under Straight for a receiver whose arriving ray travels inside glass
+/// (`glass_chain`, "A receiver inside glass"): the line is walked first, and where its first
+/// face of glass is crossed from inside, the receiver reads the sun along the direction that
+/// refracts out through that face along the line, over the disc as seen inside, `n^2 cos_in /
+/// cos_out` times denser and `n^2` times brighter. Returns what the line brings, and sets
+/// `receiver_sun_pdf` to the sun's density the receiver's own `w_b` is taken against.
+fn sample_sun_inside(
+    scene: &RenderScene,
+    settings: &PathTraceSettings,
+    sun: &Sun,
+    vertex: &Vertex<'_>,
+    receiver_sun_pdf: &mut f64,
+    random: &mut PixelRandom,
+    work: &mut RenderWork,
+) -> Result<Option<[f64; 3]>, RayTracerError> {
+    let line = sun.sample([random.next_unit(), random.next_unit()]);
+    let line_local = vertex.frame.to_local(line);
+    if !sides_agree(
+        vertex.point,
+        vertex.toward_camera,
+        line,
+        vertex.wo.z,
+        line_local.z,
+    ) {
+        return Ok(None);
+    }
+    // A surface that passes nothing along the line (only delta lobes, or the line below an
+    // opaque surface) costs no walk, as on any other vertex; a lobe narrow enough to miss the
+    // line but catch the bent direction still has a tail along the line.
+    if largest_channel(vertex.surface.evaluate(vertex.wo, line_local)) <= 0.0 {
+        return Ok(None);
+    }
+    count_shadow_ray(vertex, work);
+    let (reach, first_face) = sun_reach_inside(scene, &vertex.shadow(), line, random, work)?;
+    let bent = first_face.and_then(|face| face.bent(line).map(|bent| (face, bent)));
+    let (wi_world, pdf_light, radiance) = match bent {
+        Some((face, bent)) => {
+            let (pdf, radiance) = bent_sun(
+                sun.pdf(),
+                sun.radiance(),
+                face.ior,
+                bent.cos_in,
+                bent.cos_out,
+            );
+            (bent.inside, pdf, radiance)
+        }
+        None => (line, sun.pdf(), sun.radiance()),
+    };
+    *receiver_sun_pdf = pdf_light;
+    let Some(reach) = reach else {
+        return Ok(None);
+    };
+    let wi = vertex.frame.to_local(wi_world);
+    if bent.is_some()
+        && !sides_agree(
+            vertex.point,
+            vertex.toward_camera,
+            wi_world,
+            vertex.wo.z,
+            wi.z,
+        )
+    {
+        return Ok(None);
+    }
+    let bsdf = vertex.surface.evaluate(vertex.wo, wi);
+    if largest_channel(bsdf) <= 0.0 {
+        return Ok(None);
+    }
+    let toward = Toward::of(
+        settings.strategy,
+        vertex.wo.z,
+        wi.z,
+        bsdf,
+        pdf_light,
+        radiance,
+        lobe_densities(vertex, wi),
+        vertex.path.chain(),
+    );
+    Ok(toward.light(settings.strategy, &reach))
+}
+
+/// The vertex's surface's density toward local `wi` in its two cleaned parts, other lobes and
+/// glass lobe (`glass_chain`).
+fn lobe_densities(vertex: &Vertex<'_>, wi: Vector3) -> (f64, f64) {
+    let densities = vertex.surface.lobe_densities(vertex.wo, wi);
+    (densities.other, densities.glass)
+}
+
+/// Counts one shadow ray of `vertex`.
+fn count_shadow_ray(vertex: &Vertex<'_>, work: &mut RenderWork) {
     if vertex.is_first_hit {
         work.first_hit_shadow_rays += 1;
     } else {
         work.later_shadow_rays += 1;
     }
-    if !sun_reachable(scene, shadow_ray, random, work)? {
-        return Ok(None);
-    }
-    let pdf_light = sun.pdf();
-    let weight = if settings.strategy == LightStrategy::Combined {
-        power_heuristic(pdf_light, vertex.surface.pdf(vertex.wo, wi))
-    } else {
-        1.0
-    };
-    Ok(Some(scaled(
-        multiply(bsdf, sun.radiance()),
-        wi.z.abs() / pdf_light * weight,
-    )))
 }
 
 /// The radiance brought back along `ray` (a camera ray), by one path. Random numbers come only
@@ -287,7 +387,9 @@ pub(super) fn trace_path(
     // path really carries: an ordinary path inside glass has its throughput divided by `ior^2`
     // only until it leaves, and roulette must not kill it for that.
     let mut eta_scale = 1.0;
-    let mut arrival = Arrival::Unweighted;
+    let mut path = SunPath::camera();
+    // The camera is taken to be in air.
+    let mut in_glass = false;
     let mut scatters = 0_u32;
     let mut line = StraightLine::default();
     // Glass resting on an opaque surface is decided only in a scene that has some, so every other
@@ -296,6 +398,11 @@ pub(super) fn trace_path(
     let rests = !scene.glass_rests().is_empty();
     // The vertex a bounce across a contact reached, taken next without a trace.
     let mut across: Option<Across> = None;
+    // Whether the sun goes straight through this scene's glass (`glass_chain`); a scene with no
+    // glass takes Exact's path, which is the plain one.
+    let straight =
+        settings.sun_through_glass == SunThroughGlass::Straight && scene.has_straight_glass();
+    let sun_pdf = scene.lights().sun.as_ref().map_or(0.0, |sun| sun.pdf());
 
     work.camera_rays += 1;
     loop {
@@ -319,7 +426,7 @@ pub(super) fn trace_path(
             (next.part, next.point, None, Some(next.partner))
         } else {
             let Some(hit) = scene.parts().trace(&mut ray) else {
-                let escaped = escaped_radiance(scene, settings, ray.direction_normal, arrival);
+                let escaped = escaped_radiance(scene, settings, ray.direction_normal, path);
                 add_to(&mut radiance, multiply(throughput, escaped));
                 break;
             };
@@ -416,13 +523,14 @@ pub(super) fn trace_path(
         };
         let toward_camera = -ray.direction_normal;
         let facing = point.facing(ray.direction_normal);
+        let transmissive = surface.transmission() > 0.0 && surface.metallic() < 1.0;
         // See the header on why a transmissive surface has its true outside as +z; at a seam the
         // denser glass's side is the inside.
         let frame_normal = match &seam {
             Some(interface) if interface.into_denser => facing.shading,
             Some(_) => -facing.shading,
             None => {
-                if surface.transmission() > 0.0 && surface.metallic() < 1.0 && facing.back_face {
+                if transmissive && facing.back_face {
                     -facing.shading
                 } else {
                     facing.shading
@@ -435,24 +543,46 @@ pub(super) fn trace_path(
         let wo = frame.to_local(toward_camera);
 
         let vertex = Vertex {
+            part: part_index,
             point: &point,
+            seam: seam.as_ref(),
+            partner,
             surface: &surface,
             frame: &frame,
             toward_camera,
             wo,
             is_first_hit: scatters == 0,
+            in_glass,
+            path,
         };
-        if let Some(direct) = sample_sun(scene, settings, &vertex, random, work)? {
+        // The sun's density this vertex's `w_b` is taken against (`glass_chain`).
+        let mut receiver_sun_pdf = sun_pdf;
+        if let Some(direct) = sample_sun(
+            scene,
+            settings,
+            straight,
+            &vertex,
+            &mut receiver_sun_pdf,
+            random,
+            work,
+        )? {
             add_to(&mut radiance, multiply(throughput, direct));
         }
 
-        let Some(sample) = surface.sample(wo, random.next_unit3()) else {
+        let Some((sample, draw)) = surface.sample_by_lobe(wo, random.next_unit3()) else {
             break;
         };
         let wi_world = frame.to_world(sample.direction).get_normal();
         if !sides_agree(&point, toward_camera, wi_world, wo.z, sample.direction.z) {
             break;
         }
+        let event = Event::of_draw(
+            straight,
+            sample.is_specular,
+            draw.from_glass,
+            sample.pdf,
+            (draw.densities.other, draw.densities.glass),
+        );
         throughput = multiply(throughput, sample.weight);
         if wo.z * sample.direction.z < 0.0 {
             let ior_squared = surface.ior() * surface.ior();
@@ -463,11 +593,9 @@ pub(super) fn trace_path(
             }
         }
         scatters += 1;
-        arrival = if sample.is_specular {
-            Arrival::Unweighted
-        } else {
-            Arrival::Sampled { pdf: sample.pdf }
-        };
+        // Whether the ray leaving this event travels inside glass (`glass_chain`).
+        in_glass = in_glass_after(in_glass, seam.is_some(), transmissive, sample.direction.z);
+        path = path.after(event, straight, receiver_sun_pdf, in_glass);
 
         if let Some(after) = settings.russian_roulette_after {
             if scatters >= after {

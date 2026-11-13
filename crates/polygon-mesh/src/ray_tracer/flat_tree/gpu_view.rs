@@ -25,6 +25,7 @@ use super::gpu_scene::{narrow3, ScenePlacement};
 use super::{FlatTreeError, SurfaceRecord, COORDINATE_LIMIT};
 use crate::ray_tracer::{
     LightSetup, LightStrategy, PathTraceSettings, RenderCamera, RenderScene, ScatteringSurface,
+    SunThroughGlass,
 };
 
 /// The scene uniform's size in bytes (`PathView` in `path.wgsl`).
@@ -47,6 +48,11 @@ pub const SCENE_FLAG_FLOOR: u32 = 32;
 /// [`ViewRecord::flags`]: some glass face lies on another (`gpu_contacts.rs`); clear, the shader
 /// never reads the contact buffer.
 pub const SCENE_FLAG_GLASS_CONTACTS: u32 = 64;
+/// [`ViewRecord::flags`]: the sun goes straight through this scene's glass, as the CPU path
+/// tracer's `straight` is: [`SunThroughGlass::Straight`] and some part with a glass share. The
+/// shader then walks the line toward the sun straight through glass and mixes it with exact
+/// transport by the CPU's weights (`sun.wgsl`); clear, it runs Exact's operations.
+pub const SCENE_FLAG_SUN_STRAIGHT: u32 = 128;
 
 /// The word in the part buffer where the glass contact block (`gpu_contacts.rs`) starts, right
 /// after the part records; 0 for a scene without contacts, which appends no block.
@@ -372,6 +378,9 @@ pub(super) fn view_record(
     }
     if gradient {
         flags |= SCENE_FLAG_GRADIENT;
+    }
+    if view.settings.sun_through_glass == SunThroughGlass::Straight && scene.has_straight_glass() {
+        flags |= SCENE_FLAG_SUN_STRAIGHT;
     }
 
     let mut sun_direction = [0.0; 4];

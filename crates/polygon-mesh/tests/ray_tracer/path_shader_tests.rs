@@ -286,6 +286,7 @@ fn the_packed_buffers_hold_each_field_where_the_shader_reads_it() {
         max_bounces: 7,
         russian_roulette_after: Some(2),
         strategy: LightStrategy::NextEventOnly,
+        ..PathTraceSettings::default()
     };
     let pack =
         GpuRenderScene::pack(&scene, &camera, 20, 10, &settings, LIMITS).expect("the scene packs");

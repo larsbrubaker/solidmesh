@@ -19,6 +19,10 @@
 //! - `glass_seam`: what a path does at a glass face another glass part's face lies on.
 //! - `glass_rest`: what a path does where a glass face rests on an opaque part's face.
 //! - `see_through_rest`: what a line does where a see-through part rests on an opaque part's face.
+//! - `glass_chain`: [`SunThroughGlass`], and the record of how a path got to its ray that weighs
+//!   the sun on the way.
+//! - `sun_through_glass`: a vertex's line toward the sun, straight through glass or stopped at it.
+//! - `sun_toward`: a vertex's BSDF toward one sun direction in its two shares under Straight.
 //! - `camera`: [`RenderCamera`], perspective or orthographic, from eye, target and up.
 //! - `pixel_random`: [`PixelRandom`], each pixel's random stream, and the jitter inside the pixel.
 //! - `integrator`: the path loop; [`PathTraceSettings`] and [`LightStrategy`] are its knobs.
@@ -40,11 +44,21 @@
 //! The environment is reached only by surface sampling, and at full weight. A gradient sky is
 //! smooth, so light sampling it would buy little and cost a shadow ray at every bounce.
 //!
-//! **Glass casts a shadow to next-event estimation.** A shadow ray stops at the first thing it
-//! meets, glass included, so sunlight focused through glass (a caustic) comes only from paths that
-//! happened to reach the sun by surface sampling. Those are unbiased but noisy, and with a very
-//! small sun they are rare. A point behind glass in sun-only light therefore converges slowly to
-//! its correct brightness.
+//! **Sunlight goes straight through glass** under [`SunThroughGlass::Straight`], the default. A
+//! shadow ray goes on through every face of glass, smooth or frosted, along its own unbent line,
+//! dimmed by that face's Fresnel reflection and colored by its tint, so clear glass casts a light
+//! shadow and tinted glass a tinted one, and the floor under or inside glass is lit as smoothly as
+//! the open floor. The exact transport through the glass, a bounce that meets glass and goes on to
+//! the sun, is kept by the share the surface it lit would give its own bounce against the shadow
+//! ray (the power heuristic), so a diffuse floor takes the straight line and a mirror, a sharp
+//! glint or the camera sees through glass as the plain path tracer does (`glass_chain` says how
+//! each light path is counted once). For a diffuse floor what the unbent line does not carry is
+//! left out: light that refraction would focus (a caustic) or frosted glass would spread, the
+//! sun's reflection off glass onto it, and light that went back and forth inside a pane (under a
+//! flat clear pane with the sun overhead the floor reads `(1 - F)^2` instead of the pane's
+//! `(1 - F) / (1 + F)`, 0.16% less, up to about 15% toward grazing).
+//! [`SunThroughGlass::Exact`] is the plain path tracer, where shadow rays stop at glass and only
+//! paths that refract into the sun find it: the reference, noisy under glass.
 //!
 //! **A part's opacity is coverage, not color.** At a hit on a part of opacity `a`, the path finds
 //! the part with probability `a`, and otherwise goes on along the same line as if the part
@@ -84,6 +98,7 @@
 
 mod camera;
 mod display;
+mod glass_chain;
 mod glass_contacts;
 mod glass_rest;
 mod glass_seam;
@@ -96,11 +111,16 @@ mod render_work;
 mod renderer;
 mod see_through;
 mod see_through_rest;
+mod sun_through_glass;
+mod sun_toward;
 
 pub use camera::RenderCamera;
 pub use display::{display_byte, linear_to_srgb, tone_map};
+pub use glass_chain::SunThroughGlass;
+#[doc(hidden)]
 pub use glass_contacts::ContactSearchWork;
 pub(crate) use glass_contacts::{covers, dominant_axis, flatten, ContactFace};
+#[doc(hidden)]
 pub use glass_rest::PathVertexAt;
 pub(crate) use glass_seam::{seam_surface, SKIP_TOLERANCES as SEAM_SKIP_TOLERANCES};
 pub use integrator::{LightStrategy, PathTraceSettings};
@@ -111,4 +131,9 @@ pub use render_surface::{AccumulatedPixel, RenderSurface, RenderTile, TileRect};
 pub use render_work::{RenderWork, BOUNCE_HISTOGRAM_BINS};
 pub use renderer::PathTracer;
 pub use see_through::MAX_CROSSINGS_PER_LINE;
+#[doc(hidden)]
 pub use see_through_rest::LineVertexAt;
+#[doc(hidden)]
+pub use sun_through_glass::SunLineAt;
+#[doc(hidden)]
+pub use sun_toward::{bent_sun_at, sun_toward_at, SunPathAt, SunTowardAt};

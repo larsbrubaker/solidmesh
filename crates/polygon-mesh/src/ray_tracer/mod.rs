@@ -87,14 +87,16 @@ pub use material::{
 pub use minimal_triangle::{MinimalTriangle, VertexFunc};
 #[doc(hidden)]
 pub use path_tracer::ContactSearchWork;
+#[doc(hidden)]
+pub use path_tracer::{
+    bent_sun_at, sun_toward_at, LineVertexAt, PathVertexAt, SunLineAt, SunPathAt, SunTowardAt,
+};
 pub use path_tracer::{
     display_byte, linear_to_srgb, pixel_jitter, tone_map, AccumulatedPixel, Environment,
     LightSetup, LightStrategy, PathTraceSettings, PathTracer, PixelRandom, RenderCamera,
-    RenderScene, RenderSurface, RenderTile, RenderWork, Sun, TileRect, BOUNCE_HISTOGRAM_BINS,
-    MAX_CROSSINGS_PER_LINE,
+    RenderScene, RenderSurface, RenderTile, RenderWork, Sun, SunThroughGlass, TileRect,
+    BOUNCE_HISTOGRAM_BINS, MAX_CROSSINGS_PER_LINE,
 };
-#[doc(hidden)]
-pub use path_tracer::{LineVertexAt, PathVertexAt};
 pub use placed_part::{PartHit, PlacedPart, PlacedParts};
 pub use plane_shape::PlaneShape;
 #[doc(hidden)]

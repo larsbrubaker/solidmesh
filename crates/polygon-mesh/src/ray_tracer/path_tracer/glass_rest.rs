@@ -57,9 +57,9 @@
 //! part's face, a glass part reaching up to the floor from below with glass on top: there this
 //! route takes the seam and the GPU route the rest.
 //!
-//! **Shadow rays** are not changed: a shadow ray from an opaque face under the glass starts its
-//! rounding step above that face, inside the glass, and is stopped by the glass as any shadow ray
-//! is.
+//! **Shadow rays** from a contact vertex follow the same rule (`sun_through_glass`): from the
+//! opaque face, a sun on the glass's side crosses the glass's face first and goes on inside the
+//! glass; from the glass's face, the opaque face across stops it.
 
 use solidmesh_math::{Ray, Vector3};
 

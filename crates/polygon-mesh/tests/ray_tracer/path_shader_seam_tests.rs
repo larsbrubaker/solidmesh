@@ -107,7 +107,7 @@ fn the_contact_block_takes_no_binding_of_its_own() {
 }
 
 #[test]
-fn the_seam_is_decided_from_one_place_in_the_path_loop() {
+fn the_seam_is_decided_from_one_place_in_the_path_loop_and_one_in_the_sun_line() {
     let module = parsed();
     for name in [
         "seam_at",
@@ -123,5 +123,18 @@ fn the_seam_is_decided_from_one_place_in_the_path_loop() {
             "the shader defines {name}"
         );
     }
-    assert_eq!(PATH_WGSL.matches("seam_at(point,").count(), 1);
+    // The path's own hits and the straight line toward the sun's, each once.
+    assert_eq!(PATH_WGSL.matches("seam_at(point,").count(), 2);
+    assert_eq!(
+        PATH_WGSL
+            .matches("seam_at(point, hit.source_index, ray.direction, present)")
+            .count(),
+        1
+    );
+    assert_eq!(
+        PATH_WGSL
+            .matches("seam_at(point, hit.source_index, direction, present)")
+            .count(),
+        1
+    );
 }

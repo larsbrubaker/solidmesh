@@ -2,9 +2,10 @@
 // of the see-through parts it has passed and of how many surfaces it has crossed, the CPU's
 // `StraightLine` (`see_through.rs`). Part of `PATH_WGSL` after `path.wgsl`, whose constants
 // (`MAX_CROSSINGS_PER_LINE`, `LINE_STOPS`, `LINE_PASSES`, `LINE_ENDED`), part opacities and random
-// stream it reads, and before `catcher.wgsl` (`path_shader.rs` concatenates them). Every path in a
-// scene with see-through parts uses it, in `path.wgsl`'s loop and its shadow rays, whether or not
-// the sample is composited; the catcher's coverage line (`path_coverage_along`) uses it too.
+// stream it reads, and before `sun.wgsl` and `catcher.wgsl` (`path_shader.rs` concatenates them).
+// Every path in a scene with see-through parts uses it, in `path.wgsl`'s loop and its shadow rays,
+// whether or not the sample is composited; the catcher's coverage line (`path_coverage_along`)
+// uses it too.
 
 // One straight line's crossings (`see_through.rs`'s `StraightLine`). A path and the shadow rays
 // from its vertices never use this at the same time: a shadow ray runs between the verdict that

@@ -12,14 +12,17 @@
 //! `gpu_pack` pack a whole render scene ([`GpuRenderScene`], [`GpuSceneBuilder`]) and `gpu_view`
 //! the camera, lights, settings and floor ([`GpuView`]), with `gpu_contacts` the glass faces lying
 //! on glass ([`GpuGlassContacts`]), for the path loop [`PATH_WGSL`] (`path_shader`, `path.wgsl`,
-//! `see_through.wgsl`, `catcher.wgsl`), which renders one sample per pixel of a slice into
-//! accumulation buffers on the GPU: the same estimator as the CPU's `path_tracer`, and the
-//! shadow-catcher floor and coverage channels a compositing caller needs. `floor_rest` is the path
-//! loop's test for glass resting on that floor, in Rust ([`rests_on_floor_f32`], and
+//! `see_through.wgsl`, `sun.wgsl`, `catcher.wgsl`, `seam.wgsl`), which renders one sample per pixel
+//! of a slice into accumulation buffers on the GPU: the same estimator as the CPU's `path_tracer`,
+//! and the shadow-catcher floor and coverage channels a compositing caller needs. `floor_rest` is
+//! the path loop's test for glass resting on that floor, in Rust ([`rests_on_floor_f32`], and
 //! [`leaves_onto_floor_f32`] for the hits the loop takes it at), and for a see-through part resting
 //! on it ([`see_through_on_floor_f32`]), so a caller can check the GPU rule without a graphics
 //! card; `coverage_line` is the catcher's coverage along a camera line in Rust
-//! ([`coverage_along_f32`]), to hold against the CPU's line for line.
+//! ([`coverage_along_f32`]), `sun_line` the shadow ray's line toward the sun
+//! ([`sun_line_f32`]), each to hold against the CPU's line for line, and `sun_weights` the
+//! shadow term's weights for sunlight through glass and the path's record of them
+//! ([`sample_sun_f32`], [`sun_after_f32`]), to hold against the CPU's rules case by case.
 //!
 //! This module is the one place geometry narrows from `f64` to `f32`, because WGSL has no `f64`
 //! and a GPU read of `f32` is the point of the buffers. Everything upstream stays `f64` in a
@@ -115,6 +118,8 @@ mod layout;
 mod path_shader;
 mod scatter_shader;
 mod shader;
+mod sun_line;
+mod sun_weights;
 mod traverse;
 
 use std::fmt;
@@ -148,7 +153,8 @@ pub use gpu_view::{
     GpuCompositing, GpuFloor, GpuView, ViewRecord, GPU_SKY_SEED_SALT, GPU_SUN_SEED_SALT,
     MIN_GPU_SUN_ANGULAR_RADIUS, ROULETTE_OFF, SCENE_FLAG_COMPOSITE, SCENE_FLAG_FLOOR,
     SCENE_FLAG_GLASS_CONTACTS, SCENE_FLAG_GRADIENT, SCENE_FLAG_ORTHOGRAPHIC,
-    SCENE_FLAG_SEE_THROUGH, SCENE_FLAG_SUN, SRGB_TABLE_BYTES, VIEW_RECORD_BYTES,
+    SCENE_FLAG_SEE_THROUGH, SCENE_FLAG_SUN, SCENE_FLAG_SUN_STRAIGHT, SRGB_TABLE_BYTES,
+    VIEW_RECORD_BYTES,
 };
 pub use layout::{child_code, FlatNode, FlatTriangle, NODE_STRIDE, TRIANGLE_STRIDE};
 pub use path_shader::{PATH_ENTRY_POINT, PATH_WGSL, PATH_WORKGROUP_PIXELS};
@@ -157,6 +163,17 @@ pub use scatter_shader::{
     SCATTER_CHECK_WGSL, SCATTER_RESULT_STRIDE, SCATTER_WGSL,
 };
 pub use shader::{hit_from_le_bytes, hit_to_le_bytes, HIT_STRIDE, NO_HIT, RAY_STRIDE, TRACE_WGSL};
+pub use sun_line::{
+    facing_f32, floor_point_under_f32, next_origin_f32, passes_sun_straight_f32,
+    straight_transmittance_f32, sun_bent_f32, sun_line_f32, surface_point_f32, unit_direction_f32,
+    FloorContactF32, LineRecordF32, LineVerdictF32, PathPointF32, SeamAtF32, SeamF32, SunLineF32,
+    SunLineScene, SunVertexF32, FLOOR_PART_F32, MAX_GLASS_CROSSINGS_F32,
+};
+pub use sun_weights::{
+    arrival_pdf_f32, escaped_sun_weight_f32, power_heuristic_f32, sample_sun_f32,
+    shadow_weight_f32, sun_after_f32, sun_toward_f32, SunAtF32, SunEventF32, SunShadowF32,
+    SunStateF32, SunTowardF32, SunViewF32,
+};
 pub use traverse::{FlatHit, FlatRay, FACE_BACK, FACE_BOTH, FACE_FRONT};
 
 use solidmesh_math::Vector3;

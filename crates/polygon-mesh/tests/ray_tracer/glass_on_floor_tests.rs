@@ -23,17 +23,17 @@ use crate::glass_tray_support::{box_meshes, part_of};
 use crate::path_tracer_support::{agreement_tolerance, flat_patch};
 use crate::scattering_support::Stats;
 
-type Boxes = Vec<([f64; 3], [f64; 3])>;
+pub(crate) type Boxes = Vec<([f64; 3], [f64; 3])>;
 
 pub(crate) fn one_box(lift: f64) -> Boxes {
     vec![([20.0; 3], [0.0, 0.0, 10.0 + lift])]
 }
 
-fn slab() -> Boxes {
+pub(crate) fn slab() -> Boxes {
     vec![([60.0, 60.0, 20.0], [0.0, 0.0, 10.0])]
 }
 
-fn grid() -> Boxes {
+pub(crate) fn grid() -> Boxes {
     (0..9)
         .map(|index| {
             let (column, row) = ((index / 3) as f64, (index % 3) as f64);
@@ -44,7 +44,7 @@ fn grid() -> Boxes {
 
 /// Clear glass `boxes` and a matte floor of half side `floor_half` at z = 0, the floor the first
 /// part when `floor_first` and the last otherwise. Returns the scene and the floor's index.
-fn on_floor(
+pub(crate) fn on_floor(
     boxes: &[([f64; 3], [f64; 3])],
     floor_half: f64,
     floor_first: bool,

@@ -154,19 +154,24 @@ struct TransmissionHalf {
     denominator2: f32,
 }
 
-// One sampled scattering event, `found` false when nothing scatters. See `ScatteringSample`.
+// One sampled scattering event, `found` false when nothing scatters. See `ScatteringSample`; and,
+// as `sample_by_lobe` says beside it, whether the glass lobe drew it and its density's two parts
+// (`surface_pdf_by_lobe`, each cleaned; both 0 for a delta event).
 struct ScatterSample {
     found: bool,
     direction: vec3<f32>,
     pdf: f32,
     weight: vec3<f32>,
     is_specular: bool,
+    from_glass: bool,
+    other_pdf: f32,
+    glass_pdf: f32,
 }
 
 // ---- Small helpers.
 
 fn no_sample() -> ScatterSample {
-    return ScatterSample(false, vec3<f32>(0.0f), 0.0f, vec3<f32>(0.0f), false);
+    return ScatterSample(false, vec3<f32>(0.0f), 0.0f, vec3<f32>(0.0f), false, false, 0.0f, 0.0f);
 }
 
 fn mirror_z(v: vec3<f32>) -> vec3<f32> {
@@ -423,6 +428,19 @@ fn tint_of(s: Surface) -> vec3<f32> {
     return sqrt(base_of(s));
 }
 
+// `passes_sun_straight`: the surface has a glass share, decided in f64 when it was packed.
+fn surface_passes_sun_straight(s: Surface) -> bool {
+    return has_glass(s);
+}
+
+// `straight_transmittance`: what a line toward the sun carries on through one crossing at cosine
+// `cos` to the face, `glass share x (1 - Fresnel from the air side) x the one-crossing tint`.
+fn surface_straight_transmittance(s: Surface, cos: f32) -> vec3<f32> {
+    let from_air = GlassSide(false, vec3<f32>(0.0f, 0.0f, 1.0f), 1.0f, s.ior, s.ior_minus_one);
+    let fresnel = dielectric_fresnel(cos, from_air);
+    return tint_of(s) * (shares_of(s).glass * (1.0f - fresnel));
+}
+
 fn specular_reflectance(s: Surface, shares: Shares, cos_theta: f32) -> vec3<f32> {
     let plastic_f0 = dielectric_f0(s);
     let plastic_f90 = grazing_reflectance(plastic_f0);
@@ -668,12 +686,20 @@ fn surface_evaluate(s: Surface, wo_in: vec3<f32>, wi_in: vec3<f32>) -> vec3<f32>
     return clean3(value);
 }
 
-// The solid-angle density `surface_sample` draws `wi` from for this `wo`.
-fn surface_pdf(s: Surface, wo_in: vec3<f32>, wi_in: vec3<f32>) -> f32 {
+// The solid-angle density `surface_sample` draws `wi` from for this `wo`: its two parts summed in
+// the order the parts were added, so the sum is the one density.
+fn surface_pdf(s: Surface, wo: vec3<f32>, wi: vec3<f32>) -> f32 {
+    let parts = surface_pdf_by_lobe(s, wo, wi);
+    return clean(parts.x + parts.y);
+}
+
+// `pdf_by_lobe`: `surface_pdf` in its two parts, neither cleaned: x the lobes other than glass
+// (specular and cosine), y the glass lobe, each with its lobe's choice included.
+fn surface_pdf_by_lobe(s: Surface, wo_in: vec3<f32>, wi_in: vec3<f32>) -> vec2<f32> {
     let wo = unit_direction(wo_in);
     let wi = unit_direction(wi_in);
     if !has_direction(wo) || !has_direction(wi) {
-        return 0.0f;
+        return vec2<f32>(0.0f);
     }
     let shares = shares_of(s);
     let alpha = alpha_of(s);
@@ -681,37 +707,40 @@ fn surface_pdf(s: Surface, wo_in: vec3<f32>, wi_in: vec3<f32>) -> f32 {
     let opaque_wo = select(wo, mirror_z(wo), flipped);
     let opaque_wi = select(wi, mirror_z(wi), flipped);
     let choice = lobe_choice(s, shares, opaque_wo.z);
-    var density = 0.0f;
+    var other = 0.0f;
     if opaque_wo.z >= MIN_COS && opaque_wi.z >= MIN_COS {
         if choice.specular > 0.0f && !is_smooth(s) {
             let h = unit_direction(bisector(opaque_wo, opaque_wi));
             if has_direction(h) {
-                density += choice.specular * visible_normal_density(opaque_wo, h, alpha)
+                other += choice.specular * visible_normal_density(opaque_wo, h, alpha)
                     / (4.0f * dot(opaque_wo, h));
             }
         }
-        density += choice.cosine * opaque_wi.z / SCATTER_PI;
+        other += choice.cosine * opaque_wi.z / SCATTER_PI;
     }
+    var glass = 0.0f;
     if choice.glass > 0.0f && is_rough_glass(s) && abs(wo.z) >= MIN_COS && abs(wi.z) >= MIN_COS {
         let side = glass_side(s, wo);
         let up_wi = select(wi, mirror_z(wi), side.flipped);
         if up_wi.z > 0.0f {
-            density += choice.glass * reflected_glass_density(side, up_wi, alpha);
+            glass = choice.glass * reflected_glass_density(side, up_wi, alpha);
         } else {
-            density += choice.glass * transmitted_glass_density(side, up_wi, alpha);
+            glass = choice.glass * transmitted_glass_density(side, up_wi, alpha);
         }
     }
-    return clean(density);
+    return vec2<f32>(other, glass);
 }
 
+// The density and its two parts from one evaluation, as `finish_sample` in `model.rs` does.
 fn finish_sample(s: Surface, wo: vec3<f32>, wi: vec3<f32>) -> ScatterSample {
-    let density = surface_pdf(s, wo, wi);
+    let parts = surface_pdf_by_lobe(s, wo, wi);
+    let density = clean(parts.x + parts.y);
     if density <= 0.0f {
         return no_sample();
     }
     let cosine = abs(wi.z);
     let weight = clean3(surface_evaluate(s, wo, wi) * cosine / density);
-    return ScatterSample(true, wi, density, weight, false);
+    return ScatterSample(true, wi, density, weight, false, false, clean(parts.x), clean(parts.y));
 }
 
 fn delta_event(direction_in: vec3<f32>, probability: f32, throughput: vec3<f32>, density: f32) -> ScatterSample {
@@ -719,7 +748,8 @@ fn delta_event(direction_in: vec3<f32>, probability: f32, throughput: vec3<f32>,
     if !has_direction(direction) || probability <= 0.0f {
         return no_sample();
     }
-    return ScatterSample(true, direction, clean(density), clean3(throughput / probability), true);
+    return ScatterSample(true, direction, clean(density), clean3(throughput / probability), true,
+        false, 0.0f, 0.0f);
 }
 
 fn sample_specular(s: Surface, shares: Shares, wo: vec3<f32>, probability: f32, u1: f32, u2: f32) -> ScatterSample {
@@ -823,7 +853,9 @@ fn surface_sample(s: Surface, wo_in: vec3<f32>, u: vec3<f32>) -> ScatterSample {
     }
     if choice.glass > 0.0f {
         let remapped = (pick - choice.specular - choice.cosine) / choice.glass;
-        return sample_glass(s, shares, wo, choice.glass, random_unit(remapped), u1, u2);
+        var drawn = sample_glass(s, shares, wo, choice.glass, random_unit(remapped), u1, u2);
+        drawn.from_glass = true;
+        return drawn;
     }
     if choice.cosine > 0.0f {
         return sample_cosine(s, wo, u1, u2);

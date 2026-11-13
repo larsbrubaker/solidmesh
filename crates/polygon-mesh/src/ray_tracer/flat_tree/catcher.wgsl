@@ -1,8 +1,8 @@
 // The shadow-catcher floor and the coverage channels in WGSL, the part of `PATH_WGSL` that runs when
 // `PathView.flags` carries `PATH_FLAG_COMPOSITE`. It follows `path.wgsl` (`path_shader.rs`
-// concatenates them, with `see_through.wgsl` between) and shares its records; `gpu_view.rs` packs
-// the floor into `PathView`. It also holds what every path uses about the floor: the floor's own
-// intersection and the rules for a part resting on it.
+// concatenates them, with `see_through.wgsl` and `sun.wgsl` between) and shares its records;
+// `gpu_view.rs` packs the floor into `PathView`. It also holds what every path uses about the
+// floor: the floor's own intersection and the rules for a part resting on it.
 //
 // What a composited sample produces is a coverage (how much of the line the parts cover: 1 on an
 // opaque part, 0 on nothing, in between where the line goes through see-through parts) and the
@@ -429,7 +429,7 @@ fn path_composite_finish(index: u32, plan: CompositePlan, traced: vec3<f32>, ray
             sky_shadow = clamp(plan.light.sky_lost / open, 0.0f, 1.0f);
         }
     }
-    var backdrop = path_escaped(ray.direction, false, 0.0f);
+    var backdrop = path_escaped(ray.direction, false, 0.0f, false, 1.0f);
     if plan.found_light {
         backdrop = plan.light.reached * path_view.floor_base.xyz;
     }

@@ -19,6 +19,10 @@ pub struct RenderWork {
     pub bounce_rays: u64,
     /// Rays continuing a straight line past a part that was not there.
     pub pass_through_rays: u64,
+    /// Traces a shadow ray takes after its first, the first being counted as a shadow ray: one
+    /// past each face of glass it crosses when the sun goes straight through glass
+    /// (`SunThroughGlass`).
+    pub sun_line_rays: u64,
     /// Pixels that received a sample.
     pub pixels_rendered: u64,
     /// Samples dropped because a value overflowed or turned to NaN (see
@@ -38,6 +42,7 @@ impl RenderWork {
             + self.later_shadow_rays
             + self.bounce_rays
             + self.pass_through_rays
+            + self.sun_line_rays
     }
 
     /// The fraction of rays that are coherent (camera rays and shadow rays from their first hit),
@@ -59,6 +64,7 @@ impl RenderWork {
         self.later_shadow_rays += other.later_shadow_rays;
         self.bounce_rays += other.bounce_rays;
         self.pass_through_rays += other.pass_through_rays;
+        self.sun_line_rays += other.sun_line_rays;
         self.pixels_rendered += other.pixels_rendered;
         self.dropped_samples += other.dropped_samples;
         self.cancelled |= other.cancelled;

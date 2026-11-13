@@ -85,6 +85,8 @@ pub struct RenderScene {
     see_through_rests: GlassContacts,
     /// Every 8-bit channel value, decoded, so a hit doesn't take a power per color.
     srgb_to_linear: [f64; 256],
+    /// Whether any part is glass a shadow ray goes straight through (`sun_through_glass`).
+    straight_glass: bool,
 }
 
 /// The decoded value of each 8-bit channel value.
@@ -118,6 +120,8 @@ impl RenderScene {
             ));
         }
         let (contacts, rests) = GlassContacts::find_both(&parts, &surfaces);
+        // A face color changes only the base color, so the part's own surface answers this.
+        let straight_glass = surfaces.iter().any(ScatteringSurface::passes_sun_straight);
         Ok(RenderScene {
             parts,
             surfaces,
@@ -127,6 +131,7 @@ impl RenderScene {
             rests,
             see_through_rests: GlassContacts::default(),
             srgb_to_linear: decoded_table(),
+            straight_glass,
         })
     }
 
@@ -141,7 +146,14 @@ impl RenderScene {
             rests: GlassContacts::default(),
             see_through_rests: GlassContacts::default(),
             srgb_to_linear: decoded_table(),
+            straight_glass: false,
         }
+    }
+
+    /// Whether any part is glass a shadow ray goes straight through: without one, a shadow ray
+    /// is the one walk it always was (`sun_through_glass`).
+    pub(crate) fn has_straight_glass(&self) -> bool {
+        self.straight_glass
     }
 
     /// This scene with each part as present as `opacities` says at its index: 1 is a fully

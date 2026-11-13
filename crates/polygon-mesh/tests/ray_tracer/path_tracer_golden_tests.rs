@@ -6,7 +6,7 @@
 use solidmesh_math::{Matrix4X4, Vector3};
 use solidmesh_mesh::ray_tracer::{
     Environment, LightSetup, MeshSurface, PathTraceSettings, PathTracer, PlacedPart, PlacedParts,
-    RenderCamera, RenderScene, RenderSurface, ScatteringSurface, Sun,
+    RenderCamera, RenderScene, RenderSurface, ScatteringSurface, Sun, SunThroughGlass,
 };
 use solidmesh_mesh::solids::platonic_solids::create_cube;
 use solidmesh_mesh::CancelToken;
@@ -52,6 +52,11 @@ pub(crate) fn golden_scene() -> RenderScene {
 
 /// A digest of a whole render's accumulated sums, in pixel order.
 pub(crate) fn render_digest(scene: &RenderScene) -> u64 {
+    render_digest_with(scene, SunThroughGlass::default())
+}
+
+/// [`render_digest`] with sunlight reaching what lies behind glass as `through` says.
+pub(crate) fn render_digest_with(scene: &RenderScene, through: SunThroughGlass) -> u64 {
     let camera = RenderCamera::orthographic(
         Vector3::new(0.0, 0.0, 40.0),
         Vector3::ZERO,
@@ -61,6 +66,7 @@ pub(crate) fn render_digest(scene: &RenderScene) -> u64 {
     .unwrap();
     let settings = PathTraceSettings {
         seed: 42,
+        sun_through_glass: through,
         ..PathTraceSettings::default()
     };
     let tracer = PathTracer::new(scene, camera, SIZE.0, SIZE.1, settings).unwrap();
@@ -94,4 +100,7 @@ fn an_opaque_scene_renders_as_it_always_did() {
     let digest = render_digest(&golden_scene());
     println!("opaque digest {digest:#018x}");
     assert_eq!(digest, OPAQUE_RENDER_DIGEST, "got {digest:#018x}");
+    // With no glass, how the sun reaches what lies behind glass changes nothing.
+    let exact = render_digest_with(&golden_scene(), SunThroughGlass::Exact);
+    assert_eq!(exact, OPAQUE_RENDER_DIGEST, "got {exact:#018x} exactly");
 }

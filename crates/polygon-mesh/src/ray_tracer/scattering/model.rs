@@ -36,6 +36,23 @@ pub struct ScatteringSample {
     pub is_specular: bool,
 }
 
+/// A sampled direction's density in its two parts ([`ScatteringSurface::pdf_by_lobe`]), each
+/// cleaned: the lobes other than glass, and the glass lobe. Where one part is zero the other is
+/// the sample's whole `pdf`, to the bit. Both are zero for a delta event.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub(crate) struct LobeDensities {
+    pub(crate) other: f64,
+    pub(crate) glass: f64,
+}
+
+/// What [`ScatteringSurface::sample_by_lobe`] says of a sample beside the sample itself.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct LobeDraw {
+    /// Whether the glass lobe drew it.
+    pub(crate) from_glass: bool,
+    pub(crate) densities: LobeDensities,
+}
+
 /// The cosine-weighted mean of Schlick's grazing term `(1 - c)^5`, in closed form, which is how
 /// much of the way from `F0` to `F90` the Fresnel reflectance averages over the hemisphere.
 const MEAN_SCHLICK_GRAZING: f64 = 1.0 / 21.0;
@@ -251,24 +268,34 @@ impl ScatteringSurface {
     /// The solid-angle density [`ScatteringSurface::sample`] draws `wi` from for this `wo`, with
     /// the choice of lobe included. Zero toward delta lobes.
     pub fn pdf(&self, wo: Vector3, wi: Vector3) -> f64 {
+        let (other, glass) = self.pdf_by_lobe(wo, wi);
+        clean(other + glass)
+    }
+
+    /// [`ScatteringSurface::pdf`] in its two parts, each with its lobe's choice included and
+    /// neither cleaned: the density of drawing `wi` from the lobes other than glass (specular and
+    /// cosine), and from the glass lobe. Their sum, cleaned, is `pdf`, to the bit. A path tracer
+    /// that treats a sample from the glass lobe differently from the rest weighs each part apart.
+    pub(crate) fn pdf_by_lobe(&self, wo: Vector3, wi: Vector3) -> (f64, f64) {
         let (Some(wo), Some(wi)) = (unit_direction(wo), unit_direction(wi)) else {
-            return 0.0;
+            return (0.0, 0.0);
         };
         let mix = self.mix();
         let alpha = self.alpha();
         let opaque = OpaqueSide::of(&mix, wo);
         let (opaque_wo, opaque_wi) = (opaque.wo, opaque.across(wi));
         let choice = self.lobe_choice(&mix, opaque_wo.z);
-        let mut density = 0.0;
+        let mut other = 0.0;
         if opaque_wo.z >= MIN_COS && opaque_wi.z >= MIN_COS {
             if choice.specular > 0.0 && !self.is_smooth() {
                 if let Some(h) = unit_direction(opaque_wo + opaque_wi) {
-                    density += choice.specular * visible_normal_density(opaque_wo, h, alpha)
+                    other += choice.specular * visible_normal_density(opaque_wo, h, alpha)
                         / (4.0 * opaque_wo.dot(h));
                 }
             }
-            density += choice.cosine * opaque_wi.z / PI;
+            other += choice.cosine * opaque_wi.z / PI;
         }
+        let mut glass = 0.0;
         if choice.glass > 0.0
             && self.is_rough_glass(&mix)
             && wo.z.abs() >= MIN_COS
@@ -276,14 +303,23 @@ impl ScatteringSurface {
         {
             let side = self.glass_side(wo);
             let up_wi = if side.flipped { mirror_z(wi) } else { wi };
-            let glass = if up_wi.z > 0.0 {
+            let density = if up_wi.z > 0.0 {
                 reflected_glass_density(&side, up_wi, alpha)
             } else {
                 transmitted_glass_density(&side, up_wi, alpha)
             };
-            density += choice.glass * glass.unwrap_or(0.0);
+            glass = choice.glass * density.unwrap_or(0.0);
         }
-        clean(density)
+        (other, glass)
+    }
+
+    /// [`ScatteringSurface::pdf_by_lobe`] with each part cleaned, as a sample reports them.
+    pub(crate) fn lobe_densities(&self, wo: Vector3, wi: Vector3) -> LobeDensities {
+        let (other, glass) = self.pdf_by_lobe(wo, wi);
+        LobeDensities {
+            other: clean(other),
+            glass: clean(glass),
+        }
     }
 
     /// Draws the next direction of a path arriving along `wo`, from three random numbers in
@@ -291,6 +327,17 @@ impl ScatteringSurface {
     /// horizon or has no direction, it is below an opaque surface, the surface absorbs everything,
     /// or a rough lobe drew a direction on the wrong side of the surface.
     pub fn sample(&self, wo: Vector3, u: [f64; 3]) -> Option<ScatteringSample> {
+        self.sample_by_lobe(wo, u).map(|(sample, _)| sample)
+    }
+
+    /// [`ScatteringSurface::sample`], with whether the glass lobe drew it (a reflection or a
+    /// refraction off the glass share, smooth or frosted) or another lobe did, and the sample's
+    /// density in its two parts, computed once with the density itself.
+    pub(crate) fn sample_by_lobe(
+        &self,
+        wo: Vector3,
+        u: [f64; 3],
+    ) -> Option<(ScatteringSample, LobeDraw)> {
         let wo = unit_direction(wo)?;
         if wo.z.abs() < MIN_COS {
             return None;
@@ -311,12 +358,24 @@ impl ScatteringSurface {
         } else {
             return None;
         };
+        let draw = |from_glass| {
+            move |(sample, densities)| {
+                let draw = LobeDraw {
+                    from_glass,
+                    densities,
+                };
+                (sample, draw)
+            }
+        };
         match lobe {
-            Lobe::Specular => self.sample_specular(&mix, wo, choice.specular, u1, u2),
-            Lobe::Cosine => self.sample_cosine(&mix, wo, u1, u2),
+            Lobe::Specular => self
+                .sample_specular(&mix, wo, choice.specular, u1, u2)
+                .map(draw(false)),
+            Lobe::Cosine => self.sample_cosine(&mix, wo, u1, u2).map(draw(false)),
             Lobe::Glass => {
                 let remapped = (pick - choice.specular - choice.cosine) / choice.glass;
                 self.sample_glass(&mix, wo, choice.glass, random(remapped), u1, u2)
+                    .map(draw(true))
             }
         }
     }
@@ -356,6 +415,34 @@ impl ScatteringSurface {
     /// The tint of one crossing of a glass interface: two crossings give the base color.
     fn tint(&self) -> [f64; 3] {
         self.base_color.map(f64::sqrt)
+    }
+
+    /// Whether the surface has a glass share, smooth or frosted: the kind of surface a shadow ray
+    /// toward the sun goes straight through when the render asks for it (`SunThroughGlass`).
+    pub(crate) fn passes_sun_straight(&self) -> bool {
+        self.mix().glass > 0.0
+    }
+
+    /// What a shadow ray carries on through one crossing of this surface along a line at cosine
+    /// `cos` to its normal, `None` where the surface stops it (`passes_sun_straight`). It is a
+    /// smooth face's delta refraction value, `glass share x (1 - Fresnel) x the one-crossing
+    /// tint`, with neither the lobe's choice probability (the ray takes the refraction every time)
+    /// nor the `ior^2` radiance scaling (`sun_through_glass` says why), whatever the roughness:
+    /// frosted glass passes what a smooth face of it would, so nothing jumps as roughness crosses
+    /// the smooth threshold. The microfacet Fresnel is not averaged over a frosted face's normals,
+    /// and the spread a frosted face gives the light is not drawn. The line is not bent, so it is
+    /// read as the direction on the outside of the glass at every face, entering or leaving:
+    /// Fresnel is taken from the thinner side at `cos`. For a face parallel to the one the light
+    /// entered by, that is by reciprocity the crossing's value for the bent ray inside; for any
+    /// other face it is an approximation. An unbent ray leaving never meets total internal
+    /// reflection that the bent one would not.
+    pub(crate) fn straight_transmittance(&self, cos: f64) -> Option<[f64; 3]> {
+        if !self.passes_sun_straight() {
+            return None;
+        }
+        let glass = self.mix().glass;
+        let fresnel = dielectric_fresnel(cos, 1.0, self.ior);
+        Some(self.tint().map(|tint| glass * (1.0 - fresnel) * tint))
     }
 
     /// The Fresnel reflectance of the reflective layer at incidence cosine `cos_theta`: the metal
@@ -494,7 +581,7 @@ impl ScatteringSurface {
         probability: f64,
         u1: f64,
         u2: f64,
-    ) -> Option<ScatteringSample> {
+    ) -> Option<(ScatteringSample, LobeDensities)> {
         let opaque = OpaqueSide::of(mix, wo);
         if self.is_smooth() {
             let fresnel = self.specular_reflectance(mix, opaque.wo.z);
@@ -509,7 +596,13 @@ impl ScatteringSurface {
         self.finish_sample(wo, opaque.across(wi))
     }
 
-    fn sample_cosine(&self, mix: &Mix, wo: Vector3, u1: f64, u2: f64) -> Option<ScatteringSample> {
+    fn sample_cosine(
+        &self,
+        mix: &Mix,
+        wo: Vector3,
+        u1: f64,
+        u2: f64,
+    ) -> Option<(ScatteringSample, LobeDensities)> {
         let opaque = OpaqueSide::of(mix, wo);
         let radius = u1.sqrt();
         let phi = 2.0 * PI * u2;
@@ -536,7 +629,7 @@ impl ScatteringSurface {
         pick: f64,
         u1: f64,
         u2: f64,
-    ) -> Option<ScatteringSample> {
+    ) -> Option<(ScatteringSample, LobeDensities)> {
         let side = self.glass_side(wo);
         let unmirror = |w: Vector3| if side.flipped { mirror_z(w) } else { w };
         if self.is_smooth() || self.is_index_matched() {
@@ -575,20 +668,27 @@ impl ScatteringSurface {
     }
 
     /// The sample for a direction a rough or cosine lobe drew, weighted by the whole BSDF over
-    /// the density of the whole `sample`, so the weight matches `evaluate` and `pdf` exactly.
-    fn finish_sample(&self, wo: Vector3, wi: Vector3) -> Option<ScatteringSample> {
-        let density = self.pdf(wo, wi);
+    /// the density of the whole `sample`, so the weight matches `evaluate` and `pdf` exactly, and
+    /// that density's two parts from the same evaluation (`pdf` sums them the same way).
+    fn finish_sample(&self, wo: Vector3, wi: Vector3) -> Option<(ScatteringSample, LobeDensities)> {
+        let (other, glass) = self.pdf_by_lobe(wo, wi);
+        let density = clean(other + glass);
         if density <= 0.0 {
             return None;
         }
         let cosine = wi.z.abs();
         let weight = self.evaluate(wo, wi).map(|f| clean(f * cosine / density));
-        Some(ScatteringSample {
+        let sample = ScatteringSample {
             direction: wi,
             pdf: density,
             weight,
             is_specular: false,
-        })
+        };
+        let densities = LobeDensities {
+            other: clean(other),
+            glass: clean(glass),
+        };
+        Some((sample, densities))
     }
 }
 
@@ -598,22 +698,24 @@ fn mirror_about_z(wo: Vector3) -> Vector3 {
 }
 
 /// A delta event: `throughput` is what the lobe returns, `probability` how often it was chosen.
+/// It has no density, so neither part of one is reported.
 fn delta_event(
     direction: Vector3,
     probability: f64,
     throughput: [f64; 3],
     pdf: f64,
-) -> Option<ScatteringSample> {
+) -> Option<(ScatteringSample, LobeDensities)> {
     let direction = unit_direction(direction)?;
     if probability <= 0.0 {
         return None;
     }
-    Some(ScatteringSample {
+    let sample = ScatteringSample {
         direction,
         pdf: clean(pdf),
         weight: throughput.map(|t| clean(t / probability)),
         is_specular: true,
-    })
+    };
+    Some((sample, LobeDensities::default()))
 }
 
 /// The BSDF of glass reflecting about the half vector of `wo` and `wi`, in the frame with `wo`

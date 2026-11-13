@@ -1,9 +1,11 @@
 // What a path does at a seam, in WGSL: a hit on a face of a glass part that a face of another
 // glass part lies on. It mirrors `path_tracer/glass_seam.rs` branch by branch, reading the contact
-// block `gpu_contacts.rs` packs after the part records (its header gives the words); `path.wgsl`'s
-// path loop calls `seam_at` only when `PATH_FLAG_GLASS_CONTACTS` is set, and only for the path's
-// own hits: on the CPU too, shadow rays and coverage never look at a seam. Nothing here traverses
-// the tree. It follows `catcher.wgsl` in `PATH_WGSL`.
+// block `gpu_contacts.rs` packs after the part records (its header gives the words). `seam_at` is
+// asked only when `PATH_FLAG_GLASS_CONTACTS` is set: by `path.wgsl`'s path loop at the path's own
+// hits, and by `sun.wgsl`'s line toward the sun at its hits when it walks straight through glass
+// (`PATH_FLAG_SUN_STRAIGHT`), as the CPU's `through_glass` does; a shadow ray that stops at any
+// surface and the coverage line never look at a seam, on the CPU too. Nothing here traverses the
+// tree. It follows `catcher.wgsl` in `PATH_WGSL`.
 //
 // The point test is the CPU's `covers` on the packed edge equations, evaluated in f32 in the order
 // `GlassContactRecord::covers_f32` evaluates them, so a test can check the equations in Rust. Every

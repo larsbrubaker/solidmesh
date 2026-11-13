@@ -84,7 +84,7 @@ fn the_path_loop_calls_each_traversing_function_from_one_place() {
     for name in [
         "path_radiance",
         "path_coverage_along",
-        "path_sun_reachable",
+        "path_sun_line",
         "path_sample_sun",
     ] {
         assert_eq!(
@@ -101,7 +101,7 @@ fn the_path_loop_calls_each_traversing_function_from_one_place() {
     assert_eq!(
         call_sites("trace"),
         3,
-        "trace_closest, trace_any and path_sun_reachable"
+        "trace_closest, trace_any and path_sun_line"
     );
     assert_eq!(
         call_sites("trace_closest"),

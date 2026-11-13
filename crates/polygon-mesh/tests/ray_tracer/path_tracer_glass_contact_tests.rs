@@ -1,17 +1,18 @@
 //! Glass parts against glass parts, beyond the touching tray: glass parts that don't touch
 //! (apart, nested with a clear gap, a sheet a few millimetres over a box, two boxes a modelled
-//! gap apart) and same-glass parts that overlap in volume render the bits they always did, while
-//! two boxes stacked on a shared face gain nothing in a white furnace whether their glasses are
-//! equal, differ in index either way round, or differ only in colour.
+//! gap apart) and same-glass parts that overlap in volume render pinned bits, those of glass that
+//! touches no other glass, while two boxes stacked on a shared face gain nothing in a white
+//! furnace whether their glasses are equal, differ in index either way round, or differ only in
+//! colour.
 
 use solidmesh_math::{Matrix4X4, Vector3};
 use solidmesh_mesh::ray_tracer::{
     Environment, LightSetup, PathTraceSettings, PathTracer, PlacedParts, RenderCamera, RenderScene,
-    RenderWork, ScatteringSurface,
+    RenderWork, ScatteringSurface, SunThroughGlass,
 };
 
 use crate::glass_tray_support::{box_meshes, part_of, rig_lights};
-use crate::path_tracer_golden_tests::render_digest;
+use crate::path_tracer_golden_tests::{render_digest, render_digest_with};
 use crate::path_tracer_support::flat_patch;
 use crate::scattering_support::Stats;
 
@@ -142,14 +143,44 @@ fn overlapping_boxes() -> RenderScene {
     )
 }
 
-/// Pinned from the path tracer before glass parts could touch, where no glass part lies on
-/// another: these scenes keep the same bits. The three separate boxes rest on the floor, so their
-/// bits are those of glass leaving through its own surface onto the floor (`glass_rest`).
-const THREE_SEPARATE_BOXES_DIGEST: u64 = 0xe03a_f854_e0e9_c1be;
-const NESTED_WITH_A_GAP_DIGEST: u64 = 0x1886_fe58_a0e1_7412;
-const SHEET_OVER_A_BOX_DIGEST: u64 = 0xb4e0_2094_9cb1_ac19;
-const BOXES_A_GAP_APART_DIGEST: u64 = 0xeb76_7a2a_0972_c151;
-const OVERLAPPING_BOXES_DIGEST: u64 = 0x5570_a464_01b9_78fa;
+/// Pinned where no glass part lies on another: these scenes keep the same bits as glass that
+/// touches nothing. The three separate boxes rest on the floor, so their bits are those of glass
+/// leaving through its own surface onto the floor (`glass_rest`); every scene has smooth glass
+/// between the matte floor and the rig's sun, so its bits are those of the sun going straight
+/// through that glass (`SunThroughGlass::Straight`), with the exact transport through it kept at
+/// the floor's own weight against the sun. The three boxes include a frosted one, whose
+/// reflections are glass events like its refractions and which, seen by the camera, counts its
+/// own sun as Exact does on both of its sides. The sheet over a box is open and single sided: a
+/// path through it counts itself inside glass, so the floor it reaches reads the sun bent at the
+/// sheet's underside where its line meets it (`glass_chain`, "A receiver inside glass").
+const THREE_SEPARATE_BOXES_DIGEST: u64 = 0x5b68_ff41_2d98_f496;
+const NESTED_WITH_A_GAP_DIGEST: u64 = 0x80e5_38ce_6620_6ff1;
+const SHEET_OVER_A_BOX_DIGEST: u64 = 0x2c9a_9330_d82e_d68e;
+const BOXES_A_GAP_APART_DIGEST: u64 = 0x65d5_e962_13e7_d04d;
+const OVERLAPPING_BOXES_DIGEST: u64 = 0x9357_ef30_744e_f47e;
+
+/// The same scenes under `SunThroughGlass::Exact`, where shadow rays stop at glass: the bits the
+/// path tracer gave them before the sun could go through glass, which Exact keeps.
+const EXACT_DIGESTS: [u64; 5] = [
+    0xe03a_f854_e0e9_c1be,
+    0x1886_fe58_a0e1_7412,
+    0xb4e0_2094_9cb1_ac19,
+    0xeb76_7a2a_0972_c151,
+    0x5570_a464_01b9_78fa,
+];
+
+#[test]
+fn separate_glass_parts_render_exactly_as_they_did_before_the_sun_went_through_glass() {
+    let exact = |scene: &RenderScene| render_digest_with(scene, SunThroughGlass::Exact);
+    let digests = [
+        exact(&three_separate_boxes()),
+        exact(&nested_with_a_gap()),
+        exact(&sheet_over_a_box()),
+        exact(&boxes_a_gap_apart()),
+        exact(&overlapping_boxes()),
+    ];
+    assert_eq!(digests, EXACT_DIGESTS, "got {digests:#018x?}");
+}
 
 #[test]
 fn separate_glass_parts_render_as_they_always_did() {

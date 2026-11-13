@@ -167,6 +167,7 @@ fn closed_form_settings() -> PathTraceSettings {
         max_bounces: CLOSED_FORM_BOUNCES,
         russian_roulette_after: None,
         strategy: LightStrategy::Combined,
+        ..PathTraceSettings::default()
     }
 }
 

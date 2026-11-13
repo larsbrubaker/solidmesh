@@ -4,21 +4,22 @@
 //! one solid, in a white furnace (where no sample may carry more than the light it started in) and
 //! under a sky, with the shared faces covering each other whole or in part; two touching panes are
 //! checked against the closed form of one pane their combined thickness; and a single glass
-//! solid, alone and on a floor, renders the same bits it always did. Glass parts that overlap in
-//! volume are not one piece of glass (their inner faces show); `path_tracer_glass_contact_tests`
-//! pins them.
+//! solid, alone and on a floor, renders pinned bits, those of glass touching no other glass, and
+//! under `SunThroughGlass::Exact` the bits it had before the sun could go through glass. Glass
+//! parts that overlap in volume are not one piece of glass (their inner faces show);
+//! `path_tracer_glass_contact_tests` pins them.
 
 use solidmesh_math::{Matrix4X4, Vector3};
 use solidmesh_mesh::ray_tracer::{
     Environment, LightSetup, MeshSurface, PathTraceSettings, PathTracer, PlacedPart, PlacedParts,
-    RenderCamera, RenderScene, RenderWork, ScatteringSurface, Sun,
+    RenderCamera, RenderScene, RenderWork, ScatteringSurface, Sun, SunThroughGlass,
 };
 use solidmesh_mesh::solids::platonic_solids::create_cube;
 
 use crate::glass_tray_support::{
     box_meshes, part_of, parts_scene, rig_lights, tray_meshes, unioned,
 };
-use crate::path_tracer_golden_tests::render_digest;
+use crate::path_tracer_golden_tests::{render_digest, render_digest_with};
 use crate::path_tracer_support::{estimate, flat_patch, SHARP_CREASE};
 use crate::scattering_support::Stats;
 use crate::surface_hit_support::tree_of;
@@ -297,13 +298,20 @@ fn one_solid_tray_on_floor(lights: LightSetup) -> RenderScene {
     .unwrap()
 }
 
-/// Pinned from the path tracer before glass parts could touch: a scene with one glass solid, where
-/// no path ever crosses from glass into glass, renders the same bits. The one-solid tray rests on
-/// the floor, so its bits are those of glass leaving through its own surface onto the floor
-/// (`glass_rest`); the cube stands 2 above the floor and keeps its bits.
-const GLASS_CUBE_SUN_AND_SKY_DIGEST: u64 = 0x18ec_7fb1_377a_dc7b;
+/// Pinned with one glass solid in the scene, where no path ever crosses from glass into glass, so
+/// glass touching glass plays no part in these bits. The one-solid tray rests on the floor, so its
+/// bits are those of glass leaving through its own surface onto the floor (`glass_rest`); the cube
+/// stands 2 above the floor. Under a sun both are lit by the sun going straight through the glass
+/// and the exact transport through it at the floor's own weight (`SunThroughGlass::Straight`); the
+/// furnace has no sun, and its bits are the ones it always had.
+const GLASS_CUBE_SUN_AND_SKY_DIGEST: u64 = 0xb4f1_e307_451a_ddd3;
 const GLASS_CUBE_FURNACE_DIGEST: u64 = 0xa4b4_ca5d_bcff_8912;
-const ONE_SOLID_TRAY_DIGEST: u64 = 0xc022_6d9f_48b0_2518;
+const ONE_SOLID_TRAY_DIGEST: u64 = 0xe4cb_51fd_2d75_2b91;
+
+/// The cube under the sun and the tray under `SunThroughGlass::Exact`, where shadow rays stop at
+/// glass: the bits they had before the sun could go through glass, which Exact keeps.
+const EXACT_GLASS_CUBE_SUN_AND_SKY_DIGEST: u64 = 0x18ec_7fb1_377a_dc7b;
+const EXACT_ONE_SOLID_TRAY_DIGEST: u64 = 0xc022_6d9f_48b0_2518;
 
 #[test]
 fn a_single_glass_solid_renders_as_it_always_did() {
@@ -318,6 +326,21 @@ fn a_single_glass_solid_renders_as_it_always_did() {
         render_digest(&one_solid_tray_on_floor(rig_lights())),
     ];
     println!("glass digests {digests:#018x?}");
+    let exact = [
+        render_digest_with(&glass_cube_on_floor(golden_lights), SunThroughGlass::Exact),
+        render_digest_with(
+            &one_solid_tray_on_floor(rig_lights()),
+            SunThroughGlass::Exact,
+        ),
+    ];
+    assert_eq!(
+        exact,
+        [
+            EXACT_GLASS_CUBE_SUN_AND_SKY_DIGEST,
+            EXACT_ONE_SOLID_TRAY_DIGEST
+        ],
+        "got {exact:#018x?} exactly"
+    );
     assert_eq!(
         digests,
         [

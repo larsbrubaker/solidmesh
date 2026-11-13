@@ -491,13 +491,24 @@ fn a_see_through_box_and_a_glass_box_resting_side_by_side_each_keep_their_rule()
 /// and its whitespace collapsed, its line endings made `\n` first: a checkout may hold the shader
 /// with `\r\n`.
 pub(crate) fn function_text(source: &str, name: &str) -> String {
+    block_text(source, &format!("fn {name}("))
+}
+
+/// The text of `struct name {` through its closing brace at the start of a line, flattened as
+/// [`function_text`] flattens a function: its fields' names, order and types.
+pub(crate) fn struct_text(source: &str, name: &str) -> String {
+    block_text(source, &format!("struct {name} {{"))
+}
+
+/// The text from `opening` through the next closing brace at the start of a line, flattened.
+fn block_text(source: &str, opening: &str) -> String {
     let source = source.replace("\r\n", "\n");
     let start = source
-        .find(&format!("fn {name}("))
-        .unwrap_or_else(|| panic!("no fn {name}"));
+        .find(opening)
+        .unwrap_or_else(|| panic!("no `{opening}`"));
     let end = source[start..]
         .find("\n}\n")
-        .unwrap_or_else(|| panic!("fn {name} never ends"));
+        .unwrap_or_else(|| panic!("`{opening}` never ends"));
     let body = &source[start..start + end];
     body.lines()
         .map(|line| line.split("//").next().unwrap_or(""))

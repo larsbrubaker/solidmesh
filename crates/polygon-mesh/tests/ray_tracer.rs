@@ -13,6 +13,8 @@ mod flat_tree_shader_tests;
 mod flat_tree_support;
 #[path = "ray_tracer/flat_tree_tests.rs"]
 mod flat_tree_tests;
+#[path = "ray_tracer/floor_rest_agreement_tests.rs"]
+mod floor_rest_agreement_tests;
 #[path = "ray_tracer/glass_on_floor_opacity_tests.rs"]
 mod glass_on_floor_opacity_tests;
 #[path = "ray_tracer/glass_on_floor_tests.rs"]
@@ -63,6 +65,16 @@ mod path_tracer_render_tests;
 mod path_tracer_scene_tests;
 #[path = "ray_tracer/path_tracer_speckle_measure_tests.rs"]
 mod path_tracer_speckle_measure_tests;
+#[path = "ray_tracer/path_tracer_sun_glass_frosted_tests.rs"]
+mod path_tracer_sun_glass_frosted_tests;
+#[path = "ray_tracer/path_tracer_sun_glass_partition_tests.rs"]
+mod path_tracer_sun_glass_partition_tests;
+#[path = "ray_tracer/path_tracer_sun_glass_rules_tests.rs"]
+mod path_tracer_sun_glass_rules_tests;
+#[path = "ray_tracer/path_tracer_sun_glass_sweep_tests.rs"]
+mod path_tracer_sun_glass_sweep_tests;
+#[path = "ray_tracer/path_tracer_sun_through_glass_tests.rs"]
+mod path_tracer_sun_through_glass_tests;
 #[path = "ray_tracer/path_tracer_support.rs"]
 mod path_tracer_support;
 #[path = "ray_tracer/path_tracer_touching_glass_tests.rs"]
@@ -99,6 +111,16 @@ mod see_through_coverage_tests;
 mod see_through_glass_on_floor_tests;
 #[path = "ray_tracer/see_through_on_floor_tests.rs"]
 mod see_through_on_floor_tests;
+#[path = "ray_tracer/sun_line_shader_tests.rs"]
+mod sun_line_shader_tests;
+#[path = "ray_tracer/sun_line_text_tests.rs"]
+mod sun_line_text_tests;
+#[path = "ray_tracer/sun_through_see_through_rest_tests.rs"]
+mod sun_through_see_through_rest_tests;
+#[path = "ray_tracer/sun_weights_tests.rs"]
+mod sun_weights_tests;
+#[path = "ray_tracer/sun_weights_text_tests.rs"]
+mod sun_weights_text_tests;
 #[path = "ray_tracer/surface_builder_tests.rs"]
 mod surface_builder_tests;
 #[path = "ray_tracer/surface_hit_continuation_tests.rs"]

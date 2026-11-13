@@ -44,11 +44,13 @@
 //! onto the surface, as for glass at opacity 1 (`glass_rest`).
 //!
 //! **No seam on a contact.** The path loop looks for a glass-on-glass seam (`glass_seam`) at no
-//! traced hit on either face of such a contact, whichever face the trace returned. The GPU loop
-//! still looks for one where it decides the see-through part's face (found not there, or there
-//! and not leaving through it), so the two routes differ at a see-through glass face on the floor
-//! that another glass part's face also covers: glass reaching up to the floor's plane from below
-//! with glass on top.
+//! traced hit on either face of such a contact, whichever face the trace returned. A third face
+//! in that plane is on no such contact (the top of glass reaching up to the floor's plane from
+//! below, under see-through glass resting on the floor): a trace can still return it there, and
+//! its seam with the glass above is then found. The GPU loop still looks for one where it decides
+//! the see-through part's face (found not there, or there and not leaving through it), so the two
+//! routes differ at a see-through glass face on the floor that another glass part's face also
+//! covers: glass reaching up to the floor's plane from below with glass on top.
 //!
 //! **Limits.** A see-through part resting on glass or on another see-through part is traced as
 //! any two faces are. A line meeting the surface inside the part's footprint within rounding of

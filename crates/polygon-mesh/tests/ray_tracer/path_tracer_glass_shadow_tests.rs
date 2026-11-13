@@ -1,8 +1,10 @@
 //! Sunlight through smooth glass onto a matte floor, against its closed form: a parallel-sided
-//! pane passes the sun with its Fresnel transmission and internal reflection series, the floor
-//! returns it diffusely, and the pane sends part of that back down. The render must reach that
-//! value and reach it with little noise, which needs the sun found by a shadow ray that passes
-//! through the pane rather than only by the rare bounce that happens to land in the sun's disc.
+//! pane passes the sun straight through both faces, `(1 - F)^2` (the light that went back and
+//! forth inside the pane is left out, `SunThroughGlass::Straight`), the floor returns it
+//! diffusely, and the pane sends part of that back down with its whole reflection series. The
+//! render must reach that value, apart from the series' `(1 - F) / (1 + F)` it leaves out, and
+//! reach it with little noise, which needs the sun found by a shadow ray that passes through the
+//! pane rather than only by the rare bounce that happens to land in the sun's disc.
 
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -46,7 +48,6 @@ fn integrate(upper: f64, integrand: impl Fn(f64) -> f64) -> f64 {
 }
 
 #[test]
-#[ignore = "fails until shadow rays pass through smooth glass"]
 fn sunlight_through_a_glass_pane_lights_the_floor_smoothly() {
     let radius = 2.5_f64.to_radians();
     // Radiance making the unshaded floor's irradiance pi, so its radiance is its albedo.
@@ -86,11 +87,16 @@ fn sunlight_through_a_glass_pane_lights_the_floor_smoothly() {
     .unwrap();
 
     // The irradiance through the pane: the sun's disc, cosine weighted, each direction passed
-    // by the pane's transmittance (a parallel pane leaves directions unchanged).
-    let direct = sun_radiance
-        * integrate(radius, |theta| {
-            pane(theta.cos()).1 * theta.cos() * theta.sin() * 2.0 * PI
-        });
+    // by both faces' transmission (a parallel pane leaves directions unchanged), and what the
+    // whole series would pass, which Straight leaves out.
+    let disc = |passed: &dyn Fn(f64) -> f64| {
+        sun_radiance
+            * integrate(radius, |theta| {
+                passed(theta.cos()) * theta.cos() * theta.sin() * 2.0 * PI
+            })
+    };
+    let direct = disc(&|cos| (1.0 - fresnel(cos)).powi(2));
+    let series = disc(&|cos| pane(cos).1);
     // The share of the floor's diffuse light the pane sends back down.
     let returned = integrate(PI / 2.0, |theta| {
         pane(theta.cos()).0 * 2.0 * theta.cos() * theta.sin()
@@ -118,6 +124,31 @@ fn sunlight_through_a_glass_pane_lights_the_floor_smoothly() {
         (mean - expected).abs() <= allowed,
         "the floor under the pane is {mean} +- {error}, the closed form {expected} \
          (allowed {allowed})"
+    );
+    // (c) Only the straight line: the floor's own sun, one scattering event, sits at
+    // `(1 - F)^2` to well under the 0.16% the series would add.
+    let direct_only = PathTraceSettings {
+        max_bounces: 1,
+        russian_roulette_after: None,
+        ..PathTraceSettings::default()
+    };
+    let (first, _) = estimate(&scene, camera, (4, 4), direct_only, 256);
+    let (first_mean, first_error) = (first[0].mean(), first[0].standard_error());
+    let straight = ALBEDO / PI * direct;
+    let gap = ALBEDO / PI * series - straight;
+    let allowed_first = 5.0 * first_error + 1e-5 * straight;
+    println!(
+        "pane, one event: {first_mean} +- {first_error} against {straight} (the series {})",
+        straight + gap
+    );
+    assert!(
+        allowed_first < 0.5 * gap,
+        "the check can't tell the series from the straight line: allowed {allowed_first}, gap {gap}"
+    );
+    assert!(
+        (first_mean - straight).abs() <= allowed_first,
+        "the floor's own sun under the pane is {first_mean} +- {first_error}, the straight line's \
+         {straight} (allowed {allowed_first})"
     );
     // (b) Reached smoothly: with a shadow ray through the pane every sample sees the sun, so
     // the pixel mean's standard error at these samples is well under 1% of the mean.

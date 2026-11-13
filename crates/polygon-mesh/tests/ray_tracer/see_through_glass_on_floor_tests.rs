@@ -17,7 +17,9 @@ use solidmesh_mesh::ray_tracer::{
     ScatteringSurface,
 };
 
-use crate::glass_on_floor_tests::{gpu_pack_with, one_box, white_sky_blue_ground};
+use crate::glass_on_floor_tests::{
+    gpu_pack_with, one_box, red_and_ground_leaks, white_sky_blue_ground,
+};
 use crate::glass_tray_support::{box_meshes, part_of};
 use crate::scattering_support::Stats;
 use crate::see_through_on_floor_tests::{function_text, through_the_bottom, wide_floor};
@@ -54,6 +56,15 @@ impl Paired {
 /// Renders `resting` and `lifted` over a 24 by 24 view from steeply above, so most lines through
 /// a part on the floor leave it through its bottom, at 64 samples a pixel, sample for sample.
 pub(crate) fn paired_against_lifted(resting: &RenderScene, lifted: &RenderScene) -> Paired {
+    paired_against_lifted_with(resting, lifted, PathTraceSettings::default())
+}
+
+/// [`paired_against_lifted`] rendered with `settings`.
+pub(crate) fn paired_against_lifted_with(
+    resting: &RenderScene,
+    lifted: &RenderScene,
+    settings: PathTraceSettings,
+) -> Paired {
     let camera = RenderCamera::orthographic(
         Vector3::new(0.0, -8.0, 80.0),
         Vector3::new(0.0, 0.0, 10.0),
@@ -61,7 +72,6 @@ pub(crate) fn paired_against_lifted(resting: &RenderScene, lifted: &RenderScene)
         30.0,
     )
     .unwrap();
-    let settings = PathTraceSettings::default();
     let first = PathTracer::new(resting, camera, 24, 24, settings).unwrap();
     let second = PathTracer::new(lifted, camera, 24, 24, settings).unwrap();
     let mut work = RenderWork::default();
@@ -224,3 +234,42 @@ fn the_shader_loop_takes_see_through_glass_found_there_out_onto_the_floor() {
                 rest_hit = hit; } resting = resting || meets; }";
     assert!(body.contains(step), "the path loop no longer has `{step}`");
 }
+
+/// Half-there glass resting on the wide floor with a fully there glass box of the same footprint
+/// under the floor, its top in the floor's plane: three coplanar faces, two of them glass.
+fn glass_on_floor_over_glass(opacity: f64) -> RenderScene {
+    let parts = vec![
+        part_of(&box_meshes(&one_box(0.0))[0], Matrix4X4::IDENTITY),
+        part_of(&wide_floor(), Matrix4X4::IDENTITY),
+        part_of(
+            &box_meshes(&[([20.0; 3], [0.0, 0.0, -10.0])])[0],
+            Matrix4X4::IDENTITY,
+        ),
+    ];
+    let surfaces = vec![
+        ScatteringSurface::glass(),
+        ScatteringSurface::matte_plastic([0.3; 3]),
+        ScatteringSurface::glass(),
+    ];
+    RenderScene::new(PlacedParts::new(parts), surfaces, white_sky_blue_ground())
+        .unwrap()
+        .with_part_opacities(vec![opacity, 1.0, 1.0])
+        .unwrap()
+}
+
+/// The mean red of `red_and_ground_leaks`'s view of `glass_on_floor_over_glass` at 0.5, pinned to
+/// its bits: a path that looked for a glass-on-glass seam at a hit on the see-through rest contact
+/// (the lower glass's top lies there too) would decide the seam by which face the trace returned,
+/// and moves it (measured: 0.32882, against 0.32559). Paths do reach the ground here: the lower
+/// glass's top is on no contact, so a trace that returns it in the floor's plane enters it.
+#[test]
+fn half_there_glass_on_a_floor_over_glass_looks_for_no_seam_on_the_contact() {
+    let (red, leaks) = red_and_ground_leaks(&glass_on_floor_over_glass(0.5), 40.0);
+    println!("mean red {:?}, ground leaks {leaks}", red.mean());
+    assert_eq!(
+        red.mean().to_bits(),
+        HALF_THERE_GLASS_OVER_GLASS_RED.to_bits()
+    );
+}
+
+const HALF_THERE_GLASS_OVER_GLASS_RED: f64 = 0.325_591_366_369_197_94;
