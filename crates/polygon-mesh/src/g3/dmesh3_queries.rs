@@ -196,21 +196,32 @@ impl DMesh3 {
 
     /// Each triangle once, found through the edge it leaves the vertex along.
     pub(crate) fn vtx_triangles(&self, vid: i32) -> Vec<i32> {
-        let mut out = Vec::new();
-        if !self.is_vertex(vid) {
-            return out;
+        self.vtx_triangles_iter(vid).collect()
+    }
+
+    /// [`DMesh3::vtx_triangles`] without the allocation, in the same order: the reducer's
+    /// flip check walks it twice for every collapse it tries.
+    pub(crate) fn vtx_triangles_iter(&self, vid: i32) -> impl Iterator<Item = i32> + '_ {
+        let live = self.is_vertex(vid);
+        live.then(|| self.vertex_edges.iter(vid))
+            .into_iter()
+            .flatten()
+            .flat_map(move |eid| {
+                let other = self.edge_other_v(eid, vid);
+                let [_, _, et0, et1] = self.edges[eid as usize];
+                let first = self.tri_has_sequential_v(et0, vid, other).then_some(et0);
+                let second = (et1 != INVALID_ID && self.tri_has_sequential_v(et1, vid, other))
+                    .then_some(et1);
+                first.into_iter().chain(second)
+            })
+    }
+
+    /// The edges at a vertex, appended to `out` (nothing for a dead vertex): the reducer
+    /// re-scores them after every collapse into one reused buffer.
+    pub(crate) fn vtx_edges_into(&self, vid: i32, out: &mut Vec<i32>) {
+        if self.is_vertex(vid) {
+            out.extend(self.vertex_edges.iter(vid));
         }
-        for eid in self.vertex_edges.iter(vid) {
-            let other = self.edge_other_v(eid, vid);
-            let [_, _, et0, et1] = self.edges[eid as usize];
-            if self.tri_has_sequential_v(et0, vid, other) {
-                out.push(et0);
-            }
-            if et1 != INVALID_ID && self.tri_has_sequential_v(et1, vid, other) {
-                out.push(et1);
-            }
-        }
-        out
     }
 
     pub(crate) fn get_tri_neighbour_tris(&self, tid: i32) -> [i32; 3] {

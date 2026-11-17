@@ -92,10 +92,8 @@ fn rust_only_a_plane_quadric_measures_squared_distance_and_three_planes_meet_at_
     let q = QuadricError::from_plane([0.0, 0.0, 1.0], [5.0, -2.0, 3.0]);
     assert_eq!(q.evaluate([1.0, 1.0, 3.0]), 0.0);
     assert_eq!(q.evaluate([1.0, 1.0, 5.0]), 4.0);
-    assert!(
-        q.optimal_point().is_none(),
-        "one plane has no single minimum"
-    );
+    // One plane fixes only the height: the reference keeps its place in the plane.
+    assert_eq!(q.minimizer_near([1.0, 2.0, 7.0]), [1.0, 2.0, 3.0]);
 
     let mut corner = QuadricError::ZERO;
     corner.add(1.0, &q);
@@ -107,8 +105,43 @@ fn rust_only_a_plane_quadric_measures_squared_distance_and_three_planes_meet_at_
         &corner,
         &QuadricError::from_plane([0.0, 1.0, 0.0], [0.0, -4.0, 0.0]),
     );
-    assert_eq!(corner.optimal_point(), Some([7.0, -4.0, 3.0]));
+    // Three planes meet at one point, wherever the search starts.
+    for reference in [[0.0, 0.0, 0.0], [7.5, -3.0, 2.0]] {
+        let p = corner.minimizer_near(reference);
+        for (got, want) in p.iter().zip([7.0, -4.0, 3.0]) {
+            assert!((got - want).abs() < 1e-12, "{p:?} from {reference:?}");
+        }
+    }
     assert_eq!(corner.evaluate([7.0, -4.0, 3.0]), 0.0);
+}
+
+#[test]
+fn rust_only_a_corner_of_tiny_faces_is_placed_as_exactly_as_a_large_one() {
+    // A corner of three planes weighted by the areas of faces a millimetre across on a part
+    // measured in metres: the weights are 1e-6, so A's determinant is about 1e-18. The
+    // placement must not depend on the units.
+    let corner = |w: f64| {
+        let mut q = QuadricError::ZERO;
+        q.add(
+            w,
+            &QuadricError::from_plane([0.0, 0.0, 1.0], [0.0, 0.0, 0.003]),
+        );
+        q.add(
+            w,
+            &QuadricError::from_plane([1.0, 0.0, 0.0], [0.007, 0.0, 0.0]),
+        );
+        q.add(
+            w,
+            &QuadricError::from_plane([0.0, 1.0, 0.0], [0.0, -0.004, 0.0]),
+        );
+        q
+    };
+    for w in [1.0, 1e-6] {
+        let p = corner(w).minimizer_near([0.0, 0.0, 0.0]);
+        for (got, want) in p.iter().zip([0.007, -0.004, 0.003]) {
+            assert!((got - want).abs() < 1e-15, "weight {w}: {p:?}");
+        }
+    }
 }
 
 #[test]

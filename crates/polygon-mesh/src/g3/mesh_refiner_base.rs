@@ -67,7 +67,7 @@ impl<'a> MeshRefinerBase<'a> {
         tc: i32,
         td: i32,
     ) -> bool {
-        for tid in self.mesh.vtx_triangles(vid) {
+        for tid in self.mesh.vtx_triangles_iter(vid) {
             if tid == tc || tid == td {
                 continue;
             }

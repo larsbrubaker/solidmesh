@@ -1,7 +1,9 @@
 //! The reducer (derived from geometry3Sharp): mesh simplification by Garland & Heckbert's
 //! Quadric Error Metric. Each vertex carries the area-weighted quadric of its triangles' planes
 //! (`quadric_error.rs`); every edge is queued (`index_priority_queue.rs`) by the error of
-//! collapsing it to the point that minimizes the sum of its two vertices' quadrics, and the
+//! collapsing it to the point that minimizes the sum of its two vertices' quadrics - solved only
+//! along the directions those planes constrain, nearest the edge's midpoint, so the placement
+//! does not depend on the part's units - or to an end or the midpoint where that scores lower; the
 //! cheapest edges are collapsed - through `MeshRefinerBase`'s constraint and flip checks
 //! (`mesh_refiner_base.rs`) and `DMesh3::collapse_edge` - until the triangle (or vertex) count
 //! reaches its target. With a projection target (`mesh_projection_target.rs`) the collapsed
@@ -104,6 +106,8 @@ pub(crate) struct Reducer<'a, 't> {
     /// Per edge id, the collapse point's UV when the attribute quadric placed it
     /// (`reducer_seams.rs`); empty on a mesh without face data.
     edge_uvs: Vec<Option<[f64; 2]>>,
+    /// A reused buffer for the edges `update_neighbours` re-scores.
+    edge_scratch: Vec<i32>,
 }
 
 /// The unit normal and the area of triangle `v1 v2 v3`.
@@ -179,6 +183,7 @@ impl<'a, 't> Reducer<'a, 't> {
             is_boundary_vtx_cache: Vec::new(),
             face_data: None,
             edge_uvs: Vec::new(),
+            edge_scratch: Vec::new(),
         }
     }
 
@@ -438,21 +443,25 @@ impl<'a, 't> Reducer<'a, 't> {
             return self.project(scale(add(mesh.vertex(ea), mesh.vertex(eb)), 0.5));
         }
 
-        if let Some(result) = q.optimal_point() {
-            return self.project(result);
-        }
-
-        // degenerate matrix, evaluate quadric at edge end and midpoints
-        // (could do line search here...)
+        // The quadric's minimum nearest the edge's midpoint, or the better of the edge's ends
+        // and midpoint when one of them scores lower (a minimum projected onto the target can
+        // score worse than staying on the edge). The minimum is solved only in the directions
+        // the quadric constrains (`QuadricError::minimizer_near`), so a part measured in metres
+        // is placed exactly as the same part in millimetres.
         let va = mesh.vertex(ea);
         let vb = mesh.vertex(eb);
-        let c = self.project(scale(add(va, vb), 0.5));
+        let mid = scale(add(va, vb), 0.5);
+        let solved = self.project(q.minimizer_near(mid));
+        let c = self.project(mid);
+        let fs = q.evaluate(solved);
         let fa = q.evaluate(va);
         let fb = q.evaluate(vb);
         let fc = q.evaluate(c);
-        // The minimum of the three, NaN-propagating
-        let m = min_or_nan(fa, min_or_nan(fb, fc));
-        if m == fa {
+        // The minimum of the four, NaN-propagating; ties keep the earlier candidate.
+        let m = min_or_nan(fs, min_or_nan(fa, min_or_nan(fb, fc)));
+        if m == fs {
+            solved
+        } else if m == fa {
             va
         } else if m == fb {
             vb
@@ -470,7 +479,10 @@ impl<'a, 't> Reducer<'a, 't> {
 
     /// Re-score every edge in `vid`'s one-ring.
     fn update_neighbours(&mut self, vid: i32) {
-        for eid in self.base.mesh.vtx_edges(vid) {
+        let mut edges = std::mem::take(&mut self.edge_scratch);
+        edges.clear();
+        self.base.mesh.vtx_edges_into(vid, &mut edges);
+        for &eid in &edges {
             let [a, b] = self.base.mesh.get_edge_v(eid);
             let q = QuadricError::sum(
                 &self.vert_quadrics[a as usize],
@@ -490,6 +502,7 @@ impl<'a, 't> Reducer<'a, 't> {
                 self.edge_queue.insert(eid, err as f32);
             }
         }
+        self.edge_scratch = edges;
     }
 
     /// Projects every vertex back onto the target when projection runs after the pass.

@@ -120,8 +120,8 @@ fn bumpy_plate(n: i32) -> Mesh {
 
 #[test]
 fn reduce_of_a_bare_open_part_gives_the_same_mesh_as_before() {
-    // Hashes of the reduced geometry taken before faces carried textures and colours through
-    // Reduce. An open part runs the boundary rules, which the seam rules sit beside.
+    // Hashes of the bare reduced geometry, so a change to where Reduce puts vertices is a
+    // deliberate one. An open part runs the boundary rules, which the seam rules sit beside.
     let bare = bumpy_plate(40);
     let count = bare.faces.len() as i32;
     let hashes: Vec<u64> = [
@@ -144,10 +144,10 @@ fn reduce_of_a_bare_open_part_gives_the_same_mesh_as_before() {
     assert_eq!(
         hashes,
         vec![
-            0x98e5_19a1_00af_2dd0,
-            0x7ec1_da01_416e_8dcf,
-            0x1ddb_6122_75cb_4f63,
-            0x41f8_88e2_b417_4aff,
+            0x7512_f652_6ead_e4ea,
+            0x6a0f_02d6_a914_ac67,
+            0x868f_d20e_a286_383e,
+            0x2294_98cb_edf7_f9bb,
         ]
     );
 }

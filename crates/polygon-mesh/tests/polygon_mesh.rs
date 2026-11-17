@@ -39,6 +39,8 @@ mod mesh_split_manifold_tests;
 mod mesh_tests;
 #[path = "polygon_mesh/outline_to_mesh_tests.rs"]
 mod outline_to_mesh_tests;
+#[path = "polygon_mesh/reduce_accuracy_tests.rs"]
+mod reduce_accuracy_tests;
 #[path = "polygon_mesh/reduce_face_data_tests.rs"]
 mod reduce_face_data_tests;
 #[path = "polygon_mesh/reduce_seam_tests.rs"]

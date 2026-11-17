@@ -1,8 +1,13 @@
 //! Measures Reduce (`Mesh::reduced_to_triangle_count`) on a mesh read from a file: the time it
 //! takes, the two-way surface deviation of the result from the original
 //! (`mesh_distance::surface_deviation`) as a percentage of the original's largest
-//! bounding-box side, and the open and non-manifold edges left. With `REDUCE_BENCH_WORST` set
-//! it also prints each side's vertex farthest from the other surface.
+//! bounding-box side (max, p99 and p99.9 over both surfaces' lattice samples, and the exact
+//! largest distance from each mesh's vertices to the other surface: `vo2r` original to
+//! reduced, `vr2o` reduced to original), and the open and non-manifold edges left.
+//! `REDUCE_BENCH_SAMPLES` sets the samples per surface; `REDUCE_BENCH_TIME_ONLY` skips the
+//! measuring, so a profiler or `time` sees the reduce alone; `REDUCE_BENCH_OUT=<path>` writes
+//! the reduced mesh in the input's format, so two builds' outputs can be compared byte for byte. With `REDUCE_BENCH_WORST` set it also
+//! prints each side's vertex farthest from the other surface.
 //!
 //! The file is raw little-endian: `u32` vertex count, `u32` triangle count, then `f64` x, y, z
 //! per vertex, then `i32` a, b, c per triangle.
@@ -44,23 +49,64 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     let seconds = start.elapsed().as_secs_f64();
-    let deviation = surface_deviation(&mesh, &reduced, DEFAULT_SAMPLES_PER_SURFACE, 0.99);
+    if let Some(path) = std::env::var_os("REDUCE_BENCH_OUT") {
+        let mut out = Vec::new();
+        out.extend((reduced.vertices.len() as u32).to_le_bytes());
+        out.extend((reduced.faces.len() as u32).to_le_bytes());
+        for p in &reduced.vertices {
+            for c in [p.x, p.y, p.z] {
+                out.extend((c as f64).to_le_bytes());
+            }
+        }
+        for f in reduced.faces.iter() {
+            for i in [f.v0, f.v1, f.v2] {
+                out.extend(i.to_le_bytes());
+            }
+        }
+        std::fs::write(path, out)?;
+    }
+    if std::env::var_os("REDUCE_BENCH_TIME_ONLY").is_some() {
+        println!("{} tris in {seconds:.2}s", reduced.faces.len());
+        return Ok(());
+    }
+    let samples = std::env::var("REDUCE_BENCH_SAMPLES")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(DEFAULT_SAMPLES_PER_SURFACE);
+    let deviation = surface_deviation(&mesh, &reduced, samples, 0.99);
+    let p999 = surface_deviation(&mesh, &reduced, samples, 0.999).percentile_fraction();
+    let to_reduced = vertex_hausdorff(&mesh, &reduced) / deviation.scale;
+    let to_original = vertex_hausdorff(&reduced, &mesh) / deviation.scale;
     let (open, non_manifold) = edge_defects(&reduced);
     if std::env::var_os("REDUCE_BENCH_WORST").is_some() {
         print_worst("original vertex", &mesh, &reduced, deviation.scale);
         print_worst("reduced vertex", &reduced, &mesh, deviation.scale);
     }
     println!(
-        "{} -> {} tris  max {:.3}%  p99 {:.3}%  open {}  non-manifold {}  {:.1}s",
+        "{} -> {} tris  max {:.4}%  p99 {:.4}%  p999 {:.4}%  vo2r {:.4}%  vr2o {:.4}%  open {}  non-manifold {}  {:.1}s",
         faces.len() / 3,
         reduced.faces.len(),
         100.0 * deviation.max_fraction(),
         100.0 * deviation.percentile_fraction(),
+        100.0 * p999,
+        100.0 * to_reduced,
+        100.0 * to_original,
         open,
         non_manifold,
         seconds
     );
     Ok(())
+}
+
+/// The largest distance from a vertex of `from` to `to`'s surface: exact at every vertex, so
+/// it catches a lost tip the lattice samples could step over.
+fn vertex_hausdorff(from: &Mesh, to: &Mesh) -> f64 {
+    let points: Vec<Vector3> = from
+        .vertices
+        .iter()
+        .map(|v| Vector3::new(v.x as f64, v.y as f64, v.z as f64))
+        .collect();
+    point_distances(to, &points).into_iter().fold(0.0, f64::max)
 }
 
 /// With `REDUCE_BENCH_WORST` set: the vertex of `from` farthest from `to`'s surface, so a
