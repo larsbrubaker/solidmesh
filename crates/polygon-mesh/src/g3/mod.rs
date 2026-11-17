@@ -86,6 +86,8 @@ mod mesh_topology_tests;
 #[cfg(test)]
 mod minimal_hole_fill_tests;
 #[cfg(test)]
+mod reducer_guard_tests;
+#[cfg(test)]
 mod reducer_tests;
 #[cfg(test)]
 mod region_operator_tests;

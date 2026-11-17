@@ -6,9 +6,16 @@
 //! does not depend on the part's units - or to an end or the midpoint where that scores lower; the
 //! cheapest edges are collapsed - through `MeshRefinerBase`'s constraint and flip checks
 //! (`mesh_refiner_base.rs`) and `DMesh3::collapse_edge` - until the triangle (or vertex) count
-//! reaches its target. With a projection target (`mesh_projection_target.rs`) the collapsed
-//! points are projected back onto the original surface, inline or after the pass. MatterCAD's
-//! Reduce operation (`DecimateObject3D`) runs it through [`crate::Mesh::reduced_to_triangle_count`].
+//! reaches its target. The distance guard (the child module `reducer_guard.rs`, on by default
+//! through `ReduceOptions` for a mesh without face textures or colours) refuses, in the last stretch of the reduce, any collapse that would
+//! move the surface farther than a bound that grows only when nothing else can collapse, so a
+//! thin tip or a small boss is not cut away for its small quadric error. With a projection
+//! target (`mesh_projection_target.rs`, Reduce's "Maintain Surface") every collapse point is
+//! projected onto the original surface as it is scored, and a guarded reduce projects the
+//! positions it falls back to as well, so the result's vertices lie on the original - except,
+//! on a part with face textures or colours, a vertex the seam rules place along a seam.
+//! MatterCAD's Reduce operation (`DecimateObject3D`) runs it through
+//! [`crate::Mesh::reduced_to_triangle_count`].
 //!
 //! The arithmetic order is fixed, and the initial queue is filled from an introsort of the edge
 //! errors (`solidmesh_math::fixed_tie_sort`), whose order for tied errors is fixed too: the order ties
@@ -35,16 +42,17 @@ use super::quadric_error::QuadricError;
 use super::reducer_face_data::ReducerFaceData;
 use seams::parameter_along;
 
+#[path = "reducer_guard.rs"]
+mod guard;
 #[path = "reducer_seams.rs"]
 mod seams;
 use super::vector3d::{add, cross, distance_squared, scale, sub, EPSILON};
+use guard::Guard;
+pub(crate) use guard::ReduceOptions;
 
 /// How a projection target is used.
-#[allow(dead_code)] // no caller selects `NoProjection` yet
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TargetProjectionMode {
-    /// Disable projection.
-    NoProjection,
     /// Do all projection after reducing.
     AfterRefinement,
     /// Projection is computed before evaluating quadrics, so the QEM error of the result is
@@ -79,6 +87,7 @@ pub(crate) enum ProcessResult {
 struct QEdge {
     q: QuadricError,
     collapse_pt: [f64; 3],
+    err: f32,
 }
 
 /// The quadric-error reducer over one mesh.
@@ -108,6 +117,11 @@ pub(crate) struct Reducer<'a, 't> {
     edge_uvs: Vec<Option<[f64; 2]>>,
     /// A reused buffer for the edges `update_neighbours` re-scores.
     edge_scratch: Vec<i32>,
+    /// The distance guard (`reducer_guard.rs`), when Reduce runs with it.
+    guard: Option<Guard<'t>>,
+    /// Whether the guard's fallback positions are projected onto the target too (Maintain
+    /// Surface on a guarded reduce).
+    on_surface: bool,
 }
 
 /// The unit normal and the area of triangle `v1 v2 v3`.
@@ -184,6 +198,8 @@ impl<'a, 't> Reducer<'a, 't> {
             face_data: None,
             edge_uvs: Vec::new(),
             edge_scratch: Vec::new(),
+            guard: None,
+            on_surface: false,
         }
     }
 
@@ -245,30 +261,37 @@ impl<'a, 't> Reducer<'a, 't> {
         }
         self.initialize_queue();
 
-        while self.edge_queue.count() > 0 {
-            // termination criteria
-            if self.reduce_mode == TargetModes::VertexCount {
-                if self.base.mesh.vertex_count() as i64 <= self.target_count as i64 {
-                    break;
+        loop {
+            while self.edge_queue.count() > 0 && !self.target_reached() {
+                self.maybe_start_guard();
+                let eid = self.edge_queue.dequeue();
+                if !self.base.mesh.is_edge(eid) {
+                    continue;
                 }
-            } else if self.base.mesh.triangle_count() as i64 <= self.target_count as i64 {
+
+                let collapse_pt = self.edge_quadrics[eid as usize].collapse_pt;
+                let (result, v_kept) = self.collapse_edge(eid, collapse_pt);
+                if result == ProcessResult::OkCollapsed {
+                    self.vert_quadrics[v_kept as usize] = self.edge_quadrics[eid as usize].q;
+                    self.update_neighbours(v_kept);
+                }
+            }
+            // The guard refused the rest: grow its bound and try the edges that now fit.
+            if self.target_reached() || !self.requeue_waiting() {
                 break;
-            }
-
-            let eid = self.edge_queue.dequeue();
-            if !self.base.mesh.is_edge(eid) {
-                continue;
-            }
-
-            let collapse_pt = self.edge_quadrics[eid as usize].collapse_pt;
-            let (result, v_kept) = self.collapse_edge(eid, collapse_pt);
-            if result == ProcessResult::OkCollapsed {
-                self.vert_quadrics[v_kept as usize] = self.edge_quadrics[eid as usize].q;
-                self.update_neighbours(v_kept);
             }
         }
 
         self.reproject();
+    }
+
+    /// Whether the count the reduce works toward has reached its target.
+    fn target_reached(&self) -> bool {
+        if self.reduce_mode == TargetModes::VertexCount {
+            self.base.mesh.vertex_count() as i64 <= self.target_count as i64
+        } else {
+            self.base.mesh.triangle_count() as i64 <= self.target_count as i64
+        }
     }
 
     /// Reduces until at most `n_count` triangles remain (at least one).
@@ -405,6 +428,7 @@ impl<'a, 't> Reducer<'a, 't> {
                 self.edge_quadrics[eid as usize] = QEdge {
                     q,
                     collapse_pt: opt,
+                    err: err as f32,
                 };
                 if let Some(slot) = self.edge_uvs.get_mut(eid as usize) {
                     *slot = uv;
@@ -492,9 +516,13 @@ impl<'a, 't> Reducer<'a, 't> {
             self.edge_quadrics[eid as usize] = QEdge {
                 q,
                 collapse_pt: opt,
+                err: err as f32,
             };
             if let Some(slot) = self.edge_uvs.get_mut(eid as usize) {
                 *slot = uv;
+            }
+            if let Some(guard) = &mut self.guard {
+                guard.rescored(eid);
             }
             if self.edge_queue.contains(eid) {
                 self.edge_queue.update(eid, err as f32);
@@ -601,6 +629,7 @@ impl<'a, 't> Reducer<'a, 't> {
         let mut i_collapse = a;
 
         // if either vtx is fixed, collapse to that position
+        let fixed = collapse_to == a || collapse_to == b;
         if collapse_to == b {
             v_new_pos = v_b;
         } else if collapse_to == a {
@@ -611,17 +640,17 @@ impl<'a, 't> Reducer<'a, 't> {
             v_new_pos = self.get_projected_collapse_position(i_keep, v_new_pos);
         }
 
-        // check if this collapse will create a normal flip. Also checks for invalid collapse
-        // nbrhood, since we are doing one-ring iter anyway.
-        if self
-            .base
-            .collapse_creates_flip_or_invalid(a, b, v_new_pos, t0, t1)
-            || self
-                .base
-                .collapse_creates_flip_or_invalid(b, a, v_new_pos, t0, t1)
-        {
-            return (ProcessResult::IgnoredCreatesFlip, collapse_to_v);
-        }
+        // A position that turns no triangle over (nor makes the neighbourhood invalid) and,
+        // with the guard, keeps the surface within its bound (`reducer_guard.rs`).
+        v_new_pos = match self.choose_position(edge_id, [a, b], [t0, t1], v_new_pos, fixed) {
+            Ok(p) => p,
+            Err(refused) => return (refused, collapse_to_v),
+        };
+        let touched = self
+            .guard
+            .as_ref()
+            .filter(|g| g.enabled)
+            .map(|_| Guard::touching_before(&*self.base.mesh, a, b));
 
         // The corner UVs the collapse leaves at the kept vertex, read before the triangles
         // around the removed vertex change.
@@ -666,6 +695,9 @@ impl<'a, 't> Reducer<'a, 't> {
         if result == MeshResult::Ok {
             collapse_to_v = i_keep;
             self.base.mesh.set_vertex(i_keep, v_new_pos);
+            if let (Some(guard), Some(touched)) = (&mut self.guard, &touched) {
+                guard.after_collapse(&*self.base.mesh, i_keep, touched);
+            }
             if let (Some(data), Some(plan)) = (&mut self.face_data, uv_plan) {
                 data.apply_collapse(&*self.base.mesh, i_keep, plan);
                 data.merge_attributes(i_keep, i_collapse);
@@ -718,30 +750,60 @@ impl<'a, 't> Reducer<'a, 't> {
 
 impl crate::Mesh {
     /// The geometry of the Reduce operation (`DecimateObject3D`): the mesh as a `DMesh3`, a
-    /// `Reducer` reducing to `target_count` triangles - with "Maintain Surface"
-    /// (`maintain_surface`), projecting every collapse inline onto a copy of the original mesh
-    /// through its `DMeshAABBTree3` - then back to a `Mesh`. Face textures and face colours come
-    /// through: no reduced face straddles a seam between pictures, UV islands or colours, and
-    /// each takes its region's picture and colour, with UVs that follow the collapses. The caller
-    /// applies Reduce's floor of 4.
+    /// `Reducer` reducing to `target_count` triangles, then back to a `Mesh`.
+    ///
+    /// A mesh without face textures or colours runs with the distance guard. "Maintain
+    /// Surface" (`maintain_surface`) keeps every vertex of such a result on the original
+    /// surface: the quadric's point is projected onto a copy of the original as it is scored,
+    /// and when the guard refuses it the reduce falls back, in order of quadric error, to the
+    /// edge's ends and midpoint projected onto the original - the guard still bounding the
+    /// distance both ways.
+    ///
+    /// A mesh with face textures or colours runs by the seam rules alone, without the guard,
+    /// and "Maintain Surface" projects every collapse point onto the original as it is placed,
+    /// except a vertex the seam rules place along a seam, which stays on the seam. Face
+    /// textures and face colours come through: no reduced face straddles a seam between
+    /// pictures, UV islands or colours, and each takes its region's picture and colour, with
+    /// UVs that follow the collapses. The caller applies Reduce's floor of 4.
     pub fn reduced_to_triangle_count(&self, target_count: i32, maintain_surface: bool) -> Self {
+        self.reduced_with(
+            target_count,
+            ReduceOptions {
+                on_surface: maintain_surface,
+                ..ReduceOptions::default()
+            },
+        )
+    }
+
+    /// [`crate::Mesh::reduced_to_triangle_count`] with its options spelled out, for tests that
+    /// compare the reduce with and without the guard.
+    pub(crate) fn reduced_with(&self, target_count: i32, options: ReduceOptions) -> Self {
         let (mut mesh, face_data) = self.to_dmesh3_with_face_data();
-        let original = if maintain_surface {
-            Some(mesh.clone())
-        } else {
-            None
-        };
+        // A textured or coloured mesh keeps the seam rules' order of collapses: the guard's
+        // refusals reorder them, which smears pictures across the seams the rules protect. It
+        // keeps Maintain Surface as it was too: every collapse projected onto the original.
+        let bare = face_data.is_none();
+        let guarded = options.guard && bare;
+        let original = (guarded || options.on_surface).then(|| mesh.clone());
         let tree = original.as_ref().map(super::DMeshAABBTree3::new);
         let target = tree
             .as_ref()
             .map(super::mesh_projection_target::MeshProjectionTarget::new);
+        let size = original.as_ref().map_or(0.0, largest_side);
         let mut reducer = Reducer::new(&mut mesh);
-        if let Some(target) = &target {
+        if let (true, Some(target)) = (options.on_surface, &target) {
+            // Maintain Surface: every position a collapse may take lies on the original - the
+            // quadric's point is projected as it is scored, and a guarded reduce projects the
+            // positions it falls back to as well.
             reducer.set_projection_target(target);
             reducer.projection_mode = TargetProjectionMode::Inline;
+            reducer.on_surface = guarded;
         }
         if let Some(data) = face_data {
             reducer.attach_face_data(data);
+        }
+        if let (true, Some(tree)) = (guarded, &tree) {
+            reducer.attach_guard(tree, size);
         }
         reducer.reduce_to_triangle_count(target_count);
         let mut out = reducer.mesh().to_mesh();
@@ -750,4 +812,18 @@ impl crate::Mesh {
         }
         out
     }
+}
+
+/// The largest side of `mesh`'s axis-aligned bounding box.
+fn largest_side(mesh: &DMesh3) -> f64 {
+    let mut lo = [f64::INFINITY; 3];
+    let mut hi = [f64::NEG_INFINITY; 3];
+    for v in mesh.vertex_indices() {
+        let p = mesh.vertex(v);
+        for k in 0..3 {
+            lo[k] = lo[k].min(p[k]);
+            hi[k] = hi[k].max(p[k]);
+        }
+    }
+    (0..3).map(|k| hi[k] - lo[k]).fold(0.0, f64::max)
 }

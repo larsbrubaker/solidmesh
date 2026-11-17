@@ -220,6 +220,18 @@ fn reduce_keeps_face_colours_without_a_picture() {
 }
 
 #[test]
+fn maintain_surface_still_projects_a_textured_part_onto_its_surface() {
+    // A textured part reduces by the seam rules without the distance guard, so Maintain Surface
+    // keeps projecting each collapse onto the original and the two results differ.
+    let picture = banded_picture();
+    let original = atlas_sphere(24, 32, Some(&picture), true);
+    let target = original.faces.len() as i32 / 3;
+    let free = original.reduced_to_triangle_count(target, false);
+    let kept = original.reduced_to_triangle_count(target, true);
+    assert_ne!(geometry_hash(&free), geometry_hash(&kept));
+}
+
+#[test]
 fn reduce_of_a_textured_part_is_the_same_on_every_run() {
     let picture = banded_picture();
     let original = atlas_sphere(24, 32, Some(&picture), true);
@@ -262,10 +274,10 @@ fn reduce_of_a_bare_part_gives_the_same_mesh_as_before() {
     assert_eq!(
         hashes,
         vec![
-            0xb222_e92b_6e1c_2088,
-            0x4d78_8eae_2805_bc87,
-            0x6776_6827_a4da_38db,
-            0x150d_cf82_a91e_0e3d,
+            0xa92b_e640_255d_1192,
+            0x5259_93cd_bb7e_4554,
+            0x6fd2_0e69_1673_214e,
+            0x0962_cb65_7250_e98f,
         ]
     );
 }

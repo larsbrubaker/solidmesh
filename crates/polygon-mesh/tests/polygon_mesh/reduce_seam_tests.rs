@@ -144,10 +144,10 @@ fn reduce_of_a_bare_open_part_gives_the_same_mesh_as_before() {
     assert_eq!(
         hashes,
         vec![
-            0x7512_f652_6ead_e4ea,
-            0x6a0f_02d6_a914_ac67,
-            0x868f_d20e_a286_383e,
-            0x2294_98cb_edf7_f9bb,
+            0xa0ad_73f6_13bd_1148,
+            0x91a2_ff16_2691_c4b2,
+            0x8d02_d944_bec3_8682,
+            0x4aad_f91f_1159_5619,
         ]
     );
 }

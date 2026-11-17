@@ -8,7 +8,7 @@
 
 use solidmesh_math::Vector3;
 use solidmesh_mesh::dual_contouring::{build_octree, generate_mesh_from_octree};
-use solidmesh_mesh::mesh_distance::surface_deviation;
+use solidmesh_mesh::mesh_distance::{point_distances, surface_deviation};
 use solidmesh_mesh::solids::RoundedCornerBox;
 use solidmesh_mesh::Mesh;
 
@@ -165,4 +165,59 @@ fn a_dual_contoured_shape_reduced_to_a_tenth_keeps_its_surface() {
 #[test]
 fn a_thin_blade_reduced_to_a_twentieth_keeps_its_rim() {
     check(&blade(), "blade", 0.05, 0.0023, 0.00033);
+}
+
+/// A UV sphere of radius `radius`, `stacks` bands and `slices` around, its poles single vertices.
+fn uv_sphere(radius: f64, stacks: usize, slices: usize) -> Mesh {
+    let tau = std::f64::consts::TAU;
+    let pi = std::f64::consts::PI;
+    let mut v = vec![0.0, 0.0, radius];
+    for i in 1..stacks {
+        let theta = pi * i as f64 / stacks as f64;
+        for j in 0..slices {
+            let phi = tau * j as f64 / slices as f64;
+            v.extend_from_slice(&[
+                radius * libm::sin(theta) * libm::cos(phi),
+                radius * libm::sin(theta) * libm::sin(phi),
+                radius * libm::cos(theta),
+            ]);
+        }
+    }
+    v.extend_from_slice(&[0.0, 0.0, -radius]);
+    let last = (v.len() / 3 - 1) as i32;
+    let ring = |i: usize, j: usize| (1 + (i - 1) * slices + (j % slices)) as i32;
+    let mut f = Vec::new();
+    for j in 0..slices {
+        f.extend_from_slice(&[0, ring(1, j), ring(1, j + 1)]);
+        f.extend_from_slice(&[last, ring(stacks - 1, j + 1), ring(stacks - 1, j)]);
+    }
+    for i in 1..stacks - 1 {
+        for j in 0..slices {
+            f.extend_from_slice(&[ring(i, j), ring(i + 1, j), ring(i + 1, j + 1)]);
+            f.extend_from_slice(&[ring(i, j), ring(i + 1, j + 1), ring(i, j + 1)]);
+        }
+    }
+    Mesh::from_arrays(&v, &f)
+}
+
+#[test]
+fn maintain_surface_keeps_every_vertex_on_the_original() {
+    // Maintain Surface promises the reduced part's vertices lie on the original: a radius-10
+    // sphere of 720 triangles reduced to 200 keeps every vertex within 1e-4 of its surface.
+    let sphere = uv_sphere(10.0, 16, 24);
+    assert_eq!(sphere.faces.len(), 720);
+    let reduced = sphere.reduced_to_triangle_count(200, true);
+    assert_closed_manifold(&reduced, "sphere with Maintain Surface");
+    let points: Vec<Vector3> = reduced
+        .vertices
+        .iter()
+        .map(|v| Vector3::new(v.x as f64, v.y as f64, v.z as f64))
+        .collect();
+    let farthest = point_distances(&sphere, &points)
+        .into_iter()
+        .fold(0.0, f64::max);
+    assert!(
+        farthest <= 1e-4,
+        "a vertex is {farthest} off the original surface"
+    );
 }

@@ -1,6 +1,7 @@
 //! The part of geometry3Sharp's `DMeshAABBTree3` the signed distance grid and the mesh repair
 //! reach: the default top-down midpoint build, `FindNearestTriangle`, and `FindNearestHitTriangle`
-//! with its `TriangleFilterF`. The fast winding number over the same tree is `fast_winding`.
+//! with its `TriangleFilterF`, plus `any_triangle_within`, a yes/no search that stops at the first
+//! triangle within a radius. The fast winding number over the same tree is `fast_winding`.
 //!
 //! The layout is g3's: float box centres and extents per box, `box_to_index` into one
 //! `index_list` whose leading part holds the leaf triangle lists (`[N t1 .. tN]`) and whose tail
@@ -194,6 +195,43 @@ impl<'a> DMeshAABBTree3<'a> {
                 }
             }
         }
+    }
+
+    /// Whether some triangle lies within `radius` of `p` (at or inside it). It stops at the
+    /// first such triangle rather than finding the nearest, so a yes is cheap; the reducer's
+    /// distance guard (`reducer_guard.rs`) asks it many times per collapse.
+    pub(crate) fn any_triangle_within(&self, p: [f64; 3], radius: f64) -> bool {
+        self.any_within(self.root_index, p, radius * radius)
+    }
+
+    fn any_within(&self, i_box: i32, p: [f64; 3], radius_sqr: f64) -> bool {
+        let idx = self.box_to_index[i_box as usize];
+        if idx < self.triangles_end {
+            let idx = idx as usize;
+            let num_tris = self.index_list[idx] as usize;
+            return (1..=num_tris).any(|i| {
+                let ti = self.index_list[idx + i];
+                tri_distance_sqr(&self.mesh.get_tri_vertices(ti as usize), p) <= radius_sqr
+            });
+        }
+        let idx = idx as usize;
+        let child1 = self.index_list[idx];
+        if child1 < 0 {
+            let child1 = -child1 - 1;
+            return self.box_distance_sqr(child1, p) <= radius_sqr
+                && self.any_within(child1, p, radius_sqr);
+        }
+        let child1 = child1 - 1;
+        let child2 = self.index_list[idx + 1] - 1;
+        let dist1 = self.box_distance_sqr(child1, p);
+        let dist2 = self.box_distance_sqr(child2, p);
+        let (first, first_dist, second, second_dist) = if dist1 <= dist2 {
+            (child1, dist1, child2, dist2)
+        } else {
+            (child2, dist2, child1, dist1)
+        };
+        (first_dist <= radius_sqr && self.any_within(first, p, radius_sqr))
+            || (second_dist <= radius_sqr && self.any_within(second, p, radius_sqr))
     }
 
     /// The nearest triangle `filter` accepts strictly within `max_dist` (`f64::MAX` for no

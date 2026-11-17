@@ -29,7 +29,9 @@ use solidmesh_mesh::Mesh;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 3 {
-        return Err("usage: reduce_bench <mesh.bin> <target triangles> [keep|free]".into());
+        return Err(
+            "usage: reduce_bench <mesh.bin> <target triangles> [keep|free|<reduced.bin>]".into(),
+        );
     }
     let mut bytes = Vec::new();
     std::fs::File::open(&args[1])?.read_to_end(&mut bytes)?;
@@ -81,6 +83,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var_os("REDUCE_BENCH_WORST").is_some() {
         print_worst("original vertex", &mesh, &reduced, deviation.scale);
         print_worst("reduced vertex", &reduced, &mesh, deviation.scale);
+        print_worst_centroid("original face", &mesh, &reduced, deviation.scale);
+        print_worst_centroid("reduced face", &reduced, &mesh, deviation.scale);
     }
     println!(
         "{} -> {} tris  max {:.4}%  p99 {:.4}%  p999 {:.4}%  vo2r {:.4}%  vr2o {:.4}%  open {}  non-manifold {}  {:.1}s",
@@ -131,6 +135,43 @@ fn print_worst(label: &str, from: &Mesh, to: &Mesh, scale: f64) {
         p.y,
         p.z,
         100.0 * distances[worst] / scale
+    );
+}
+
+/// With `REDUCE_BENCH_WORST` set: the face of `from` whose centroid is farthest from `to`.
+fn print_worst_centroid(label: &str, from: &Mesh, to: &Mesh, scale: f64) {
+    let points: Vec<Vector3> = from
+        .faces
+        .iter()
+        .map(|f| {
+            let [a, b, c] = [f.v0, f.v1, f.v2].map(|i| from.vertices[i as usize]);
+            Vector3::new(
+                (a.x as f64 + b.x as f64 + c.x as f64) / 3.0,
+                (a.y as f64 + b.y as f64 + c.y as f64) / 3.0,
+                (a.z as f64 + b.z as f64 + c.z as f64) / 3.0,
+            )
+        })
+        .collect();
+    let d = point_distances(to, &points);
+    let mut worst = 0;
+    for i in 0..d.len() {
+        if d[i] > d[worst] {
+            worst = i;
+        }
+    }
+    let f = &from.faces[worst];
+    let e = |i: i32, j: i32| {
+        let (a, b) = (from.vertices[i as usize], from.vertices[j as usize]);
+        (((a.x - b.x) as f64).powi(2) + ((a.y - b.y) as f64).powi(2) + ((a.z - b.z) as f64).powi(2))
+            .sqrt()
+    };
+    println!(
+        "  worst {label} centroid {worst} at {:?}: {:.3}%  edges {:.4} {:.4} {:.4}",
+        points[worst],
+        100.0 * d[worst] / scale,
+        e(f.v0, f.v1),
+        e(f.v1, f.v2),
+        e(f.v2, f.v0)
     );
 }
 
