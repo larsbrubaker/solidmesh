@@ -7,6 +7,16 @@
 //! kernel (`csg`) for telling a touch from a crossing. The AI tool's `measure` reads it;
 //! `point_distances` answers point-to-surface distances over the same tree, and
 //! `point_triangle_distance_sqr` exposes the single point-triangle distance.
+//!
+//! `surface_deviation` measures how far one surface strays from another, both ways, on
+//! `point_distances`: a caller that simplifies a mesh (`Mesh::reduced_to_triangle_count`)
+//! refuses a result that drifted too far from the original. Each surface is sampled on a fixed
+//! barycentric lattice per face, fine enough that no lattice cell is wider than the spacing the
+//! sample budget allows, so every vertex and edge is sampled and the samples fall evenly over
+//! the area. The two directions' samples are pooled, each weighted by the area it stands for,
+//! giving the largest distance and an area-weighted percentile. Samples follow the faces'
+//! order and the percentile's sort breaks ties by sample index, so the same two meshes give
+//! the same numbers to the bit.
 
 use solidmesh_math::{Matrix4X4, Vector3};
 
@@ -253,4 +263,183 @@ fn triangle_soup(mesh: &Mesh) -> DMesh3 {
 
 fn to_vector3(v: [f64; 3]) -> Vector3 {
     Vector3::new(v[0], v[1], v[2])
+}
+
+/// Samples per surface `surface_deviation` callers use unless they need another budget.
+pub const DEFAULT_SAMPLES_PER_SURFACE: usize = 200_000;
+
+/// The two-way deviation between two surfaces.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SurfaceDeviation {
+    /// The largest distance from a sample of either surface to the other surface.
+    pub max: f64,
+    /// The area-weighted percentile of the pooled sample distances, at `percentile`.
+    pub percentile_distance: f64,
+    /// The percentile asked for, in `0.0..=1.0` (0.99 for the 99th).
+    pub percentile: f64,
+    /// The largest side of the first mesh's axis-aligned bounding box, the scale the fractions
+    /// are taken against.
+    pub scale: f64,
+}
+
+impl SurfaceDeviation {
+    /// `max` as a fraction of the first mesh's largest bounding-box side (0 for a mesh with
+    /// no extent).
+    pub fn max_fraction(&self) -> f64 {
+        if self.scale > 0.0 {
+            self.max / self.scale
+        } else {
+            0.0
+        }
+    }
+
+    /// `percentile_distance` as a fraction of the first mesh's largest bounding-box side.
+    pub fn percentile_fraction(&self) -> f64 {
+        if self.scale > 0.0 {
+            self.percentile_distance / self.scale
+        } else {
+            0.0
+        }
+    }
+}
+
+/// The two-way deviation between `a` and `b`, sampling each surface with about
+/// `samples_per_surface` points (more when it has more faces: every face's corners are
+/// sampled) and reporting the area-weighted `percentile` (clamped to `0.0..=1.0`). A mesh
+/// with no faces is infinitely far from one with faces; two empty meshes are zero apart.
+pub fn surface_deviation(
+    a: &Mesh,
+    b: &Mesh,
+    samples_per_surface: usize,
+    percentile: f64,
+) -> SurfaceDeviation {
+    let percentile = percentile.clamp(0.0, 1.0);
+    let scale = largest_side(a);
+    if a.faces.is_empty() || b.faces.is_empty() {
+        let d = if a.faces.is_empty() && b.faces.is_empty() {
+            0.0
+        } else {
+            f64::INFINITY
+        };
+        return SurfaceDeviation {
+            max: d,
+            percentile_distance: d,
+            percentile,
+            scale,
+        };
+    }
+    let (points_a, mut weights) = surface_samples(a, samples_per_surface);
+    let (points_b, weights_b) = surface_samples(b, samples_per_surface);
+    let mut distances = point_distances(b, &points_a);
+    distances.extend(point_distances(a, &points_b));
+    weights.extend(weights_b);
+
+    let mut max = 0.0f64;
+    let mut total_weight = 0.0f64;
+    for (&d, &w) in distances.iter().zip(&weights) {
+        if d > max {
+            max = d;
+        }
+        total_weight += w;
+    }
+    let mut order: Vec<usize> = (0..distances.len()).collect();
+    order.sort_by(|&i, &j| distances[i].total_cmp(&distances[j]).then(i.cmp(&j)));
+    let wanted = percentile * total_weight;
+    let mut reached = 0.0f64;
+    let mut percentile_distance = max;
+    for &i in &order {
+        reached += weights[i];
+        if reached >= wanted {
+            percentile_distance = distances[i];
+            break;
+        }
+    }
+    SurfaceDeviation {
+        max,
+        percentile_distance,
+        percentile,
+        scale,
+    }
+}
+
+/// The lattice samples of `mesh`'s faces and the area each stands for.
+fn surface_samples(mesh: &Mesh, budget: usize) -> (Vec<Vector3>, Vec<f64>) {
+    let corners = |face: &crate::Face| {
+        [face.v0, face.v1, face.v2].map(|i| {
+            let v = mesh.vertices[i as usize];
+            [v.x as f64, v.y as f64, v.z as f64]
+        })
+    };
+    let mut total_area = 0.0f64;
+    for face in mesh.faces.iter() {
+        total_area += triangle_area(&corners(face));
+    }
+    // The lattice spacing at which `budget` evenly spread samples cover the area.
+    let spacing = if budget > 0 && total_area > 0.0 {
+        (2.0 * total_area / budget as f64).sqrt()
+    } else {
+        f64::INFINITY
+    };
+    let mut points = Vec::new();
+    let mut weights = Vec::new();
+    for face in mesh.faces.iter() {
+        let tri = corners(face);
+        let longest = edge_length(tri[0], tri[1])
+            .max(edge_length(tri[1], tri[2]))
+            .max(edge_length(tri[2], tri[0]));
+        let steps = if spacing.is_finite() {
+            ((longest / spacing).ceil() as usize).clamp(1, 1024)
+        } else {
+            1
+        };
+        let weight = triangle_area(&tri) / ((steps + 1) * (steps + 2) / 2) as f64;
+        for i in 0..=steps {
+            for j in 0..=(steps - i) {
+                let k = steps - i - j;
+                let (u, v, w) = (
+                    i as f64 / steps as f64,
+                    j as f64 / steps as f64,
+                    k as f64 / steps as f64,
+                );
+                points.push(Vector3::new(
+                    u * tri[0][0] + v * tri[1][0] + w * tri[2][0],
+                    u * tri[0][1] + v * tri[1][1] + w * tri[2][1],
+                    u * tri[0][2] + v * tri[1][2] + w * tri[2][2],
+                ));
+                weights.push(weight);
+            }
+        }
+    }
+    (points, weights)
+}
+
+fn largest_side(mesh: &Mesh) -> f64 {
+    let mut lo = [f64::INFINITY; 3];
+    let mut hi = [f64::NEG_INFINITY; 3];
+    for v in &mesh.vertices {
+        for (axis, c) in [v.x as f64, v.y as f64, v.z as f64].into_iter().enumerate() {
+            lo[axis] = lo[axis].min(c);
+            hi[axis] = hi[axis].max(c);
+        }
+    }
+    (0..3)
+        .map(|axis| hi[axis] - lo[axis])
+        .filter(|side| side.is_finite())
+        .fold(0.0, f64::max)
+}
+
+fn edge_length(a: [f64; 3], b: [f64; 3]) -> f64 {
+    let d = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt()
+}
+
+fn triangle_area(t: &[[f64; 3]; 3]) -> f64 {
+    let e1 = [t[1][0] - t[0][0], t[1][1] - t[0][1], t[1][2] - t[0][2]];
+    let e2 = [t[2][0] - t[0][0], t[2][1] - t[0][1], t[2][2] - t[0][2]];
+    let c = [
+        e1[1] * e2[2] - e1[2] * e2[1],
+        e1[2] * e2[0] - e1[0] * e2[2],
+        e1[0] * e2[1] - e1[1] * e2[0],
+    ];
+    0.5 * (c[0] * c[0] + c[1] * c[1] + c[2] * c[2]).sqrt()
 }
