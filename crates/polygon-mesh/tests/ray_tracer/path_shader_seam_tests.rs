@@ -1,8 +1,8 @@
 //! The path loop's seam piece (`flat_tree/seam.wgsl`): its constants are the pack's
 //! (`gpu_contacts.rs`), the word offsets it reads included, and the CPU's skip; the part buffer's
 //! word reading matches the part record; and the contact block costs no binding: the path entry point still uses 7 storage buffers and
-//! group 2 still holds bindings 0 to 6, so a caller binds exactly what it bound before. Whether the
-//! seam's picture matches the CPU's needs a graphics card and is checked where one runs.
+//! group 2 holds bindings 0 to 7, binding 7 the picture atlas (a texture, `picture.wgsl`). What
+//! the seam reads of a picture is in `seam_picture_pack_tests` and `seam_picture_line_tests`.
 
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use naga::{AddressSpace, Literal, Module};
@@ -102,8 +102,9 @@ fn the_contact_block_takes_no_binding_of_its_own() {
         7,
         "storage buffers the path loop uses: {storage:?}"
     );
+    // Binding 7 is the picture atlas, a texture and no buffer (`picture.wgsl`).
     group_two.sort_unstable();
-    assert_eq!(group_two, (0..7).collect::<Vec<u32>>());
+    assert_eq!(group_two, (0..8).collect::<Vec<u32>>());
 }
 
 #[test]

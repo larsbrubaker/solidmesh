@@ -107,14 +107,16 @@ fn path_floor_point(ray: Ray, t: f32) -> PathPoint {
     let at = ray.origin.xy + ray.direction.xy * t;
     let position = vec3<f32>(at.x, at.y, path_view.floor_plane.z);
     let up = vec3<f32>(0.0f, 0.0f, 1.0f);
-    return PathPoint(position, up, up, path_floor_offset(position), PATH_FLOOR_PART, 0xFFFFFFu);
+    return PathPoint(position, up, up, path_floor_offset(position), PATH_FLOOR_PART, 0xFFFFFFu,
+        vec3<f32>(1.0f));
 }
 
 // The floor point right under `position`: where a path leaving glass resting on the floor meets it.
 fn path_floor_point_under(position: vec3<f32>) -> PathPoint {
     let at = vec3<f32>(position.x, position.y, path_view.floor_plane.z);
     let up = vec3<f32>(0.0f, 0.0f, 1.0f);
-    return PathPoint(at, up, up, path_floor_offset(at), PATH_FLOOR_PART, 0xFFFFFFu);
+    return PathPoint(at, up, up, path_floor_offset(at), PATH_FLOOR_PART, 0xFFFFFFu,
+        vec3<f32>(1.0f));
 }
 
 // The contact rule for a face on the floor (`floor_rest.rs`, where a test pins these).

@@ -6,6 +6,21 @@
 //! are 8-bit display colors, sRGB encoded as the app stores them, so they are decoded to linear
 //! first. The uncolored face (white) leaves the surface as it is, and that case skips the rebuild.
 //!
+//! **Pictures.** [`RenderScene::with_face_textures`] gives the scene decoded pictures
+//! ([`TraceTexture`]) and, for each part, which picture each face shows. The scene holds each
+//! picture behind an [`Arc`], so a caller rendering the same design again (a new scene at every
+//! camera stop) hands the next scene the same pictures with no texel copied. At a hit on such a
+//! face with texture coordinates, the surface's base color is the part's base color times the
+//! face's color times the picture's factor there (`trace_texture` gives the lookup), in that
+//! order. A factor of exactly 1 (a white or fully see-through spot) leaves the surface as the
+//! face's color alone makes it, to the bit, and a scene with no pictures renders exactly as one
+//! without this.
+//! A seam between two glass faces reads each face's own picture (`glass_seam`). The graphics
+//! card's path loop reads pictures too (`flat_tree`'s `picture.wgsl`, from the pack's atlas), where
+//! this tracer does: at each path vertex, at the glass face across a contact with the floor, and
+//! at each face a line toward the sun crosses, and at a seam both faces' pictures, as `glass_seam`
+//! does (`seam.wgsl`).
+//!
 //! **Opacity.** Each part has an opacity in [0, 1], what fraction of it is present, separate from
 //! its surface: a half-there part is half coverage of a surface that is all surface, not a tint.
 //! The opacities are 1 unless a caller says otherwise; `see_through` says what a ray does with
@@ -62,13 +77,17 @@
 //! walk that reaches `MAX_CROSSINGS_PER_LINE` crossings (every face past the end counts toward it,
 //! opaque ones too) ends there covered, as a line reaching the cap before the end does.
 
+use std::sync::Arc;
+
 use solidmesh_math::{Color, Ray};
 
 use super::display::srgb_to_linear;
 use super::glass_contacts::{ContactSearchWork, GlassContacts};
 use super::lights::LightSetup;
 use super::see_through::{continued_ray, StraightLine};
-use crate::ray_tracer::{PlacedParts, RayTracerError, ScatteringSurface};
+use super::trace_texture::TraceTexture;
+use crate::ray_tracer::{PlacedParts, RayTracerError, ScatteringSurface, SurfacePoint};
+use solidmesh_math::Vector2;
 
 /// A scene ready to render.
 pub struct RenderScene {
@@ -87,10 +106,15 @@ pub struct RenderScene {
     srgb_to_linear: [f64; 256],
     /// Whether any part is glass a shadow ray goes straight through (`sun_through_glass`).
     straight_glass: bool,
+    /// The pictures faces show, shared with the caller and any other scene given the same ones.
+    textures: Vec<Arc<TraceTexture>>,
+    /// For each part, the picture each face shows; empty when no face shows one, and a part's
+    /// list empty when none of its faces does.
+    face_textures: Vec<Vec<Option<u32>>>,
 }
 
-/// The decoded value of each 8-bit channel value.
-fn decoded_table() -> [f64; 256] {
+/// The decoded value of each 8-bit channel value: the table faces and pictures decode through.
+pub(super) fn decoded_table() -> [f64; 256] {
     // `code` is below 256, so the cast keeps it exactly.
     std::array::from_fn(|code| srgb_to_linear(code as u8))
 }
@@ -132,6 +156,8 @@ impl RenderScene {
             see_through_rests: GlassContacts::default(),
             srgb_to_linear: decoded_table(),
             straight_glass,
+            textures: Vec::new(),
+            face_textures: Vec::new(),
         })
     }
 
@@ -147,6 +173,8 @@ impl RenderScene {
             see_through_rests: GlassContacts::default(),
             srgb_to_linear: decoded_table(),
             straight_glass: false,
+            textures: Vec::new(),
+            face_textures: Vec::new(),
         }
     }
 
@@ -182,6 +210,76 @@ impl RenderScene {
         self.see_through_rests =
             GlassContacts::find_see_through_rests(&self.parts, &self.surfaces, &self.opacities);
         Ok(self)
+    }
+
+    /// This scene with its faces showing `textures`: `face_textures` holds, for each part, the
+    /// index into `textures` each face shows, or `None` for a face that shows none; a part's list
+    /// is empty when none of its faces shows a picture, and otherwise has one entry per face. A
+    /// face shows its picture only where it has texture coordinates. A list count that differs
+    /// from the part count, a part's list that is neither empty nor one entry per face, or an
+    /// index past `textures`, is [`RayTracerError::InvalidArgument`]. The scene keeps the `Arc`s
+    /// it is given, so pictures shared between scenes are stored once.
+    pub fn with_face_textures(
+        mut self,
+        textures: Vec<Arc<TraceTexture>>,
+        face_textures: Vec<Vec<Option<u32>>>,
+    ) -> Result<Self, RayTracerError> {
+        if face_textures.len() != self.parts.parts().len() {
+            return Err(RayTracerError::InvalidArgument(
+                "a render scene needs exactly one list of face textures for each part",
+            ));
+        }
+        for (part, faces) in self.parts.parts().iter().zip(&face_textures) {
+            if !faces.is_empty() && faces.len() != part.surface().face_count() {
+                return Err(RayTracerError::InvalidArgument(
+                    "a part's face textures must be empty or name one texture (or none) per face",
+                ));
+            }
+            let past_the_end =
+                |&index: &u32| usize::try_from(index).map_or(true, |index| index >= textures.len());
+            if faces.iter().flatten().any(past_the_end) {
+                return Err(RayTracerError::InvalidArgument(
+                    "a face names a texture past the end of the scene's textures",
+                ));
+            }
+        }
+        let any = face_textures
+            .iter()
+            .any(|faces| faces.iter().any(Option::is_some));
+        if any {
+            self.textures = textures;
+            self.face_textures = face_textures;
+        } else {
+            self.textures = Vec::new();
+            self.face_textures = Vec::new();
+        }
+        Ok(self)
+    }
+
+    /// Whether any face shows a picture: without one, every hit reads the face's color alone.
+    pub(crate) fn has_face_textures(&self) -> bool {
+        !self.face_textures.is_empty()
+    }
+
+    /// The pictures faces show, the very `Arc`s [`RenderScene::with_face_textures`] was given
+    /// (empty when no face shows one).
+    pub fn textures(&self) -> &[Arc<TraceTexture>] {
+        &self.textures
+    }
+
+    /// The picture face `face_index` of part `part_index` shows, `None` when it shows none.
+    pub fn face_texture(&self, part_index: usize, face_index: usize) -> Option<u32> {
+        *self.face_textures.get(part_index)?.get(face_index)?
+    }
+
+    /// What texture `texture_index`'s picture multiplies a face's color by at `uv`, `None` when
+    /// there is no such texture: the lookup a hit on a face showing it reads.
+    pub fn texture_factor_at(&self, texture_index: u32, uv: Vector2) -> Option<[f64; 3]> {
+        Some(
+            self.textures
+                .get(usize::try_from(texture_index).ok()?)?
+                .factor_at(uv, &self.srgb_to_linear),
+        )
     }
 
     /// Where faces of glass parts lie on each other.
@@ -354,5 +452,41 @@ impl RenderScene {
             surface.transmission(),
             surface.ior(),
         ))
+    }
+
+    /// The surface of part `part_index` at `point`: its base color times the face's color times
+    /// the face's picture there, when it shows one (see the module header).
+    pub(crate) fn surface_at_point(
+        &self,
+        part_index: usize,
+        point: &SurfacePoint,
+    ) -> Option<ScatteringSurface> {
+        let factor = self.picture_factor(part_index, point);
+        let Some(factor) = factor.filter(|factor| *factor != [1.0; 3]) else {
+            return self.surface_at(part_index, point.base_color);
+        };
+        let surface = *self.surfaces.get(part_index)?;
+        let base = surface.base_color();
+        let color = point.base_color;
+        let tinted = [
+            base[0] * self.srgb_to_linear[usize::from(color.red)] * factor[0],
+            base[1] * self.srgb_to_linear[usize::from(color.green)] * factor[1],
+            base[2] * self.srgb_to_linear[usize::from(color.blue)] * factor[2],
+        ];
+        Some(ScatteringSurface::new(
+            tinted,
+            surface.metallic(),
+            surface.roughness(),
+            surface.transmission(),
+            surface.ior(),
+        ))
+    }
+
+    /// The factor the picture on `point`'s face gives there, `None` when the face shows no
+    /// picture or has no texture coordinates.
+    fn picture_factor(&self, part_index: usize, point: &SurfacePoint) -> Option<[f64; 3]> {
+        let face = usize::try_from(point.face_index).ok()?;
+        let texture = self.face_texture(part_index, face)?;
+        self.texture_factor_at(texture, point.texture_coordinate?)
     }
 }

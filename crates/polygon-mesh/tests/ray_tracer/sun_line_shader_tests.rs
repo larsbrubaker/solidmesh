@@ -31,7 +31,7 @@ use crate::see_through_on_floor_tests::wide_floor;
 /// One box of the scene: its size, center, surface and opacity.
 type Piece = ([f64; 3], [f64; 3], ScatteringSurface, f64);
 
-fn glass_of(color: [f64; 3], roughness: f64, ior: f64) -> ScatteringSurface {
+pub(super) fn glass_of(color: [f64; 3], roughness: f64, ior: f64) -> ScatteringSurface {
     ScatteringSurface::new(color, 0.0, roughness, 1.0, ior)
 }
 
@@ -110,7 +110,7 @@ fn pair(pieces: &[Piece], floor: bool) -> (RenderScene, GpuRenderScene) {
 }
 
 /// Directions toward the sun: straight up and tilted 25 and 50 degrees two ways.
-fn sun_directions() -> Vec<Vector3> {
+pub(super) fn sun_directions() -> Vec<Vector3> {
     let mut directions = vec![Vector3::UNIT_Z];
     for (degrees, azimuth) in [(25.0_f64, 0.3_f64), (50.0, 2.1), (25.0, 4.0), (50.0, 5.5)] {
         let (tilt, turn) = (degrees.to_radians(), azimuth);
@@ -123,15 +123,15 @@ fn sun_directions() -> Vec<Vector3> {
     directions
 }
 
-fn narrow(v: Vector3) -> [f32; 3] {
+pub(super) fn narrow(v: Vector3) -> [f32; 3] {
     [v.x as f32, v.y as f32, v.z as f32]
 }
 
-fn packed(pack: &GpuRenderScene, position: Vector3) -> [f32; 3] {
+pub(super) fn packed(pack: &GpuRenderScene, position: Vector3) -> [f32; 3] {
     narrow(position - pack.scene_origin())
 }
 
-fn down_from(origin: Vector3) -> Ray {
+pub(super) fn down_from(origin: Vector3) -> Ray {
     Ray::with_limits(
         origin,
         -Vector3::UNIT_Z,
@@ -142,7 +142,7 @@ fn down_from(origin: Vector3) -> Ray {
 }
 
 /// The packed scene's nearest hit from `origin` along `direction` (world coordinates).
-fn gpu_hit(
+pub(super) fn gpu_hit(
     pack: &GpuRenderScene,
     origin: Vector3,
     direction: Vector3,
@@ -160,7 +160,7 @@ fn gpu_hit(
 }
 
 /// The vertex on the floor at `(x, y)` with nothing resting there.
-fn gpu_floor_vertex(pack: &GpuRenderScene, x: f64, y: f64) -> SunVertexF32 {
+pub(super) fn gpu_floor_vertex(pack: &GpuRenderScene, x: f64, y: f64) -> SunVertexF32 {
     let plane = pack.view().floor_plane;
     SunVertexF32 {
         point: floor_point_under_f32(packed(pack, Vector3::new(x, y, 0.0)), plane),
@@ -171,7 +171,7 @@ fn gpu_floor_vertex(pack: &GpuRenderScene, x: f64, y: f64) -> SunVertexF32 {
 
 /// The vertex on the floor under the part whose bottom face the line down from `inside` meets,
 /// reached across the contact (`PATH_ACROSS_FLOOR`).
-fn gpu_floor_under(pack: &GpuRenderScene, inside: Vector3) -> SunVertexF32 {
+pub(super) fn gpu_floor_under(pack: &GpuRenderScene, inside: Vector3) -> SunVertexF32 {
     let rest_hit = gpu_hit(pack, inside, -Vector3::UNIT_Z);
     let face = surface_point_f32(pack, &rest_hit);
     SunVertexF32 {
@@ -192,7 +192,7 @@ fn gpu_traced_vertex(pack: &GpuRenderScene, origin: Vector3, direction: Vector3)
 
 /// The CPU's line and the mirror's from the same vertex toward `direction`, each drawing from its
 /// own copy of `random`.
-fn both(
+pub(super) fn both(
     scene: &RenderScene,
     pack: &GpuRenderScene,
     (cpu_ray, absent, across): (&Ray, &[usize], bool),
@@ -231,7 +231,7 @@ fn both(
 /// at most 1), and reads Fresnel at the `f32` direction's cosine to the `f32` normal, whose error
 /// near these angles moves Fresnel by less; the errors add across crossings. 2e-7 a crossing is
 /// about three such steps; the worst measured here is 3.6e-8 a crossing.
-fn transmittance_bound(crossed: u32) -> f64 {
+pub(super) fn transmittance_bound(crossed: u32) -> f64 {
     2e-7 * f64::from(crossed.max(1))
 }
 
@@ -270,7 +270,7 @@ fn normal_fresnel(ior: f64) -> f64 {
     ((ior - 1.0) / (ior + 1.0)).powi(2)
 }
 
-fn random() -> PixelRandom {
+pub(super) fn random() -> PixelRandom {
     PixelRandom::for_pixel(7, 0, 0, 0)
 }
 

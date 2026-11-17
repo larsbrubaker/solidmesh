@@ -516,7 +516,7 @@ pub(super) fn trace_path(
 
         let surface = match &seam {
             Some(interface) => interface.surface,
-            None => match scene.surface_at(part_index, point.base_color) {
+            None => match scene.surface_at_point(part_index, &point) {
                 Some(surface) => surface,
                 None => break,
             },

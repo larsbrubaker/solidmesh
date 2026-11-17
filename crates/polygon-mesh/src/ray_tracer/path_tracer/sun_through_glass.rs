@@ -383,7 +383,7 @@ fn sun_reach_from(
                     // surface under glass, a see-through part found there that is not glass)
                     // stops it.
                     let passed = scene
-                        .surface_at(next.part, next.point.base_color)
+                        .surface_at_point(next.part, &next.point)
                         .and_then(|surface| crossing(&surface, &next.point, direction));
                     let Some(passed) = passed else {
                         return Ok(None);
@@ -522,7 +522,7 @@ fn through_glass(
         }
         let surface = match &seam {
             Some(interface) => Some(interface.surface),
-            None => scene.surface_at(hit.part.index(), point.base_color),
+            None => scene.surface_at_point(hit.part.index(), &point),
         };
         let Some(surface) = surface else {
             return Ok(None);

@@ -1,7 +1,9 @@
 //! [`MeshSurface`]: everything a shading ray tracer needs about a mesh's surface, built once from
 //! a [`Mesh`] and then read from any thread (plain data, `Send + Sync`). It answers
 //! [`MeshSurface::surface_point`]: for a hit on a face, the [`SurfacePoint`] with its barycentric
-//! weights, normals, color and texture coordinate.
+//! weights, normals, color and texture coordinate. The texture coordinates come from the mesh's
+//! face textures; which picture a face shows is the render's choice, held by `RenderScene`
+//! (`path_tracer::render_scene`), so one table serves every picture a face may be given.
 //!
 //! **Smooth normals with sharp creases.** Each face corner gets its own normal: the unit sum of
 //! the normals of the faces at that vertex that reach this corner's face across edges bent less
@@ -180,6 +182,13 @@ impl MeshSurface {
     /// The color of `face`, as [`SurfacePoint::base_color`] gives it.
     pub(super) fn face_color(&self, face: usize) -> Color {
         self.base_color(face)
+    }
+
+    /// The texture coordinates of `face`'s three corners, `None` when it has none: the ones the
+    /// CPU interpolates, which `flat_tree`'s GPU packing writes shifted by whole repeats
+    /// (`gpu_texture_block.rs`).
+    pub(super) fn face_texture_corners(&self, face: usize) -> Option<[Vector2Float; 3]> {
+        *self.texture_corners.get(face)?
     }
 
     /// The corner positions of `face` in `f64`, `None` when an index or a coordinate is bad.

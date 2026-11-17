@@ -481,8 +481,8 @@ fn gpu_refused(reason: String) -> Result<Object, JsError> {
 }
 
 /// Ray Tracing page, GPU route: packs the prepared part and floor for the GPU in `args`' look
-/// (see `ray_trace_gpu`), and answers the shader and the buffers the page uploads once, or
-/// `{ fits: false, reason }` when this scene does not fit this device.
+/// (see `ray_trace_gpu`), and answers the shader, the buffers and the picture atlas the page
+/// uploads once, or `{ fits: false, reason }` when this scene does not fit this device.
 #[wasm_bindgen]
 pub fn ray_trace_gpu_prepare(max_binding: f64, args: &[f64]) -> Result<Object, JsError> {
     use solidmesh::mesh::ray_tracer::flat_tree::{albedo_table_bytes, PATH_ENTRY_POINT, PATH_WGSL};
@@ -493,12 +493,18 @@ pub fn ray_trace_gpu_prepare(max_binding: f64, args: &[f64]) -> Result<Object, J
         session.gpu = None;
         let pack = ray_trace_gpu::GpuSession::pack(&session.scene, request, binding)
             .map_err(|e| JsError::new(&e))?;
-        let gpu = match pack {
+        let mut gpu = match pack {
             ray_trace_gpu::GpuOutcome::Fits(gpu) => gpu,
             ray_trace_gpu::GpuOutcome::Refused(reason) => return gpu_refused(reason),
         };
+        // The atlas's texels leave the session's pack here: the page uploads them, and a later
+        // prepare packs again (the session's pack was dropped above).
+        let [atlas, atlas_width, atlas_height] = gpu_bench_render::atlas_fields(gpu.packed_mut())?;
         let packed = gpu.packed();
         let result = gpu_bench::fields(&[
+            atlas,
+            atlas_width,
+            atlas_height,
             ("fits", true.into()),
             ("shader", PATH_WGSL.into()),
             ("entryPoint", PATH_ENTRY_POINT.into()),

@@ -112,6 +112,26 @@ fn the_path_loop_calls_each_traversing_function_from_one_place() {
 }
 
 #[test]
+fn the_picture_lookup_is_copied_once_per_face_that_needs_it() {
+    // A texel load copied into each place it is called grows the compiled program, so the four
+    // loads of a lookup sit in one function called from three places: a path vertex, a crossing
+    // of the line toward the sun, and the covering face at a seam, which needs its picture beside
+    // the hit face's (`picture.wgsl`, `seam.wgsl`).
+    assert_eq!(call_sites("textureLoad"), 1, "path_picture_texel");
+    assert_eq!(
+        call_sites("path_picture_texel"),
+        4,
+        "path_picture_at's four texels"
+    );
+    assert_eq!(
+        call_sites("path_picture_at"),
+        3,
+        "path_radiance, path_sun_line and seam_at"
+    );
+    assert_eq!(call_sites("seam_at"), 2, "path_radiance and path_sun_line");
+}
+
+#[test]
 fn the_call_site_count_reads_calls_and_not_definitions_or_prose() {
     let source = concat!(
         "fn walk (ray: Ray) -> u32 {\n",

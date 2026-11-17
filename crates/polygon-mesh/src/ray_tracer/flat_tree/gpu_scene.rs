@@ -1,13 +1,15 @@
 //! Packs a whole [`RenderScene`] for the WGSL path loop ([`PATH_WGSL`]): one [`FlatTree`] over
 //! every placed part's world triangles, a [`FaceRecord`] for each triangle in the order the
 //! tree's `source_index` numbers them (its part, corner normals, geometric normal, continuing-ray
-//! offset and color), a [`PartRecord`] per part (its surface and opacity), the glass contacts
-//! (`gpu_contacts.rs`: where a glass face lies on another, appended to the part buffer, nothing
-//! when none does), and the
-//! uniform records
-//! the view holds (`gpu_view.rs`: [`GpuView`] and [`ViewRecord`], and the sRGB table). Byte
-//! layouts are the WGSL structs of `path.wgsl`, written field by field in little-endian order as
-//! `layout.rs` does; a test pins them against naga's own layout of the shader.
+//! offset, color and picture word), a [`PartRecord`] per part (its surface and opacity), the glass
+//! contacts (`gpu_contacts.rs`: where a glass face lies on another, appended to the part buffer,
+//! nothing when none does), the pictures (`gpu_textures.rs`: one RGBA8 atlas the caller uploads
+//! as a texture, and `gpu_texture_block.rs`: each pictured face's coordinates and its picture's
+//! place in the atlas, appended to the part buffer after the contacts, nothing when no face shows
+//! a picture), and the uniform records the view holds (`gpu_view.rs`: [`GpuView`] and
+//! [`ViewRecord`], and the sRGB table). Byte layouts are the WGSL structs of `path.wgsl`, written
+//! field by field in little-endian order as `layout.rs` does; a test pins them against naga's own
+//! layout of the shader.
 //!
 //! **Two uniform buffers, one for what orbiting moves.** The per-view uniform is rewritten every
 //! time the camera or lights change; the sRGB table, unrelated to the view, is a separate fixed
@@ -20,15 +22,17 @@
 //! radiance past f32, or a disc so small a direction's rounding is a real part of its size) is
 //! refused too, with what to change, instead of rendering wrong.
 //!
-//! **When to fall back to the CPU.** Every [`FlatTreeError`] says what would fit, but only some
-//! are about the scene and not a programming error. [`FlatTreeError::PackedBufferTooLarge`],
+//! **When to fall back to the CPU.** Every [`FlatTreeError`] says what would fit, but only some are
+//! about the scene and not a programming error. [`FlatTreeError::PackedBufferTooLarge`],
 //! [`FlatTreeError::BufferTooLarge`], [`FlatTreeError::TooManyTriangles`],
-//! [`FlatTreeError::SceneTooLarge`] and [`FlatTreeError::TreeTooDeep`] mean this scene does not
-//! fit this GPU's limits: render it on the CPU. So does [`FlatTreeError::NotRepresentable`] when
-//! its reason is about 32-bit values. [`FlatTreeError::InvalidCoordinate`] is a fallback too, and
-//! the one a caller might mistake for a broken file: the CPU renders a mesh with a NaN or infinite
-//! corner (a face with such a corner has no surface of its own and the tracer carries on past it)
-//! and one whose corners pass [`super::COORDINATE_LIMIT`], where the GPU's `f32` buffers cannot.
+//! [`FlatTreeError::SceneTooLarge`], [`FlatTreeError::TreeTooDeep`],
+//! [`FlatTreeError::TexturesTooLarge`] and [`FlatTreeError::OutOfMemory`] mean this scene does not
+//! fit this GPU's limits or this device's memory: render it on the CPU. So does
+//! [`FlatTreeError::NotRepresentable`] when its reason is about 32-bit values.
+//! [`FlatTreeError::InvalidCoordinate`] is a fallback too, and the one a caller might mistake for a
+//! broken file: the CPU renders a mesh with a NaN or infinite corner (a face with such a corner has
+//! no surface of its own and the tracer carries on past it) and one whose corners pass
+//! [`super::COORDINATE_LIMIT`], where the GPU's `f32` buffers cannot.
 //! [`FlatTreeError::NoTriangles`] is an empty scene, with nothing a GPU binding can hold: the CPU
 //! renders it as only its lights, and a caller decides whether that is worth a render at all.
 //! [`FlatTreeError::UnexpectedBvhLeaf`] is a bug, and so is a [`GpuSceneBuilder`] stepped after it
@@ -69,8 +73,11 @@ use solidmesh_math::Vector3;
 
 use super::gpu_contacts::GpuGlassContacts;
 use super::gpu_pack::GpuSceneBuilder;
+use super::gpu_texture_block::GpuTextureBlock;
+use super::gpu_textures::{GpuTextureAtlas, GpuTextureLimits};
 use super::gpu_view::{
-    view_record, GpuCompositing, GpuView, ViewRecord, SRGB_TABLE_BYTES, VIEW_RECORD_BYTES,
+    pack_words, view_record, GpuCompositing, GpuView, ViewRecord, SRGB_TABLE_BYTES,
+    VIEW_RECORD_BYTES,
 };
 use super::layout::NODE_STRIDE;
 use super::{
@@ -80,7 +87,7 @@ use super::{
 use crate::ray_tracer::{PathTraceSettings, RenderCamera, RenderScene};
 
 /// A face record's size in bytes.
-pub const FACE_STRIDE: usize = 60;
+pub const FACE_STRIDE: usize = 64;
 /// A part record's size in bytes: a [`SurfaceRecord`] and an opacity.
 pub const PART_STRIDE: usize = 40;
 /// The per-dispatch slice uniform's size in bytes.
@@ -115,6 +122,9 @@ pub struct FaceRecord {
     pub part: u32,
     /// The face's color: `0xBBGGRR` (sRGB bytes, decoded in the shader).
     pub color: u32,
+    /// Where the face's picture entry starts in the part buffer, in words, or
+    /// [`super::NO_TEXTURE`] (`gpu_texture_block.rs`).
+    pub texture: u32,
 }
 
 impl FaceRecord {
@@ -128,7 +138,12 @@ impl FaceRecord {
                 offset += 4;
             }
         }
-        for word in [self.ray_offset.to_bits(), self.part, self.color] {
+        for word in [
+            self.ray_offset.to_bits(),
+            self.part,
+            self.color,
+            self.texture,
+        ] {
             bytes[offset..offset + 4].copy_from_slice(&word.to_le_bytes());
             offset += 4;
         }
@@ -163,6 +178,9 @@ pub struct GpuSceneSizes {
     pub part_bytes: u64,
     /// The color accumulation buffer's size for this image, [`ACCUMULATION_STRIDE`] per pixel.
     pub accumulation_bytes: u64,
+    /// The picture atlas's size (`gpu_textures.rs`), 4 bytes a texel: often the largest single
+    /// allocation of a pictured scene, held by the pack until taken and by the GPU texture.
+    pub atlas_bytes: u64,
     /// The coverage-channel buffer's size for this image, [`CHANNEL_STRIDE`] per pixel, one
     /// record for a plain view (a binding cannot be empty and a plain view never touches it).
     pub channel_bytes: u64,
@@ -174,13 +192,16 @@ pub struct GpuSceneSizes {
 /// has at most one fewer node than leaf runs and at most one run per triangle. `pixel_count` is
 /// the image's area; `compositing` says whether a view will use the coverage channels. The part
 /// bytes are the part records alone: the glass contact block a scene with glass lying on glass
-/// appends to them (`gpu_contacts.rs`) depends on which faces touch, which counts cannot bound, so
-/// a caller sizing the part buffer for such a scene reads [`GpuRenderScene::sizes`] after packing.
+/// appends to them (`gpu_contacts.rs`) depends on which faces touch, and the picture block
+/// (`gpu_texture_block.rs`) on which faces show pictures, which counts cannot bound, so a caller
+/// sizing the part buffer for such a scene reads [`GpuRenderScene::sizes`] after packing. The atlas
+/// bytes are the most `texture_limits` allow.
 pub fn gpu_scene_size_bound(
     triangle_count: u64,
     part_count: u64,
     pixel_count: u64,
     compositing: bool,
+    texture_limits: GpuTextureLimits,
 ) -> GpuSceneSizes {
     let triangles = triangle_count.min(MAX_TRIANGLES);
     let channels = if compositing { pixel_count.max(1) } else { 1 };
@@ -190,6 +211,7 @@ pub fn gpu_scene_size_bound(
         face_bytes: triangles * FACE_STRIDE as u64,
         part_bytes: part_count * PART_STRIDE as u64,
         accumulation_bytes: pixel_count * ACCUMULATION_STRIDE as u64,
+        atlas_bytes: texture_limits.max_atlas_bytes(),
         channel_bytes: channels * CHANNEL_STRIDE as u64,
         tree: FlatTreeSizes {
             node_count: triangles.saturating_sub(1).max(1),
@@ -228,6 +250,8 @@ pub struct GpuRenderScene {
     pub(super) placement_origin: Vector3,
     pub(super) placement_radius: f64,
     pub(super) contacts: GpuGlassContacts,
+    pub(super) textures: GpuTextureBlock,
+    pub(super) atlas: GpuTextureAtlas,
 }
 
 impl GpuRenderScene {
@@ -251,13 +275,26 @@ impl GpuRenderScene {
     }
 
     /// Packs `scene` for `view`, compositing and all, in one call. The tree holds only `scene`'s
-    /// parts: a [`GpuFloor`](super::GpuFloor) is a shape in the shader, not a part.
+    /// parts: a [`GpuFloor`](super::GpuFloor) is a shape in the shader, not a part. The scene's
+    /// pictures are fitted to [`GpuTextureLimits::DEFAULT`].
     pub fn pack_view(
         scene: &RenderScene,
         view: &GpuView,
         limits: GpuSceneLimits,
     ) -> Result<GpuRenderScene, FlatTreeError> {
-        let mut builder = GpuSceneBuilder::new(scene, *view, limits)?;
+        Self::pack_view_with_texture_limits(scene, view, limits, GpuTextureLimits::DEFAULT)
+    }
+
+    /// [`GpuRenderScene::pack_view`] with the scene's pictures fitted to `texture_limits`
+    /// (`gpu_textures.rs`) and not WebGPU's defaults.
+    pub fn pack_view_with_texture_limits(
+        scene: &RenderScene,
+        view: &GpuView,
+        limits: GpuSceneLimits,
+        texture_limits: GpuTextureLimits,
+    ) -> Result<GpuRenderScene, FlatTreeError> {
+        let mut builder =
+            GpuSceneBuilder::new(scene, *view, limits)?.with_texture_limits(texture_limits);
         loop {
             if let Some(packed) = builder.step(usize::MAX)? {
                 return Ok(packed);
@@ -275,7 +312,11 @@ impl GpuRenderScene {
             origin: self.placement_origin,
             radius: self.placement_radius,
         };
-        self.view = view_record(scene, view, &placement)?;
+        let mut record = view_record(scene, view, &placement)?;
+        // Whether the contact block and its covering words exist is the pack's to say, not the
+        // scene's: a view set with another scene must not promise words this pack never wrote.
+        pack_words(&mut record, &self.contacts, self.parts.len())?;
+        self.view = record;
         self.pixels = view.image;
         self.composited = !matches!(view.compositing, GpuCompositing::Plain);
         Ok(())
@@ -317,14 +358,35 @@ impl GpuRenderScene {
     }
 
     /// The part buffer's bytes: the part records, then the glass contact block where the scene
-    /// has one (`gpu_contacts.rs`), so a scene without contacts packs only its records.
+    /// has one (`gpu_contacts.rs`), then the picture block where a face shows a picture
+    /// (`gpu_texture_block.rs`), so a scene with neither packs only its records.
     pub fn part_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(self.parts.len() * PART_STRIDE);
         for part in &self.parts {
             bytes.extend_from_slice(&part.to_le_bytes());
         }
         bytes.extend_from_slice(&self.contacts.to_le_bytes());
+        bytes.extend_from_slice(&self.textures.to_le_bytes());
         bytes
+    }
+
+    /// The picture block (`gpu_texture_block.rs`): empty for a scene where no face shows a
+    /// picture. Its words are the tail of [`GpuRenderScene::part_bytes`].
+    pub fn texture_block(&self) -> &GpuTextureBlock {
+        &self.textures
+    }
+
+    /// The scene's pictures in one atlas (`gpu_textures.rs`), for the caller to upload as an
+    /// `Rgba8Uint` texture: 1 by 1 white for a scene without pictures.
+    pub fn texture_atlas(&self) -> &GpuTextureAtlas {
+        &self.atlas
+    }
+
+    /// The atlas's texels, taken out of the pack ([`GpuTextureAtlas::take_bytes`]): a caller that
+    /// has uploaded them need not keep a second copy. `None` when taken before; the placements
+    /// and shrink report stay.
+    pub fn take_texture_atlas_bytes(&mut self) -> Option<Vec<u8>> {
+        self.atlas.take_bytes()
     }
 
     /// The glass contacts (`gpu_contacts.rs`): empty for a scene where no glass lies on glass.
@@ -362,8 +424,10 @@ impl GpuRenderScene {
             triangle_bytes: tree.triangle_bytes,
             face_bytes: self.faces.len() as u64 * FACE_STRIDE as u64,
             part_bytes: self.parts.len() as u64 * PART_STRIDE as u64
-                + self.contacts.to_words().len() as u64 * 4,
+                + self.contacts.to_words().len() as u64 * 4
+                + self.textures.words().len() as u64 * 4,
             accumulation_bytes: pixels * ACCUMULATION_STRIDE as u64,
+            atlas_bytes: self.atlas.byte_len(),
             channel_bytes: if self.composited {
                 pixels * CHANNEL_STRIDE as u64
             } else {

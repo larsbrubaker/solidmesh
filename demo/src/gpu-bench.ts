@@ -5,8 +5,11 @@
 // scattering model over the worker's fixed batch once (demo/wasm/src/gpu_bench_scatter.rs), and
 // `runRenderCheck` renders one scene of the render check with the library's path loop
 // (PATH_WGSL, demo/wasm/src/gpu_bench_render.rs), one pass at a time, reading its accumulation back
-// after each pass so the worker can compare against the CPU. The path loop's pipeline, bind groups
-// and dispatch are exported for the Ray Tracing page's GPU route (src/ray-trace-gpu.ts).
+// after each pass so the worker can compare against the CPU. The path loop's pipeline, bind groups,
+// picture atlas upload and dispatch are exported for the Ray Tracing page's GPU route
+// (src/ray-trace-gpu.ts). The path loop reads faces' pictures from an `rgba8uint` texture at group
+// 2 binding 7 (the library's flat_tree/picture.wgsl), so both pages upload the pack's atlas
+// (`uploadAtlas`) and bind its view there; a scene without pictures has a 1 by 1 white one.
 //
 // Rays per second is rays traced divided by GPU time. GPU time comes from timestamp queries around
 // each compute pass when the adapter has them, and otherwise from the wall time between
@@ -34,6 +37,9 @@ export const COPY_SRC = 0x0004;
 export const COPY_DST = 0x0008;
 export const UNIFORM = 0x0040;
 export const STORAGE = 0x0080;
+/** `GPUTextureUsage` flags: textures number theirs apart from buffers. */
+const TEXTURE_COPY_DST = 0x02;
+const TEXTURE_BINDING = 0x04;
 const QUERY_RESOLVE = 0x0200;
 export const MAP_MODE_READ = 0x0001;
 const COMPUTE_STAGE = 0x0004;
@@ -391,7 +397,30 @@ export async function createPathPipeline(device: any, shader: string, entryPoint
   }
 }
 
-/** The path loop's buffers, in the bindings the header of `path.wgsl` lists. */
+/** The pack's picture atlas as the worker hands it over: straight sRGB RGBA8, rows bottom first. */
+export interface PictureAtlas {
+  atlas: Uint8Array;
+  atlasWidth: number;
+  atlasHeight: number;
+}
+
+/**
+ * The atlas as the `rgba8uint` texture the path loop reads texel by texel. Its rows go up as they
+ * come, row 0 at y = 0, which is the bottom row the shader's coordinates count from.
+ */
+export function uploadAtlas(device: any, picture: PictureAtlas): any {
+  const size = { width: picture.atlasWidth, height: picture.atlasHeight };
+  const texture = device.createTexture({ size, format: 'rgba8uint', usage: TEXTURE_BINDING | TEXTURE_COPY_DST });
+  device.queue.writeTexture(
+    { texture },
+    picture.atlas,
+    { bytesPerRow: picture.atlasWidth * 4, rowsPerImage: picture.atlasHeight },
+    size,
+  );
+  return texture;
+}
+
+/** The path loop's buffers and its atlas's view, in the bindings the header of `path.wgsl` lists. */
 export interface PathBuffers {
   nodes: any;
   triangles: any;
@@ -403,6 +432,8 @@ export interface PathBuffers {
   slice: any;
   channels: any;
   srgb: any;
+  /** The picture atlas texture's view (`uploadAtlas`). */
+  atlas: any;
 }
 
 /** The three bind groups of the path loop. */
@@ -413,7 +444,10 @@ export function pathBindGroups(device: any, pipeline: any, buffers: PathBuffers)
     device.createBindGroup({ layout: pipeline.getBindGroupLayout(1), entries: entries([buffers.albedo]) }),
     device.createBindGroup({
       layout: pipeline.getBindGroupLayout(2),
-      entries: entries([buffers.faces, buffers.parts, buffers.accumulation, buffers.view, buffers.slice, buffers.channels, buffers.srgb]),
+      entries: [
+        ...entries([buffers.faces, buffers.parts, buffers.accumulation, buffers.view, buffers.slice, buffers.channels, buffers.srgb]),
+        { binding: 7, resource: buffers.atlas },
+      ],
     }),
   ];
 }
@@ -428,7 +462,7 @@ export function dispatchPath(encoder: any, pipeline: any, groups: any[], count: 
 }
 
 /** What gpu_bench_render_prepare answers. */
-export interface RenderPrepared {
+export interface RenderPrepared extends PictureAtlas {
   shader: string;
   entryPoint: string;
   nodes: Uint8Array;
@@ -475,6 +509,8 @@ export async function runRenderCheck(
     const parts = upload(prepared.parts, STORAGE);
     const sceneUniform = upload(prepared.scene, UNIFORM);
     const srgbUniform = upload(prepared.srgb, UNIFORM);
+    const atlas = uploadAtlas(device, prepared);
+    created.push(atlas);
     // A plain view never reads the channels, but the pipeline binds the buffer; one record does.
     const channels = device.createBuffer({ size: CHANNEL_BYTES, usage: STORAGE });
     created.push(channels);
@@ -485,6 +521,7 @@ export async function runRenderCheck(
 
     const groups = pathBindGroups(device, pipeline, {
       nodes, triangles, albedo, faces, parts, accumulation, view: sceneUniform, slice: sliceUniform, channels, srgb: srgbUniform,
+      atlas: atlas.createView(),
     });
 
     const snapshots = new Uint8Array(snapshotBytes * prepared.samples);

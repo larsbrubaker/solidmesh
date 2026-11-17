@@ -19,7 +19,9 @@
 // decides, at each hit nearest first, the part's presence, the seam (`seam.wgsl`), whether the
 // surface passes the sun (`surface_passes_sun_straight`), the first face crossed from inside its
 // solid, a glass face resting on the floor being left (which stops it), the crossing cap
-// `PATH_MAX_GLASS_CROSSINGS` and the face's `surface_straight_transmittance`, in the CPU's order.
+// `PATH_MAX_GLASS_CROSSINGS` and the face's `surface_straight_transmittance`, in the CPU's order,
+// a face's picture tinting its crossing as its color does (`picture.wgsl`: looked up at each face
+// the walk finds there, and at the face across a contact taken from the vertex).
 // The CPU's rest rule covers glass resting on any opaque part; here only the analytic floor has
 // one, so a line leaving glass through a face lying on an opaque part of the tree crosses that
 // face and meets the part's own face by the trace, which stops it unless the continuing-ray start
@@ -196,6 +198,7 @@ fn path_sun_line(vertex: PathVertex, direction: vec3<f32>, straight: bool) -> Su
         var across: PathPoint;
         if vertex.floor_first {
             across = path_surface_point(vertex.rest_hit);
+            across.picture = vertex.rest_picture;
         } else {
             across = path_floor_point_under(vertex.point.position);
         }
@@ -213,7 +216,7 @@ fn path_sun_line(vertex: PathVertex, direction: vec3<f32>, straight: bool) -> Su
             if !walk {
                 return path_sun_blocked(line);
             }
-            let surface = path_surface_at(across.part, across.color);
+            let surface = path_surface_at(across.part, across.color, across.picture);
             if !surface_passes_sun_straight(surface) {
                 return path_sun_blocked(line);
             }
@@ -238,7 +241,7 @@ fn path_sun_line(vertex: PathVertex, direction: vec3<f32>, straight: bool) -> Su
         if stop_at_any {
             return path_sun_blocked(line);
         }
-        let point = path_surface_point(hit);
+        var point = path_surface_point(hit);
         var present = true;
         if see_through {
             let verdict = line_at_hit(point.part);
@@ -253,6 +256,10 @@ fn path_sun_line(vertex: PathVertex, direction: vec3<f32>, straight: bool) -> Su
             }
             ray = path_ray_from(path_next_origin(point, direction), direction);
             continue;
+        }
+        // The face's picture tints what it passes, as on the CPU; a part not there needs none.
+        if present {
+            point.picture = path_picture_at(hit);
         }
         var seam = seam_none();
         if (path_view.flags & PATH_FLAG_GLASS_CONTACTS) != 0u {
@@ -275,7 +282,7 @@ fn path_sun_line(vertex: PathVertex, direction: vec3<f32>, straight: bool) -> Su
         let at_seam = seam.kind == SEAM_INTERFACE;
         var surface = seam.surface;
         if !at_seam {
-            surface = path_surface_at(point.part, point.color);
+            surface = path_surface_at(point.part, point.color, point.picture);
         }
         if !surface_passes_sun_straight(surface) {
             return path_sun_blocked(line);
@@ -340,7 +347,8 @@ fn path_sun_bent(outward: vec3<f32>, ior: f32, line: vec3<f32>) -> SunBent {
 // A vertex of the path, as its shadow ray reads it: the point, its surface and frame, and where a
 // straight line toward the sun starts from it (`ShadowVertex`): the seam's interface there, and
 // whether it is on a contact with the floor (`resting`), the floor under a part (`floor_first`,
-// the part's face hit in `rest_hit`) or a part's face over the floor.
+// the part's face hit in `rest_hit`, the picture there in `rest_picture`, which the path loop
+// looked up) or a part's face over the floor.
 struct PathVertex {
     point: PathPoint,
     surface: Surface,
@@ -351,6 +359,7 @@ struct PathVertex {
     resting: bool,
     floor_first: bool,
     rest_hit: Hit,
+    rest_picture: vec3<f32>,
 }
 
 // What a vertex's BSDF sends toward one sun direction under Straight, in its two shares (`Toward`

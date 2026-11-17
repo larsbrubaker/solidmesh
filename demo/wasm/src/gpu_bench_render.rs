@@ -37,6 +37,12 @@
 //!
 //! A one-pixel-wide leak keeps its full size in its row or column (the line tier) instead of a
 //! sixth of it in a region.
+//!
+//! **The picture atlas.** The path loop reads faces' pictures from a texture at group 2 binding 7,
+//! so every prepare call (this page's and the Ray Tracing page's, in `lib.rs`) hands the page the
+//! pack's atlas too ([`atlas_fields`]): its size and its texels, straight sRGB RGBA8, rows bottom
+//! first, uploaded as they are and taken out of the pack as they go. A scene without pictures has
+//! a 1 by 1 white atlas.
 
 use js_sys::{Object, Uint8Array};
 use solidmesh::mesh::ray_tracer::flat_tree::{
@@ -53,6 +59,23 @@ pub use crate::gpu_bench_render_compare::{
 pub use crate::gpu_bench_render_scenes::{check_scene, CheckScene, SCENE_COUNT};
 
 use crate::gpu_bench::fields;
+
+/// The pack's picture atlas for the page: `atlas` (its texels), `atlasWidth` and `atlasHeight`.
+/// The texels are taken out of the pack as they are handed over, so the page's upload is the one
+/// copy kept: nothing reads them from the pack after a prepare, and the next prepare packs afresh.
+pub(crate) fn atlas_fields(
+    pack: &mut GpuRenderScene,
+) -> Result<[(&'static str, JsValue); 3], JsError> {
+    let bytes = pack
+        .take_texture_atlas_bytes()
+        .ok_or_else(|| JsError::new("The scene's pictures were already handed over."))?;
+    let atlas = pack.texture_atlas();
+    Ok([
+        ("atlas", Uint8Array::from(bytes.as_slice()).into()),
+        ("atlasWidth", f64::from(atlas.width()).into()),
+        ("atlasHeight", f64::from(atlas.height()).into()),
+    ])
+}
 
 /// The finest grid the check needs: a thousandth of a unit, far below a pixel of these scenes.
 pub const CHECK_VERTEX_STEP: f64 = 1e-3;
@@ -251,8 +274,12 @@ pub fn gpu_bench_render_prepare(index: u32, max_binding: f64) -> Result<Object, 
         WEBGPU_DEFAULT_MAX_STORAGE_BINDING
     };
     let check = check_scene(index).map_err(|e| JsError::new(&e))?;
-    let pack = packed(&check, binding).map_err(|e| JsError::new(&e))?;
+    let mut pack = packed(&check, binding).map_err(|e| JsError::new(&e))?;
+    let [atlas, atlas_width, atlas_height] = atlas_fields(&mut pack)?;
     fields(&[
+        atlas,
+        atlas_width,
+        atlas_height,
         ("shader", PATH_WGSL.into()),
         ("entryPoint", PATH_ENTRY_POINT.into()),
         (

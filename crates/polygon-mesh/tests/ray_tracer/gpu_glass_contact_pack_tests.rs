@@ -2,13 +2,14 @@
 //! contact entries and what an entry holds, for two glass boxes stacked face on face, a small
 //! glass box of another index on a larger one, and 96 glass walls touching end to end, the block
 //! riding after the part records where the view says; that a scene where no glass lies on glass
-//! appends nothing, its flag clear and its block start 0;
+//! appends nothing, its flag clear and its block start 0; that a view set with another scene keeps
+//! the pack's own contact flag and block start;
 //! and that the packed edge equations, evaluated in `f32` as the shader will, cover exactly the
 //! region the covering box stands on, away from a tolerance-wide strip at its edge.
 
 use solidmesh_math::Vector3;
 use solidmesh_mesh::ray_tracer::flat_tree::{
-    GpuRenderScene, GpuSceneLimits, CONTACT_COVER_DENSER, CONTACT_ENTRY_WORDS,
+    GpuRenderScene, GpuSceneLimits, GpuView, CONTACT_COVER_DENSER, CONTACT_ENTRY_WORDS,
     CONTACT_FULLY_COVERED, CONTACT_HIT_DENSER, CONTACT_SAME_GLASS, PART_STRIDE,
     SCENE_FLAG_GLASS_CONTACTS, WEBGPU_DEFAULT_MAX_STORAGE_BINDING,
 };
@@ -23,16 +24,26 @@ const LIMITS: GpuSceneLimits = GpuSceneLimits {
     max_vertex_step: 1e-3,
 };
 
-fn pack(scene: &RenderScene) -> GpuRenderScene {
-    let camera = RenderCamera::orthographic(
+fn camera() -> RenderCamera {
+    RenderCamera::orthographic(
         Vector3::new(0.0, -20.0, 20.0),
         Vector3::ZERO,
         Vector3::UNIT_Z,
         10.0,
     )
-    .expect("a camera");
-    GpuRenderScene::pack(scene, &camera, 4, 4, &PathTraceSettings::default(), LIMITS)
-        .expect("the scene packs")
+    .expect("a camera")
+}
+
+fn pack(scene: &RenderScene) -> GpuRenderScene {
+    GpuRenderScene::pack(
+        scene,
+        &camera(),
+        4,
+        4,
+        &PathTraceSettings::default(),
+        LIMITS,
+    )
+    .expect("the scene packs")
 }
 
 fn glass(color: [f64; 3], roughness: f64, ior: f64) -> ScatteringSurface {
@@ -313,4 +324,54 @@ fn gpu_contact_pack_without_contacts_appends_nothing() {
         }
     }
     assert_eq!(CONTACT_FULLY_COVERED, 1 << 31);
+}
+
+/// The contact flag and block start say what the pack wrote: a view set with a scene of other
+/// contacts must neither send the shader to a block the pack never appended nor hide the one it
+/// did.
+#[test]
+fn a_view_set_with_another_scene_keeps_the_packs_contact_words() {
+    let clear = ScatteringSurface::glass();
+    let stacked = boxes_scene(
+        &[
+            ([2.0, 2.0, 2.0], [0.0, 0.0, 1.0], clear),
+            ([2.0, 2.0, 2.0], [0.0, 0.0, 3.0], clear),
+        ],
+        false,
+        furnace(),
+    );
+    let apart = boxes_scene(
+        &[
+            ([2.0, 2.0, 2.0], [0.0, 0.0, 1.0], clear),
+            ([2.0, 2.0, 2.0], [0.0, 0.0, 5.0], clear),
+        ],
+        false,
+        furnace(),
+    );
+    let view = |scene: &RenderScene| {
+        GpuView::plain(
+            camera(),
+            4,
+            4,
+            *scene.lights(),
+            PathTraceSettings::default(),
+        )
+    };
+
+    let mut with_block = pack(&stacked);
+    let block = with_block.view().contact_block;
+    assert_eq!(block, (2 * PART_STRIDE / 4) as u32);
+    with_block
+        .set_view(&apart, &view(&apart))
+        .expect("the view changes");
+    assert_ne!(with_block.view().flags & SCENE_FLAG_GLASS_CONTACTS, 0);
+    assert_eq!(with_block.view().contact_block, block);
+
+    let mut without = pack(&apart);
+    assert!(without.contact_bytes().is_empty());
+    without
+        .set_view(&stacked, &view(&stacked))
+        .expect("the view changes");
+    assert_eq!(without.view().flags & SCENE_FLAG_GLASS_CONTACTS, 0);
+    assert_eq!(without.view().contact_block, 0);
 }

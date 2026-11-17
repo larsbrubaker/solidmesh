@@ -29,6 +29,12 @@ mod glass_tray_support;
 mod gpu_glass_contact_grid_tests;
 #[path = "ray_tracer/gpu_glass_contact_pack_tests.rs"]
 mod gpu_glass_contact_pack_tests;
+#[path = "ray_tracer/gpu_texture_atlas_tests.rs"]
+mod gpu_texture_atlas_tests;
+#[path = "ray_tracer/gpu_texture_pack_tests.rs"]
+mod gpu_texture_pack_tests;
+#[path = "ray_tracer/gpu_texture_shader_tests.rs"]
+mod gpu_texture_shader_tests;
 #[path = "ray_tracer/gpu_view_tests.rs"]
 mod gpu_view_tests;
 #[path = "ray_tracer/minimal_triangle_tests.rs"]
@@ -41,6 +47,8 @@ mod part_opacity_tests;
 mod path_camera_ray_tests;
 #[path = "ray_tracer/path_shader_inlining_tests.rs"]
 mod path_shader_inlining_tests;
+#[path = "ray_tracer/path_shader_precision_tests.rs"]
+mod path_shader_precision_tests;
 #[path = "ray_tracer/path_shader_seam_tests.rs"]
 mod path_shader_seam_tests;
 #[path = "ray_tracer/path_shader_tests.rs"]
@@ -103,6 +111,10 @@ mod scattering_energy_tests;
 mod scattering_support;
 #[path = "ray_tracer/scattering_tests.rs"]
 mod scattering_tests;
+#[path = "ray_tracer/seam_picture_line_tests.rs"]
+mod seam_picture_line_tests;
+#[path = "ray_tracer/seam_picture_pack_tests.rs"]
+mod seam_picture_pack_tests;
 #[path = "ray_tracer/see_through_coverage_end_tests.rs"]
 mod see_through_coverage_end_tests;
 #[path = "ray_tracer/see_through_coverage_tests.rs"]
@@ -131,5 +143,11 @@ mod surface_hit_placed_tests;
 mod surface_hit_support;
 #[path = "ray_tracer/surface_hit_tests.rs"]
 mod surface_hit_tests;
+#[path = "ray_tracer/texture_glass_seam_tests.rs"]
+mod texture_glass_seam_tests;
+#[path = "ray_tracer/texture_lookup_tests.rs"]
+mod texture_lookup_tests;
+#[path = "ray_tracer/texture_stepping_tests.rs"]
+mod texture_stepping_tests;
 #[path = "ray_tracer/trace_api_tests.rs"]
 mod trace_api_tests;

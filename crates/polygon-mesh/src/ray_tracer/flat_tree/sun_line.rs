@@ -5,9 +5,10 @@
 //! line for line without a graphics card, as `coverage_line.rs` does for the coverage walk. A
 //! test pins the shader's text to these steps. The pieces the walk reads are mirrored here too:
 //! a hit's point and its facing (`path_surface_point`, `path_facing`), the continuing-ray start,
-//! the surface of a part at a face's color, the seam (`seam_at`), the floor's distance and rest
-//! rule, and the scattering model's straight transmittance (`surface_straight_transmittance`)
-//! with the shader's Fresnel.
+//! the surface of a part at a face's color and picture (`path_surface_at`, the picture read by
+//! [`SunLineScene::picture_at`], `path_picture_at` in `picture.wgsl`), the floor's distance and
+//! rest rule, and the scattering model's straight transmittance (`surface_straight_transmittance`)
+//! with the shader's Fresnel. The seam the walk asks at each hit (`seam_at`) is `seam_f32.rs`'s.
 //!
 //! **The vertex** ([`SunVertexF32`]) is what the path loop knows where it samples the sun: the
 //! point, the seam interface there, and whether the point is on a contact with the floor (the
@@ -20,11 +21,10 @@
 
 use super::coverage_line::{MAX_CROSSINGS_PER_LINE_F32, PATH_FAR_F32};
 use super::floor_rest::{floor_offset_f32, rests_on_floor_f32};
-use super::gpu_contacts::{
-    CONTACT_COVER_DENSER, CONTACT_HIT_DENSER, CONTACT_NO_SEAM, CONTACT_SAME_GLASS,
-};
 use super::gpu_scene::GpuRenderScene;
+use super::gpu_texture_block::{texture_lookup_f32, NO_TEXTURE};
 use super::gpu_view::{SCENE_FLAG_FLOOR, SCENE_FLAG_GLASS_CONTACTS, SCENE_FLAG_SEE_THROUGH};
+use super::seam_f32::{absent_toward, seam_origin_f32, SeamAtF32, SeamF32};
 use super::traverse::{FlatHit, FlatRay, FACE_BOTH};
 use super::{SurfaceRecord, SURFACE_HAS_GLASS};
 
@@ -34,9 +34,6 @@ pub const MAX_GLASS_CROSSINGS_F32: u32 = 16;
 
 /// The part a point on the floor carries (`PATH_FLOOR_PART` in `catcher.wgsl`).
 pub const FLOOR_PART_F32: u32 = 0xFFFF_FFFE;
-
-/// The shader's `CONTACT_SKIP_TOLERANCES`.
-const SKIP_TOLERANCES_F32: f32 = 2.0;
 
 /// `UNIT_LENGTH_SLACK` in `scatter.wgsl`.
 const UNIT_LENGTH_SLACK_F32: f32 = 9.536_743e-7;
@@ -88,6 +85,9 @@ pub struct PathPointF32 {
     pub ray_offset: f32,
     pub part: u32,
     pub color: u32,
+    /// What the face's picture multiplies its color by here: 1 as a point is made, until a walk
+    /// looks it up ([`SunLineScene::picture_at`]).
+    pub picture: V3,
 }
 
 /// `path_surface_point`: the point of `hit`, rebuilt from its triangle's corners.
@@ -114,6 +114,7 @@ pub fn surface_point_f32(pack: &GpuRenderScene, hit: &FlatHit) -> PathPointF32 {
         ray_offset: face.ray_offset,
         part: face.part,
         color: face.color,
+        picture: [1.0; 3],
     }
 }
 
@@ -127,6 +128,7 @@ pub fn floor_point_under_f32(position: V3, floor_plane: [f32; 4]) -> PathPointF3
         ray_offset: floor_offset_f32(at),
         part: FLOOR_PART_F32,
         color: 0x00FF_FFFF,
+        picture: [1.0; 3],
     }
 }
 
@@ -161,22 +163,14 @@ pub fn next_origin_f32(point: &PathPointF32, outgoing: V3) -> V3 {
     add(point.position, scale(point.geometric, side))
 }
 
-/// `seam_origin`: past both faces of a seam of half width `skip`, on the side `direction` leaves by.
-fn seam_origin_f32(point: &PathPointF32, direction: V3, skip: f32) -> V3 {
-    if dot(direction, point.geometric) >= 0.0 {
-        add(point.position, scale(point.geometric, skip))
-    } else {
-        add(point.position, scale(point.geometric, -skip))
-    }
-}
-
-/// `path_surface_at`: the surface of `part` at a face of `color` (`0xBBGGRR`), the floor's for the
-/// floor `floor_surface`.
-fn surface_at_f32(
+/// `path_surface_at`: the surface of `part` at a face of `color` (`0xBBGGRR`) whose picture gives
+/// `picture` there, the floor's for the floor `floor_surface`.
+pub(super) fn surface_at_f32(
     pack: &GpuRenderScene,
     floor_surface: SurfaceRecord,
     part: u32,
     color: u32,
+    picture: V3,
 ) -> SurfaceRecord {
     if part == FLOOR_PART_F32 {
         return floor_surface;
@@ -191,6 +185,9 @@ fn surface_at_f32(
         surface.base_color[0] *= linear(color & 255);
         surface.base_color[1] *= linear((color >> 8) & 255);
         surface.base_color[2] *= linear((color >> 16) & 255);
+    }
+    for (base, factor) in surface.base_color.iter_mut().zip(picture) {
+        *base *= factor;
     }
     surface
 }
@@ -245,26 +242,6 @@ pub fn sun_bent_f32(outward: V3, ior: f32, line: V3) -> Option<(V3, f32, f32)> {
     Some((inside, cos_out, cos_in))
 }
 
-/// The one interface at a seam a vertex is on (`PathSeam` of kind `SEAM_INTERFACE`).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct SeamF32 {
-    pub surface: SurfaceRecord,
-    pub into_denser: bool,
-    pub skip: f32,
-    /// The part not there on the line that reached the seam, and whether its side is the one the
-    /// hit face's normal points to.
-    pub absent: Option<(u32, bool)>,
-}
-
-/// What `seam_at` found at a hit.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum SeamAtF32 {
-    None,
-    Straight { skip: f32 },
-    Interface(SeamF32),
-    Ended,
-}
-
 /// Where the vertex is on a contact with the floor: `resting` in `path.wgsl`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FloorContactF32 {
@@ -298,7 +275,7 @@ pub struct SunLineF32 {
 #[derive(Debug, Default)]
 pub struct LineRecordF32 {
     passed: Vec<u32>,
-    crossings: u32,
+    pub(super) crossings: u32,
 }
 
 /// `line_at_hit`'s verdicts.
@@ -322,7 +299,7 @@ impl LineRecordF32 {
     }
 
     /// `line_at_hit`, the draw asked of `there` with the part's opacity.
-    fn at_hit(
+    pub(super) fn at_hit(
         &mut self,
         pack: &GpuRenderScene,
         part: u32,
@@ -350,9 +327,11 @@ impl LineRecordF32 {
 
 /// What a line walk reads of a packed scene: the pack, the analytic floor when the path may meet
 /// one (`path_floor_active`), and whether the pack's flags would carry `PATH_FLAG_SUN_STRAIGHT`.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct SunLineScene<'a> {
-    pack: &'a GpuRenderScene,
+    pub(super) pack: &'a GpuRenderScene,
+    /// The part buffer as words, for the picture lookup; empty when no face shows a picture.
+    part_words: Vec<u32>,
     /// The floor's plane (center x, center y, height, half side) and its surface.
     floor: Option<([f32; 4], SurfaceRecord)>,
     sun_straight: bool,
@@ -376,22 +355,63 @@ impl<'a> SunLineScene<'a> {
             };
             (view.floor_plane, surface)
         });
+        let part_words = if pack.texture_block().words().is_empty() {
+            Vec::new()
+        } else {
+            pack.part_bytes()
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|word| u32::from_le_bytes(*word))
+                .collect()
+        };
         SunLineScene {
             pack,
+            part_words,
             floor,
             sun_straight,
         }
+    }
+
+    /// `path_picture_at`: what the picture on `hit`'s face multiplies its color by there, exactly
+    /// 1 on a face without one, read by [`texture_lookup_f32`] (the shader's lookup step for step)
+    /// from the pack's part words and atlas at the hit's own weights. The path loop's lookup at a
+    /// vertex is this at the vertex's hit, so the `rest_picture` a vertex on the floor under glass
+    /// hands the shadow ray is this at its `rest_hit`. A pack whose atlas bytes were taken reads no
+    /// picture. A mirror of the shader for tests, not an API to render with.
+    #[doc(hidden)]
+    pub fn picture_at(&self, hit: &FlatHit) -> V3 {
+        let Some(face) = self.pack.faces().get(hit.source_index as usize) else {
+            return [1.0; 3];
+        };
+        if face.texture == NO_TEXTURE {
+            return [1.0; 3];
+        }
+        let atlas = self.pack.texture_atlas();
+        atlas
+            .bytes()
+            .and_then(|bytes| {
+                texture_lookup_f32(
+                    &self.part_words,
+                    face.texture,
+                    hit.barycentric,
+                    bytes,
+                    atlas.width(),
+                    &self.pack.srgb_table_bytes(),
+                )
+            })
+            .map_or([1.0; 3], |found| found.factor)
     }
 
     /// The floor's plane, when the walk meets the floor.
     pub fn floor_plane(&self) -> Option<[f32; 4]> {
         self.floor.map(|(plane, _)| plane)
     }
-    fn flags(&self) -> u32 {
+    pub(super) fn flags(&self) -> u32 {
         self.pack.view().flags
     }
 
-    fn floor_surface(&self) -> SurfaceRecord {
+    pub(super) fn floor_surface(&self) -> SurfaceRecord {
         self.floor
             .map_or(self.pack.parts()[0].surface, |(_, surface)| surface)
     }
@@ -423,87 +443,6 @@ impl<'a> SunLineScene<'a> {
             rests_on_floor_f32(point.position, point.geometric, point.ray_offset, plane)
         })
     }
-
-    /// `seam_at`: the seam at `point` on the hit's packed face `triangle`, for a line along
-    /// `direction` that found the hit part there when `here_present`.
-    pub fn seam_at(
-        &self,
-        point: &PathPointF32,
-        triangle: u32,
-        direction: V3,
-        here_present: bool,
-        line: &mut LineRecordF32,
-        there: &mut dyn FnMut(f32) -> bool,
-    ) -> SeamAtF32 {
-        let (entries, fully) = self.pack.glass_contacts().of_triangle(triangle as usize);
-        let entry = if fully {
-            entries.first()
-        } else {
-            entries
-                .iter()
-                .find(|entry| entry.covers_f32(point.position))
-        };
-        let Some(entry) = entry else {
-            return SeamAtF32::None;
-        };
-        if entry.flags & CONTACT_NO_SEAM != 0 {
-            return SeamAtF32::None;
-        }
-        let mut there_present = true;
-        if self.flags() & SCENE_FLAG_SEE_THROUGH != 0 {
-            let verdict = line.at_hit(self.pack, entry.part, there);
-            if verdict == LineVerdictF32::Ended {
-                return SeamAtF32::Ended;
-            }
-            there_present = verdict == LineVerdictF32::Stops;
-        }
-        let skip = SKIP_TOLERANCES_F32 * entry.tolerance;
-        let leaving_here = facing_f32(point, direction).1;
-        if !here_present && !there_present {
-            return SeamAtF32::Straight { skip };
-        }
-        if here_present && there_present && entry.flags & CONTACT_SAME_GLASS != 0 {
-            if line.crossings >= MAX_CROSSINGS_PER_LINE_F32 {
-                return SeamAtF32::Ended;
-            }
-            line.crossings += 1;
-            return SeamAtF32::Straight { skip };
-        }
-        let floor = self.floor_surface();
-        let (surface, into_denser, absent) = if here_present && !there_present {
-            (
-                surface_at_f32(self.pack, floor, point.part, point.color),
-                !leaving_here,
-                Some((entry.part, true)),
-            )
-        } else if !here_present && there_present {
-            (
-                surface_at_f32(self.pack, floor, entry.part, entry.color),
-                leaving_here,
-                Some((point.part, false)),
-            )
-        } else {
-            let denser = if leaving_here {
-                entry.flags & CONTACT_COVER_DENSER != 0
-            } else {
-                entry.flags & CONTACT_HIT_DENSER != 0
-            };
-            (entry.interface, denser, None)
-        };
-        SeamAtF32::Interface(SeamF32 {
-            surface,
-            into_denser,
-            skip,
-            absent,
-        })
-    }
-}
-
-/// `seam_absent_toward`.
-fn absent_toward(seam: &SeamF32, point: &PathPointF32, direction: V3) -> Option<u32> {
-    let (part, on_normal_side) = seam.absent?;
-    let toward_normal_side = dot(direction, point.geometric) >= 0.0;
-    (toward_normal_side == on_normal_side).then_some(part)
 }
 
 fn ray_from(origin: V3, direction: V3) -> FlatRay {
@@ -552,7 +491,11 @@ pub fn sun_line_f32(
         origin = seam_origin_f32(&vertex.point, direction, seam.skip);
     } else if let (true, Some(contact)) = (scene.sun_straight, contact) {
         let across = match contact {
-            FloorContactF32::FloorUnder { rest_hit } => surface_point_f32(pack, &rest_hit),
+            FloorContactF32::FloorUnder { rest_hit } => {
+                let mut across = surface_point_f32(pack, &rest_hit);
+                across.picture = scene.picture_at(&rest_hit);
+                across
+            }
             FloorContactF32::OverFloor => {
                 let plane = scene.floor.map_or([0.0; 4], |(plane, _)| plane);
                 floor_point_under_f32(vertex.point.position, plane)
@@ -569,7 +512,13 @@ pub fn sun_line_f32(
             if !walk {
                 return found;
             }
-            let surface = surface_at_f32(pack, floor_surface, across.part, across.color);
+            let surface = surface_at_f32(
+                pack,
+                floor_surface,
+                across.part,
+                across.color,
+                across.picture,
+            );
             if !passes_sun_straight_f32(&surface) {
                 return found;
             }
@@ -594,7 +543,7 @@ pub fn sun_line_f32(
             found.reached = true;
             return found;
         };
-        let point = surface_point_f32(pack, &hit);
+        let mut point = surface_point_f32(pack, &hit);
         let mut present = true;
         if see_through {
             match line.at_hit(pack, point.part, there) {
@@ -608,6 +557,9 @@ pub fn sun_line_f32(
             }
             ray = ray_from(next_origin_f32(&point, direction), direction);
             continue;
+        }
+        if present {
+            point.picture = scene.picture_at(&hit);
         }
         let mut seam = None;
         if scene.flags() & SCENE_FLAG_GLASS_CONTACTS != 0 {
@@ -630,7 +582,7 @@ pub fn sun_line_f32(
         }
         let surface = match &seam {
             Some(interface) => interface.surface,
-            None => surface_at_f32(pack, floor_surface, point.part, point.color),
+            None => surface_at_f32(pack, floor_surface, point.part, point.color, point.picture),
         };
         if !passes_sun_straight_f32(&surface) {
             return found;

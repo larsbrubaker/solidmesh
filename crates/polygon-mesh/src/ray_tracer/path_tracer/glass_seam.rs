@@ -5,7 +5,9 @@
 //! **Which glass is on which side.** Two faces lying on each other are found in either order by a
 //! trace, since they are at the same distance. Arriving at the back of the hit face, the path is
 //! leaving the hit part into the covering one; arriving at its front, it is leaving the covering
-//! part into the hit one. Either way the answer is the same.
+//! part into the hit one. Either way the answer is the same: each side's surface is its own
+//! part's, with its own face's color and picture, the covering face's read at its point under
+//! the hit, so a picture on either face of the pair makes the same seam.
 //!
 //! **Whether each part is there.** A part only partly there is decided per straight line, as at
 //! any other hit (`see_through`): the path loop decides the hit part before this file is asked,
@@ -128,10 +130,18 @@ pub(super) fn glass_seam(
     let Some(other_part) = scene.parts().parts().get(contact.part) else {
         return Ok(None);
     };
-    let (Some(here), Some(there)) = (
-        scene.surface_at(part, point.base_color),
-        scene.surface_at(contact.part, other_part.surface().face_color(contact.face)),
-    ) else {
+    // The covering face's picture is read at its own point under the hit, so a picture on either
+    // face makes the same seam; a scene with no pictures needs only the covering face's color.
+    let there = if scene.has_face_textures() {
+        let covering_face = i32::try_from(contact.face).map_err(|_| {
+            RayTracerError::InvalidArgument("a contact face's index is beyond what a mesh can hold")
+        })?;
+        let there_point = other_part.surface_point(covering_face, point.position)?;
+        scene.surface_at_point(contact.part, &there_point)
+    } else {
+        scene.surface_at(contact.part, other_part.surface().face_color(contact.face))
+    };
+    let (Some(here), Some(there)) = (scene.surface_at_point(part, &point), there) else {
         return Ok(None);
     };
     let there_present = if scene.has_see_through_parts() {

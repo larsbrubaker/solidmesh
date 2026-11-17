@@ -1,27 +1,32 @@
 // The path loop in WGSL: one sample per pixel of a pixel range, added into an RGBA accumulation
 // buffer, the same estimator `path_tracer/integrator.rs` computes on the CPU. It follows
-// `trace.wgsl` and `scatter.wgsl` (`PATH_WGSL` is them, this, `see_through.wgsl` (the parts one
-// straight line has gone through), `sun.wgsl` (the sky, the sun and the shadow ray toward it),
-// `catcher.wgsl` and `seam.wgsl`); `gpu_scene.rs` packs the buffers and pins these records.
+// `trace.wgsl` and `scatter.wgsl` (`PATH_WGSL` is them, this, `picture.wgsl` (a face's picture at a
+// hit), `see_through.wgsl` (the parts one straight line has gone through), `sun.wgsl` (the sky, the
+// sun and the shadow ray toward it), `catcher.wgsl` and `seam.wgsl`); `gpu_scene.rs` packs the
+// buffers and pins these records.
 // Bindings:
 //
 //   group 0: 0 the tree's nodes, 1 its triangles (`trace.wgsl`)
 //   group 1: 0 the albedo table (`scatter.wgsl`)
 //   group 2: 0 `faces`, 1 `parts` (the part records as words, then the glass contact block where
-//            the scene has one, from the word `path_view.contact_block` holds), 2 `accumulation` (`read_write`), 3 `path_view` (uniform,
+//            the scene has one, from the word `path_view.contact_block` holds, then the picture
+//            block, `gpu_texture_block.rs`, whose entries `Face.texture` points to), 2
+//            `accumulation` (`read_write`), 3 `path_view` (uniform,
 //            the only buffer a change of view writes), 4 `path_slice` (uniform: `{ first_pixel,
 //            pixel_count, sample_index }`), 5 `channels` (`read_write`, the coverage channels),
-//            6 `path_srgb` (uniform, fixed at pack)
+//            6 `path_srgb` (uniform, fixed at pack), 7 `path_atlas` (the picture atlas, a
+//            `texture_2d<u32>` of `Rgba8Uint` texels read with `textureLoad`, `picture.wgsl`)
 //
 // Entry point `path_trace_main`, workgroup size 64: invocation `id.x` handles pixel `first_pixel +
 // id.x` (row order from the bottom left, `y * width + x`), so a caller time-slices by choosing the
 // range and dispatching `ceil(count / 64)` workgroups; an invocation past the range runs the
 // range's last pixel and writes nothing (the entry point says why). Limits used: 7 storage buffers
-// in the compute stage, 3 uniform buffers, 3 bind groups, 64 invocations per workgroup, about 2.1
+// and 1 sampled texture (at most `GpuTextureLimits::max_side` texels a side, 8192 by default) in
+// the compute stage, 3 uniform buffers, 3 bind groups, 64 invocations per workgroup, about 2.1
 // KB of private memory and 1.2 KB of function memory per invocation (those two measured when the
 // loop was first written, in 0.2.4, and not measured again since `PathVertex` and the sun's records
-// grew in 0.4.0). WebGPU's defaults are 8, 12, 4, 256 and the 8 KB its compilers must accept, so
-// nothing here asks for more than a phone gives.
+// grew in 0.4.0). WebGPU's defaults are 8, 16, 8192, 12, 4, 256 and the 8 KB its compilers must
+// accept, so nothing here asks for more than a phone gives.
 //
 // The color and the coverage channels are two buffers and not one 48-byte record: a browser's
 // default 128 MB storage binding holds a 1440p image's 16-byte colors and 32-byte channels apart,
@@ -51,7 +56,8 @@
 //   center has a proportionally larger offset, and a very thin wall out there can leak where the
 //   CPU's cannot. `GpuSceneLimits::max_vertex_step` bounds how far that can go.
 // - Face colors arrive decoded through `path_scene`'s table of every 8-bit value, the same f64
-//   decoding `RenderScene` holds, narrowed once.
+//   decoding `RenderScene` holds, narrowed once; so do a picture's texels (`picture.wgsl`), whose
+//   coordinate is interpolated in f32 from coordinates the pack shifted by whole repeats.
 //
 // Everything else is the CPU loop in the CPU's order. A see-through part's verdict comes first,
 // then, in a scene with glass lying on glass, the seam (`seam.wgsl`, `glass_seam.rs`: straight on
@@ -119,7 +125,8 @@ const LINE_ENDED: u32 = 2u;
 
 // One per face, indexed by a hit's `source_index`: the corner normals for shading, not unit
 // length (see `gpu_scene.rs`), the world geometric normal, the continuing ray's offset, which part
-// the face belongs to, and its color as `0xBBGGRR` bytes.
+// the face belongs to, its color as `0xBBGGRR` bytes, and the word in `parts` where its picture
+// entry starts (`PATH_NO_TEXTURE` for none; `gpu_texture_block.rs` lays out the entry).
 struct Face {
     n0: array<f32, 3>,
     n1: array<f32, 3>,
@@ -128,6 +135,7 @@ struct Face {
     ray_offset: f32,
     part: u32,
     color: u32,
+    texture: u32,
 }
 
 struct Part {
@@ -274,6 +282,9 @@ fn path_next_unit3() -> vec3<f32> {
 
 // ---- A point on a surface (`surface_point.rs`, `placed_part.rs`).
 
+// `picture` is what the face's picture multiplies its color by at the point: 1 as a point is made,
+// until the path loop or the line toward the sun looks it up (`picture.wgsl`) where the CPU reads
+// it; the floor shows none.
 struct PathPoint {
     position: vec3<f32>,
     geometric: vec3<f32>,
@@ -281,6 +292,7 @@ struct PathPoint {
     ray_offset: f32,
     part: u32,
     color: u32,
+    picture: vec3<f32>,
 }
 
 fn path_vec3(values: array<f32, 3>) -> vec3<f32> {
@@ -299,7 +311,8 @@ fn path_surface_point(hit: Hit) -> PathPoint {
     if !has_direction(shading) {
         shading = geometric;
     }
-    return PathPoint(position, geometric, shading, face.ray_offset, face.part, face.color);
+    return PathPoint(position, geometric, shading, face.ray_offset, face.part, face.color,
+        vec3<f32>(1.0f));
 }
 
 struct PathFacing {
@@ -360,9 +373,11 @@ fn path_to_world(frame: PathFrame, local: vec3<f32>) -> vec3<f32> {
     return frame.tangent * local.x + frame.bitangent * local.y + frame.normal * local.z;
 }
 
-// The surface of `part` at a face of `color`: base times the decoded face color, for a colored
-// face (the CPU's white-face shortcut gives the same answer, since white decodes to 1).
-fn path_surface_at(part: u32, color: u32) -> Surface {
+// The surface of `part` at a face of `color` whose picture gives `picture` there: base times the
+// decoded face color, for a colored face, times the picture, in the CPU's order (the CPU's
+// shortcuts for a white face and a factor of 1 give the same answer: white decodes to 1, and a
+// face without a picture multiplies by exactly 1, which is the base color itself).
+fn path_surface_at(part: u32, color: u32, picture: vec3<f32>) -> Surface {
     if part == PATH_FLOOR_PART {
         return path_floor_surface();
     }
@@ -375,6 +390,9 @@ fn path_surface_at(part: u32, color: u32) -> Surface {
         surface.base_g *= path_srgb.to_linear[g >> 2u][g & 3u];
         surface.base_b *= path_srgb.to_linear[b >> 2u][b & 3u];
     }
+    surface.base_r *= picture.x;
+    surface.base_g *= picture.y;
+    surface.base_b *= picture.z;
     return surface;
 }
 
@@ -497,6 +515,18 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
             }
             resting = resting || meets;
         }
+        // The picture on the face this vertex meets, looked up once (`picture.wgsl`): its own
+        // face's, or, on the floor under glass resting there, the glass face's across, which the
+        // line toward the sun crosses first. A part not there needs none.
+        var rest_picture = vec3<f32>(1.0f);
+        if present && hit.triangle != NO_HIT && (!floor_first || resting) {
+            let picture = path_picture_at(hit);
+            if floor_first {
+                rest_picture = picture;
+            } else {
+                point.picture = picture;
+            }
+        }
         // A seam between two glass parts is looked at only in a scene that has one
         // (`seam.wgsl`), so every other scene runs exactly the operations it always did.
         var seam = seam_none();
@@ -533,7 +563,7 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
         if at_seam {
             surface = seam.surface;
         } else {
-            surface = path_surface_at(point.part, point.color);
+            surface = path_surface_at(point.part, point.color, point.picture);
         }
         let toward_camera = -ray.direction;
         let facing = path_facing(point, ray.direction);
@@ -550,7 +580,7 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
         let wo = path_to_local(frame, toward_camera);
 
         let vertex = PathVertex(point, surface, frame, toward_camera, wo, seam, resting, floor_first,
-            rest_hit);
+            rest_hit, rest_picture);
         let shadow = path_sample_sun(vertex, sun_path.chain, sun_path.in_glass);
         radiance += throughput * shadow.light;
 

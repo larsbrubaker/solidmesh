@@ -14,7 +14,11 @@
 //! when its first entry covers the whole face, and one more holding the entry count, so triangle
 //! `t`'s entries run from its start to the next triangle's, nearly always none; then the entries,
 //! [`CONTACT_ENTRY_WORDS`] words each, in the CPU's list order, so the first covering entry is the
-//! one the CPU finds. `seam.wgsl` reads it.
+//! one the CPU finds. In a scene where some face shows a picture ([`super::SCENE_FLAG_PICTURES`])
+//! the entries are followed by one word per entry, in the same order, the covering face's index in
+//! the tree's triangle buffer ([`super::FlatTree::triangles`]): that gives the shader the face's
+//! corners, to place the point on it, and its `source_index`, whose face record says where its
+//! picture entry starts. A scene without pictures appends no such word. `seam.wgsl` reads it.
 //!
 //! **An entry** is everything one contact triangle decides, worked out in `f64` here:
 //! - its three edges as the shader tests them, in the scene-centre frame the packed triangles use
@@ -34,7 +38,9 @@
 //!   (`glass_seam::seam_surface`: relative index from the `f64` indices, colors multiplied, the
 //!   larger roughness and metallic, the smaller transmission). The interface is the same whichever
 //!   side the path comes from; only which side is denser depends on that, so both answers are
-//!   flags.
+//!   flags. Those decisions are from the two faces' colors; in a scene with pictures the shader
+//!   makes them again from the surfaces where either face's picture factor at the point differs
+//!   from 1, the materials' sameness apart from color given by [`CONTACT_SAME_MATERIAL`].
 //!
 //! **Fully covered faces.** A face whose first entry covers all three of its corners (by the CPU's
 //! own `f64` test) is covered by that entry everywhere, since a widened triangle is convex, and that
@@ -42,7 +48,9 @@
 
 use solidmesh_math::Vector3;
 
-use super::{FaceRecord, FlatTreeError, SurfaceRecord, PART_STRIDE, SURFACE_RECORD_STRIDE};
+use super::{
+    FaceRecord, FlatTree, FlatTreeError, SurfaceRecord, PART_STRIDE, SURFACE_RECORD_STRIDE,
+};
 use crate::ray_tracer::path_tracer::{covers, dominant_axis, flatten, seam_surface, ContactFace};
 use crate::ray_tracer::RenderScene;
 
@@ -84,6 +92,10 @@ pub const CONTACT_COVER_DENSER: u32 = 4;
 /// An entry's flag: one of the two surfaces could not be formed, so, as on the CPU, the covering
 /// entry makes the hit an ordinary one and no later entry is tried.
 pub const CONTACT_NO_SEAM: u32 = 8;
+/// An entry's flag, set only in a scene with pictures: the two glasses are the same in all but
+/// their base color (metallic, roughness, transmission and index alike, compared in `f64`), so the
+/// shader can tell one glass from the base colors alone once a picture has tinted them.
+pub const CONTACT_SAME_MATERIAL: u32 = 16;
 
 /// One edge of a contact triangle as the shader tests it; see the module header.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -148,17 +160,21 @@ impl GlassContactRecord {
     }
 }
 
-/// The packed contacts: per-triangle starts and the entries. Both empty for a scene without any.
+/// The packed contacts: per-triangle starts, the entries and, in a scene with pictures, each
+/// entry's covering triangle. All empty for a scene without contacts.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GpuGlassContacts {
     /// One word per triangle and the entry count, as in the module header; empty without contacts.
     pub starts: Vec<u32>,
     pub entries: Vec<GlassContactRecord>,
+    /// One per entry in a scene with pictures, the covering face's index in the tree's triangle
+    /// buffer; empty in a scene without pictures.
+    pub covering_triangles: Vec<u32>,
 }
 
 impl GpuGlassContacts {
     /// The block's words, appended to the part buffer: none when there are no contacts, else the
-    /// triangle count, the starts and the entries.
+    /// triangle count, the starts, the entries and the covering triangles.
     pub fn to_words(&self) -> Vec<u32> {
         if self.starts.is_empty() {
             return Vec::new();
@@ -171,6 +187,7 @@ impl GpuGlassContacts {
         for entry in &self.entries {
             words.extend_from_slice(&entry.to_words());
         }
+        words.extend_from_slice(&self.covering_triangles);
         words
     }
 
@@ -184,22 +201,31 @@ impl GpuGlassContacts {
 
     /// The entries of triangle `triangle` (its `source_index`) and whether its first covers it all.
     pub fn of_triangle(&self, triangle: usize) -> (&[GlassContactRecord], bool) {
+        let (_, entries, fully) = self.of_triangle_from(triangle);
+        (entries, fully)
+    }
+
+    /// As [`GpuGlassContacts::of_triangle`], led by the index of the triangle's first entry in
+    /// [`GpuGlassContacts::entries`] (and so in [`GpuGlassContacts::covering_triangles`]).
+    pub fn of_triangle_from(&self, triangle: usize) -> (usize, &[GlassContactRecord], bool) {
         let (Some(&start), Some(&end)) = (self.starts.get(triangle), self.starts.get(triangle + 1))
         else {
-            return (&[], false);
+            return (0, &[], false);
         };
         let first = (start & !CONTACT_FULLY_COVERED) as usize;
         let last = (end & !CONTACT_FULLY_COVERED) as usize;
         let entries = self.entries.get(first..last).unwrap_or(&[]);
-        (entries, start & CONTACT_FULLY_COVERED != 0)
+        (first, entries, start & CONTACT_FULLY_COVERED != 0)
     }
 }
 
-/// Packs `scene`'s glass contacts against `faces` (recentred, offsets set) about `origin`, refused
+/// Packs `scene`'s glass contacts against `faces` (recentred, offsets set) about `origin`, each
+/// entry's covering face, in a scene with pictures, as its index in `tree`'s triangles; refused
 /// when the part buffer with the block after it would pass `max_storage_binding`.
 pub(super) fn pack_glass_contacts(
     scene: &RenderScene,
     faces: &[FaceRecord],
+    tree: &FlatTree,
     origin: Vector3,
     max_storage_binding: u64,
 ) -> Result<GpuGlassContacts, FlatTreeError> {
@@ -217,7 +243,21 @@ pub(super) fn pack_glass_contacts(
     let mut packed = GpuGlassContacts {
         starts: Vec::with_capacity(total + 1),
         entries: Vec::new(),
+        covering_triangles: Vec::new(),
     };
+    let pictures = scene.has_face_textures();
+    // Each face's place in the tree's triangle buffer, built only where covering faces are packed.
+    let mut in_tree = Vec::new();
+    if pictures {
+        in_tree = vec![u32::MAX; total];
+        for (at, triangle) in tree.triangles().iter().enumerate() {
+            let slot = in_tree
+                .get_mut(triangle.source_index as usize)
+                .ok_or(FlatTreeError::UnexpectedBvhLeaf)?;
+            // `FlatTree` holds at most `u32::MAX` triangles, so the index fits.
+            *slot = at as u32;
+        }
+    }
     for (part_index, part) in parts.iter().enumerate() {
         let table = part.surface();
         let mesh_to_world = part.mesh_to_world();
@@ -247,6 +287,14 @@ pub(super) fn pack_glass_contacts(
                     origin,
                 )?;
                 packed.entries.push(record);
+                if pictures {
+                    let covering = first_triangle
+                        .get(contact.part)
+                        .and_then(|&first| in_tree.get(first + contact.face))
+                        .filter(|&&at| at != u32::MAX)
+                        .ok_or(FlatTreeError::UnexpectedBvhLeaf)?;
+                    packed.covering_triangles.push(*covering);
+                }
             }
         }
     }
@@ -255,7 +303,8 @@ pub(super) fn pack_glass_contacts(
     let bytes = (part_words
         + 1
         + packed.starts.len() as u64
-        + (packed.entries.len() * CONTACT_ENTRY_WORDS) as u64)
+        + (packed.entries.len() * CONTACT_ENTRY_WORDS) as u64
+        + packed.covering_triangles.len() as u64)
         * 4;
     if bytes > max_storage_binding {
         return Err(FlatTreeError::PackedBufferTooLarge {
@@ -265,7 +314,7 @@ pub(super) fn pack_glass_contacts(
             what: "contact entries",
             largest_that_fits: (max_storage_binding / 4)
                 .saturating_sub(part_words + 1 + packed.starts.len() as u64)
-                / CONTACT_ENTRY_WORDS as u64,
+                / (CONTACT_ENTRY_WORDS + usize::from(pictures)) as u64,
         });
     }
     Ok(packed)
@@ -346,6 +395,14 @@ fn entry(
             }
             if here.ior() >= there.ior() {
                 flags |= CONTACT_HIT_DENSER;
+            }
+            if scene.has_face_textures()
+                && here.metallic() == there.metallic()
+                && here.roughness() == there.roughness()
+                && here.transmission() == there.transmission()
+                && here.ior() == there.ior()
+            {
+                flags |= CONTACT_SAME_MATERIAL;
             }
             if there.ior() >= here.ior() {
                 flags |= CONTACT_COVER_DENSER;

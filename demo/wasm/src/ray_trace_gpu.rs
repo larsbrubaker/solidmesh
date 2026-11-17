@@ -97,7 +97,9 @@ pub fn fallback_reason(error: &FlatTreeError) -> Option<String> {
         | FlatTreeError::SceneTooLarge { .. }
         | FlatTreeError::TreeTooDeep { .. }
         | FlatTreeError::InvalidCoordinate { .. }
-        | FlatTreeError::NotRepresentable { .. } => Some(error.to_string()),
+        | FlatTreeError::NotRepresentable { .. }
+        | FlatTreeError::TexturesTooLarge { .. }
+        | FlatTreeError::OutOfMemory { .. } => Some(error.to_string()),
         FlatTreeError::NoTriangles | FlatTreeError::UnexpectedBvhLeaf => None,
     }
 }
@@ -167,6 +169,12 @@ impl GpuSession {
     /// The pack, for the buffers the page uploads once.
     pub fn packed(&self) -> &GpuRenderScene {
         &self.scene
+    }
+
+    /// The pack, for taking out what the page uploads and the session never reads again (the
+    /// picture atlas's texels).
+    pub fn packed_mut(&mut self) -> &mut GpuRenderScene {
+        &mut self.scene
     }
 
     /// The view uniform and part records of `request`: all a new camera or look writes.

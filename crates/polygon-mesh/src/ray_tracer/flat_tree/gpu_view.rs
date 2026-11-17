@@ -15,12 +15,18 @@
 //! it directly, keeps the point's height exact (`z` is the plane, not a rounded `origin + t *
 //! direction`), and adds no triangles to the tree.
 //!
+//! **What the pack says, not the scene.** The flags and words that promise words in the part
+//! buffer ([`SCENE_FLAG_GLASS_CONTACTS`], [`ViewRecord::contact_block`], [`SCENE_FLAG_PICTURES`])
+//! come from what the pack wrote (`pack_words`), never from the scene a view is set with, so a
+//! view can't send the shader to words a pack never wrote.
+//!
 //! **Coordinates are relative to the packed scene's origin** (`gpu_scene.rs`): every position
 //! here is subtracted from the scene's center in `f64` before it narrows. Directions and radiances
 //! need no recentring.
 
 use solidmesh_math::Vector3;
 
+use super::gpu_contacts::GpuGlassContacts;
 use super::gpu_scene::{narrow3, ScenePlacement};
 use super::{FlatTreeError, SurfaceRecord, COORDINATE_LIMIT};
 use crate::ray_tracer::{
@@ -53,18 +59,36 @@ pub const SCENE_FLAG_GLASS_CONTACTS: u32 = 64;
 /// shader then walks the line toward the sun straight through glass and mixes it with exact
 /// transport by the CPU's weights (`sun.wgsl`); clear, it runs Exact's operations.
 pub const SCENE_FLAG_SUN_STRAIGHT: u32 = 128;
+/// [`ViewRecord::flags`]: the pack's contact block carries each entry's covering triangle
+/// (`gpu_contacts.rs`), which it does when some face shows a picture and some glass lies on glass.
+/// A seam then reads the covering face's picture too; clear, the shader reads no such word. The
+/// bit comes from the pack itself (`pack_words`), never from the scene a view is set with,
+/// so it cannot promise words a pack never wrote.
+pub const SCENE_FLAG_PICTURES: u32 = 256;
 
-/// The word in the part buffer where the glass contact block (`gpu_contacts.rs`) starts, right
-/// after the part records; 0 for a scene without contacts, which appends no block.
-fn contact_block_start(scene: &RenderScene) -> Result<u32, FlatTreeError> {
-    if scene.glass_contacts().is_empty() {
-        return Ok(0);
+/// Sets in `view` what the pack's own words say: [`SCENE_FLAG_GLASS_CONTACTS`] and the contact
+/// block's first word (right after the `part_count` part records) where `contacts` hold a block,
+/// and [`SCENE_FLAG_PICTURES`] where they carry covering triangles; each cleared otherwise.
+pub(super) fn pack_words(
+    view: &mut ViewRecord,
+    contacts: &GpuGlassContacts,
+    part_count: usize,
+) -> Result<(), FlatTreeError> {
+    view.flags &= !(SCENE_FLAG_GLASS_CONTACTS | SCENE_FLAG_PICTURES);
+    view.contact_block = 0;
+    if !contacts.starts.is_empty() {
+        view.flags |= SCENE_FLAG_GLASS_CONTACTS;
+        view.contact_block =
+            u32::try_from(part_count * (super::PART_STRIDE / 4)).map_err(|_| {
+                FlatTreeError::NotRepresentable {
+                    reason: "more parts than a 32-bit word index into the part buffer can reach",
+                }
+            })?;
     }
-    u32::try_from(scene.parts().parts().len() * (super::PART_STRIDE / 4)).map_err(|_| {
-        FlatTreeError::NotRepresentable {
-            reason: "more parts than a 32-bit word index into the part buffer can reach",
-        }
-    })
+    if !contacts.covering_triangles.is_empty() {
+        view.flags |= SCENE_FLAG_PICTURES;
+    }
+    Ok(())
 }
 
 /// [`ViewRecord::roulette_after`] when Russian roulette is off.
@@ -340,7 +364,8 @@ fn floor_lanes(floor: &GpuFloor, placement: &ScenePlacement) -> Result<FloorLane
     })
 }
 
-/// The view's record, for a pack placed at `placement`.
+/// The view's record, for a pack placed at `placement`, with the words that say what the pack
+/// wrote left clear for `pack_words` to set.
 pub(super) fn view_record(
     scene: &RenderScene,
     view: &GpuView,
@@ -372,9 +397,6 @@ pub(super) fn view_record(
     }
     if scene.has_see_through_parts() {
         flags |= SCENE_FLAG_SEE_THROUGH;
-    }
-    if !scene.glass_contacts().is_empty() {
-        flags |= SCENE_FLAG_GLASS_CONTACTS;
     }
     if gradient {
         flags |= SCENE_FLAG_GRADIENT;
@@ -448,7 +470,7 @@ pub(super) fn view_record(
     Ok(ViewRecord {
         eye,
         forward: narrow3(basis.forward),
-        contact_block: contact_block_start(scene)?,
+        contact_block: 0,
         right: direction(basis.right),
         up: direction(basis.up),
         width: view.image.0,

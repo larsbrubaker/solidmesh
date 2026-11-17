@@ -1,8 +1,8 @@
 // The Ray Tracing page's WebGPU work (src/demos/ray-trace.ts is the page): the library's path loop
 // (PATH_WGSL, packed by demo/wasm/src/ray_trace_gpu.rs) run on the GPU one short slice of pixels
 // at a time, adding into an accumulation buffer the page reads back to draw. The pipeline, bind
-// groups and dispatch come from src/gpu-bench.ts, where the GPU Ray Tracing page's render check
-// uses them too.
+// groups, picture atlas upload and dispatch come from src/gpu-bench.ts, where the GPU Ray Tracing
+// page's render check uses them too.
 //
 // A slice is sized from what the image has been proven and measured to cost (`SliceCosts`,
 // src/ray-trace-rules.ts), and a still first runs a small pilot of itself (`pilot`) so that no
@@ -19,8 +19,8 @@
 // promise that never settles. Types are `any` because Bun's types carry no WebGPU declarations.
 
 import {
-  ACCUMULATION_BYTES, CHANNEL_BYTES, COPY_DST, COPY_SRC, type GpuContext, MAP_MODE_READ, MAP_READ, STORAGE, UNIFORM,
-  createPathPipeline, dispatchPath, pathBindGroups, uploadBuffer,
+  ACCUMULATION_BYTES, CHANNEL_BYTES, COPY_DST, COPY_SRC, type GpuContext, MAP_MODE_READ, MAP_READ, type PictureAtlas, STORAGE,
+  UNIFORM, createPathPipeline, dispatchPath, pathBindGroups, uploadAtlas, uploadBuffer,
 } from './gpu-bench.ts';
 import { WORKGROUP_RAYS } from './gpu-bench-rules.ts';
 import { CARRIED_COST_MARGIN, SampleWalk, SliceCosts } from './ray-trace-rules.ts';
@@ -30,8 +30,8 @@ const VIEW_BYTES = 272;
 /** Bytes of the `path_slice` uniform (`PIXEL_SLICE_BYTES` in the library's flat_tree/gpu_scene.rs). */
 const SLICE_BYTES = 16;
 
-/** What ray_trace_gpu_prepare answers for a scene that fits. */
-export interface GpuPack {
+/** What ray_trace_gpu_prepare answers for a scene that fits, the picture atlas among it. */
+export interface GpuPack extends PictureAtlas {
   fits: true;
   shader: string;
   entryPoint: string;
@@ -67,8 +67,9 @@ export class GpuPathRenderer {
   private height = 0;
   private capacity = 0;
   private groups: any[] = [];
+  /** Every buffer and texture made, destroyed with the renderer. */
   private buffers: any[] = [];
-  private shared!: { nodes: any; triangles: any; albedo: any; faces: any; srgb: any; channels: any };
+  private shared!: { nodes: any; triangles: any; albedo: any; faces: any; srgb: any; channels: any; atlas: any };
   private viewUniform: any;
   private sliceUniform: any;
   private parts: any = null;
@@ -104,6 +105,8 @@ export class GpuPathRenderer {
       srgb: made(uploadBuffer(device, pack.srgb, UNIFORM)),
       // A plain view never reads the channels, but the pipeline binds the buffer; one record does.
       channels: made(device.createBuffer({ size: CHANNEL_BYTES, usage: STORAGE })),
+      // The scene's pictures, fixed with the pack: a view of the texture, which `buffers` keeps.
+      atlas: made(uploadAtlas(device, pack)).createView(),
     };
     renderer.viewUniform = made(device.createBuffer({ size: VIEW_BYTES, usage: UNIFORM | COPY_DST }));
     renderer.sliceUniform = made(device.createBuffer({ size: SLICE_BYTES, usage: UNIFORM | COPY_DST }));
@@ -172,10 +175,10 @@ export class GpuPathRenderer {
     this.staging = device.createBuffer({ size: bytes, usage: MAP_READ | COPY_DST });
     this.buffers.push(this.accumulation, this.staging);
     this.capacity = pixels;
-    const { nodes, triangles, albedo, faces, srgb, channels } = this.shared;
+    const { nodes, triangles, albedo, faces, srgb, channels, atlas } = this.shared;
     this.groups = pathBindGroups(device, this.pipeline, {
       nodes, triangles, albedo, faces, parts: this.parts, accumulation: this.accumulation,
-      view: this.viewUniform, slice: this.sliceUniform, channels, srgb,
+      view: this.viewUniform, slice: this.sliceUniform, channels, srgb, atlas,
     });
   }
 

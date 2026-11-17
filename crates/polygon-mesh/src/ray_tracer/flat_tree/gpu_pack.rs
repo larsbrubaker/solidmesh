@@ -7,31 +7,60 @@
 //!
 //! **A work unit** is one small, fixed piece of work: gathering one face's corners and normals
 //! ([`GPU_SCENE_BUILDER_UNITS_PER_FACE`] units per face for the whole pack, some of it spent in
-//! each stage), or one corner visited while the scene's placement is found. The stages run in
-//! this order: gather faces, measure the bounds and reach of their corners, recentre and size
-//! each face's ray offset, build the tree, then build the part records, the glass contacts and the
-//! first view. The gathering, bounds, reach and recentring are sliced to the unit; the tree and
-//! the last stage are not. The last stage is one call in the same step as the tree and costs in
-//! proportion to the parts and the contact entries (a scene with no glass lying on glass packs no
-//! contacts at all). **The tree build is one call and cannot be paused**,
-//! the same limit the CPU's own tree has (the part's `TraceableRef` is built off the frame
-//! ahead of time): a [`step`](GpuSceneBuilder::step) that reaches the tree does the tree, and
-//! a thread-less host pays for it in one slice however many units it gave. Reaching it is
-//! reported as [`GpuSceneBuilder::next_step_builds_tree`], so such a host can defer that step to
-//! an idle moment, or size a scene it can afford. The tree over a scene's parts is built in
-//! `f64` over `f32`-narrowed corners and copied out to the flat records; slicing it needs a
-//! resumable BVH builder and is future work.
+//! each stage), one corner visited while the scene's placement is found, or one unit of the
+//! picture atlas's build (`gpu_atlas_build.rs`: a texel cleared or copied, a halved texel costing
+//! [`ATLAS_WORK_PER_HALVED_TEXEL`](super::ATLAS_WORK_PER_HALVED_TEXEL)). The stages run in this
+//! order: gather faces, measure the bounds and reach of their corners, recentre and size each
+//! face's ray offset, build the tree and with it everything sized by the parts (the part records,
+//! the glass contacts, the first view, the picture atlas's plan and the picture block, each
+//! pictured face's place in it), then build the atlas's texels. Everything but the tree step is
+//! sliced to the unit, the atlas too, so a scene with a large picture (or one the atlas must
+//! halve, `gpu_textures.rs` says what that costs) packs in as many short steps as the host likes.
+//!
+//! **The tree step cannot be paused**, the same limit the CPU's own tree has (the part's
+//! `TraceableRef` is built off the frame ahead of time): a [`step`](GpuSceneBuilder::step) that
+//! reaches the tree does the tree and the work sized by the parts, the glass contact entries (a
+//! scene with no glass lying on glass packs no contacts at all) and the pictured faces, and a
+//! thread-less host pays for it in one slice however many units it gave. Reaching it is reported
+//! as [`GpuSceneBuilder::next_step_builds_tree`], so such a host can defer that step to an idle
+//! moment, or size a scene it can afford. That step ends once the tree and its records are done
+//! when the scene's atlas still has texels to build, so the atlas starts in a slice of its own; a
+//! scene without pictures (its 1 by 1 white atlas) or a pack given its plan finishes in it. The
+//! tree over a scene's parts is built in `f64` over `f32`-narrowed corners and copied out to the
+//! flat records; slicing it needs a resumable BVH builder and is future work.
+//!
+//! **A re-pack of the same pictures** need not build the atlas again: a host that keeps the atlas
+//! it uploaded hands the earlier pack's plan to the next ([`GpuSceneBuilder::with_texture_plan`],
+//! the plan from [`GpuTextureAtlas::plan`]), which then writes the picture block from the plan's
+//! placements and builds no texels: its
+//! [`texture_atlas`](super::GpuRenderScene::texture_atlas) has the plan's size and placements and
+//! no bytes, so the caller keeps the texture it uploaded. Handing a plan over checks only the
+//! pictures' count and sizes ([`TextureAtlasPlan::fits_sizes_of`]); another count or size is
+//! refused, but other pictures of the same sizes are not, and the pack would point at the old
+//! atlas's texels. A caller reuses a plan only for the very same pictures in the same order (for
+//! instance [`RenderScene::textures`](crate::ray_tracer::RenderScene::textures) matched one by one
+//! with `Arc::ptr_eq`). A plan also skips [`GpuTextureLimits`]: it was fitted to the limits of
+//! the pack that made it, so a caller reusing one on another device (after a lost device, say)
+//! checks that device's limits itself.
 
 use std::sync::Arc;
 
 use solidmesh_math::Vector3;
 
-use super::gpu_contacts::pack_glass_contacts;
+use super::gpu_atlas_build::TextureAtlasBuild;
+use super::gpu_contacts::{pack_glass_contacts, GpuGlassContacts};
 use super::gpu_scene::{
     check_image_buffers, GpuRenderScene, GpuSceneLimits, PartRecord, ScenePlacement,
     CHANNEL_STRIDE, FACE_STRIDE, PART_STRIDE,
 };
-use super::gpu_view::{srgb_table_bytes, view_record, GpuCompositing, GpuView, SRGB_TABLE_BYTES};
+use super::gpu_texture_block::{pack_texture_block, GpuTextureBlock};
+use super::gpu_textures::{
+    plan_texture_atlas, GpuTextureAtlas, GpuTextureLimits, TextureAtlasPlan,
+};
+use super::gpu_view::{
+    pack_words, srgb_table_bytes, view_record, GpuCompositing, GpuView, ViewRecord,
+    SRGB_TABLE_BYTES,
+};
 use super::{FaceRecord, FlatTree, FlatTreeError, SurfaceRecord};
 use crate::ray_tracer::surface_point::SURFACE_OFFSET_F32_STEPS;
 use crate::ray_tracer::RenderScene;
@@ -76,7 +105,18 @@ enum Stage {
         index: usize,
     },
     Tree,
+    Atlas(TextureAtlasBuild),
     Finished,
+}
+
+/// What the tree step packs, held while the atlas's texels are built.
+struct Packed {
+    tree: FlatTree,
+    parts: Vec<PartRecord>,
+    view: ViewRecord,
+    srgb_table: [u8; SRGB_TABLE_BYTES],
+    contacts: GpuGlassContacts,
+    textures: GpuTextureBlock,
 }
 
 /// A pack being built; see the module header. Produces the same bits however its work is sliced.
@@ -84,6 +124,12 @@ pub struct GpuSceneBuilder<'a> {
     source: SceneSource<'a>,
     view: GpuView,
     limits: GpuSceneLimits,
+    texture_limits: GpuTextureLimits,
+    /// A plan handed over by [`GpuSceneBuilder::with_texture_plan`]: no atlas is built.
+    texture_plan: Option<Arc<TextureAtlasPlan>>,
+    /// Atlas work units spent, the counter of `gpu_atlas_build.rs`.
+    atlas_work: u64,
+    packed: Option<Packed>,
     world_triangles: Vec<[Vector3; 3]>,
     faces: Vec<FaceRecord>,
     placement: ScenePlacement,
@@ -147,6 +193,10 @@ impl<'a> GpuSceneBuilder<'a> {
             source,
             view,
             limits,
+            texture_limits: GpuTextureLimits::DEFAULT,
+            texture_plan: None,
+            atlas_work: 0,
+            packed: None,
             world_triangles: Vec::with_capacity(triangle_count as usize),
             faces: Vec::with_capacity(triangle_count as usize),
             placement: ScenePlacement {
@@ -158,16 +208,65 @@ impl<'a> GpuSceneBuilder<'a> {
         })
     }
 
+    /// This builder with the scene's pictures fitted to `texture_limits` (`gpu_textures.rs`)
+    /// instead of [`GpuTextureLimits::DEFAULT`]. A plan handed over
+    /// ([`GpuSceneBuilder::with_texture_plan`]) is used instead of any limits.
+    pub fn with_texture_limits(mut self, texture_limits: GpuTextureLimits) -> Self {
+        self.texture_limits = texture_limits;
+        self
+    }
+
+    /// This builder with the scene's pictures laid out by `plan`, an earlier pack's
+    /// ([`GpuTextureAtlas::plan`]) whose atlas the caller still holds: the pack writes the
+    /// picture block from the plan's placements and builds no atlas texels, so its atlas's
+    /// `bytes()` is `None` and the caller keeps the texture it uploaded (see the module header).
+    /// Refused with [`FlatTreeError::NotRepresentable`] when the scene's pictures are not the
+    /// count and sizes the plan was made for. Only the count and sizes are checked: hand a plan
+    /// over only for the very same pictures in the same order (the scene's
+    /// `Arc<TraceTexture>`s matched with `Arc::ptr_eq`), never for other pictures of the same
+    /// sizes. The plan replaces [`GpuSceneBuilder::with_texture_limits`]: no limit is checked,
+    /// so a caller reusing a plan on another device (after a lost device) checks its limits
+    /// itself.
+    pub fn with_texture_plan(mut self, plan: Arc<TextureAtlasPlan>) -> Result<Self, FlatTreeError> {
+        if !plan.fits_sizes_of(self.source.get().textures()) {
+            return Err(FlatTreeError::NotRepresentable {
+                reason: "these pictures are not the ones the atlas plan was made for",
+            });
+        }
+        self.texture_plan = Some(plan);
+        Ok(self)
+    }
+
+    /// How many of the picture atlas's work units (`gpu_atlas_build.rs`) this pack has spent: 0
+    /// for a pack given its plan, and the plan's [`TextureAtlasPlan::build_work`] once a pack that
+    /// builds its atlas is done.
+    pub fn atlas_work_done(&self) -> u64 {
+        self.atlas_work
+    }
+
     /// True when the next [`GpuSceneBuilder::step`] will build the tree: the one step that can't
     /// be sized (see the module header).
     pub fn next_step_builds_tree(&self) -> bool {
         matches!(self.stage, Stage::Tree)
     }
 
-    /// Runs up to `work_units` of the pack. Answers the finished pack once, `None` when more
-    /// remains. Calling it again after the pack came back answers an error about being finished,
-    /// never a second, different pack. See the module header for what a unit is.
+    /// Runs up to `work_units` of the pack (a step in the atlas's halving can pass them by less
+    /// than one halved texel's cost, which is never cut; the tree's step is not sized at all).
+    /// Answers the finished pack once, `None` when more remains. Calling it again after the pack
+    /// came back answers an error about being finished, never a second, different pack, and so
+    /// does a step after an error. See the module header for what a unit is.
     pub fn step(&mut self, work_units: usize) -> Result<Option<GpuRenderScene>, FlatTreeError> {
+        let stepped = self.run(work_units);
+        if stepped.is_err() {
+            // A stage that failed may have spent part of its work (faces gathered, records
+            // packed), so the pack never resumes from it.
+            self.stage = Stage::Finished;
+        }
+        stepped
+    }
+
+    /// [`GpuSceneBuilder::step`] until an error ends the pack.
+    fn run(&mut self, work_units: usize) -> Result<Option<GpuRenderScene>, FlatTreeError> {
         let mut budget = work_units;
         loop {
             // A slice that spent its whole budget stops here, whichever stage it reached: in
@@ -270,10 +369,36 @@ impl<'a> GpuSceneBuilder<'a> {
                     self.stage = Stage::Tree;
                 }
                 Stage::Tree => {
+                    self.stage = Stage::Finished;
                     let tree =
                         FlatTree::build(&self.world_triangles, self.limits.max_storage_binding)?;
-                    self.stage = Stage::Finished;
-                    return Ok(Some(self.finish(tree)?));
+                    let plan = self.pack_records(tree)?;
+                    if self.texture_plan.is_some() {
+                        let atlas = GpuTextureAtlas { plan, bytes: None };
+                        return Ok(Some(self.finish(atlas)?));
+                    }
+                    let mut build = TextureAtlasBuild::new(plan);
+                    if self.source.get().textures().is_empty() {
+                        let atlas = build.step(self.source.get().textures(), usize::MAX)?;
+                        self.atlas_work = build.work_done();
+                        if let Some(atlas) = atlas {
+                            return Ok(Some(self.finish(atlas)?));
+                        }
+                    }
+                    // The atlas's texels start in a step of their own (see the module header).
+                    self.stage = Stage::Atlas(build);
+                    return Ok(None);
+                }
+                Stage::Atlas(build) => {
+                    let atlas = build.step_within(self.source.get().textures(), &mut budget);
+                    self.atlas_work = build.work_done();
+                    match atlas? {
+                        Some(atlas) => {
+                            self.stage = Stage::Finished;
+                            return Ok(Some(self.finish(atlas)?));
+                        }
+                        None => return Ok(None),
+                    }
                 }
                 Stage::Finished => {
                     return Err(FlatTreeError::NotRepresentable {
@@ -284,7 +409,9 @@ impl<'a> GpuSceneBuilder<'a> {
         }
     }
 
-    fn finish(&mut self, tree: FlatTree) -> Result<GpuRenderScene, FlatTreeError> {
+    /// Packs everything the tree step does after the tree (see the module header) and answers
+    /// the atlas's plan: the handed-over one, or one made for the scene's pictures.
+    fn pack_records(&mut self, tree: FlatTree) -> Result<Arc<TextureAtlasPlan>, FlatTreeError> {
         let scene = self.source.get();
         let parts = scene.parts().parts();
         let part_records = (0..parts.len())
@@ -298,27 +425,58 @@ impl<'a> GpuSceneBuilder<'a> {
                 })
             })
             .collect::<Result<Vec<_>, FlatTreeError>>()?;
-        let view = view_record(scene, &self.view, &self.placement)?;
-        let composited = !matches!(self.view.compositing, GpuCompositing::Plain);
+        let mut view = view_record(scene, &self.view, &self.placement)?;
         let srgb_table: [u8; SRGB_TABLE_BYTES] = srgb_table_bytes(scene);
         let contacts = pack_glass_contacts(
             scene,
             &self.faces,
+            &tree,
             self.placement.origin,
             self.limits.max_storage_binding,
         )?;
-        Ok(GpuRenderScene {
+        pack_words(&mut view, &contacts, part_records.len())?;
+        let plan = match &self.texture_plan {
+            Some(plan) => Arc::clone(plan),
+            None => Arc::new(plan_texture_atlas(scene.textures(), self.texture_limits)?),
+        };
+        let first_texture_word =
+            (part_records.len() * (PART_STRIDE / 4)) as u64 + contacts.to_words().len() as u64;
+        let textures = pack_texture_block(
+            scene,
+            &mut self.faces,
+            plan.placements(),
+            first_texture_word,
+            self.limits.max_storage_binding,
+        )?;
+        self.packed = Some(Packed {
             tree,
-            faces: std::mem::take(&mut self.faces),
             parts: part_records,
             view,
             srgb_table,
+            contacts,
+            textures,
+        });
+        Ok(plan)
+    }
+
+    fn finish(&mut self, atlas: GpuTextureAtlas) -> Result<GpuRenderScene, FlatTreeError> {
+        let packed = self.packed.take().ok_or(FlatTreeError::NotRepresentable {
+            reason: "this GPU pack was already finished",
+        })?;
+        Ok(GpuRenderScene {
+            tree: packed.tree,
+            faces: std::mem::take(&mut self.faces),
+            parts: packed.parts,
+            view: packed.view,
+            srgb_table: packed.srgb_table,
             pixels: self.view.image,
-            composited,
+            composited: !matches!(self.view.compositing, GpuCompositing::Plain),
             limits: self.limits,
             placement_origin: self.placement.origin,
             placement_radius: self.placement.radius,
-            contacts,
+            contacts: packed.contacts,
+            textures: packed.textures,
+            atlas,
         })
     }
 }
@@ -384,6 +542,8 @@ fn gather_faces(
                 color: u32::from(color.red)
                     | u32::from(color.green) << 8
                     | u32::from(color.blue) << 16,
+                // Set when the pack finishes, for a face showing a picture (`gpu_texture_block`).
+                texture: super::NO_TEXTURE,
             });
             *face += 1;
         }

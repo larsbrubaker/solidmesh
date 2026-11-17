@@ -11,8 +11,12 @@
 //! - `lights`: [`Environment`] (a constant radiance or a smooth sky-to-ground gradient), [`Sun`]
 //!   (a disc with a finite angular radius and a radiance) and [`LightSetup`], which holds one of
 //!   each (the sun is optional).
-//! - `render_scene`: [`RenderScene`], the parts, one surface and optional opacity per part, and
-//!   the lights.
+//! - `render_scene`: [`RenderScene`], the parts, one surface and optional opacity per part, the
+//!   pictures faces show, and the lights.
+//! - `trace_texture`: [`TraceTexture`], a decoded picture, and the lookup (Repeat, bilinear,
+//!   decoded before blending) that gives a face's color factor at a texture coordinate.
+//! - `texture_halving`: [`TextureHalving`] and [`TextureShrinking`], a picture's halving in
+//!   bounded pieces for a host without threads.
 //! - `see_through`: how a ray goes past a part that is only partly there.
 //! - `glass_contacts`: where faces of glass parts lie on each other, found when the scene is
 //!   built.
@@ -113,6 +117,8 @@ mod see_through;
 mod see_through_rest;
 mod sun_through_glass;
 mod sun_toward;
+mod texture_halving;
+mod trace_texture;
 
 pub use camera::RenderCamera;
 pub use display::{display_byte, linear_to_srgb, tone_map};
@@ -137,3 +143,8 @@ pub use see_through_rest::LineVertexAt;
 pub use sun_through_glass::SunLineAt;
 #[doc(hidden)]
 pub use sun_toward::{bent_sun_at, sun_toward_at, SunPathAt, SunTowardAt};
+pub(crate) use texture_halving::ShrinkCursor;
+pub use texture_halving::{TextureHalving, TextureShrinking};
+pub use trace_texture::TraceTexture;
+#[doc(hidden)]
+pub use trace_texture::{blend_factors, texel_spot, TexelSpot};

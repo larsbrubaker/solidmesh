@@ -11,8 +11,12 @@
 //! against the CPU model, reading [`SurfaceRecord`] and [`albedo_table_bytes`]. `gpu_scene` and
 //! `gpu_pack` pack a whole render scene ([`GpuRenderScene`], [`GpuSceneBuilder`]) and `gpu_view`
 //! the camera, lights, settings and floor ([`GpuView`]), with `gpu_contacts` the glass faces lying
-//! on glass ([`GpuGlassContacts`]), for the path loop [`PATH_WGSL`] (`path_shader`, `path.wgsl`,
-//! `see_through.wgsl`, `sun.wgsl`, `catcher.wgsl`, `seam.wgsl`), which renders one sample per pixel
+//! on glass ([`GpuGlassContacts`]), `gpu_textures` the scene's pictures laid into one atlas
+//! ([`GpuTextureAtlas`], built in bounded pieces by `gpu_atlas_build`'s [`TextureAtlasBuild`])
+//! and `gpu_texture_block` where each pictured face's picture lies in it
+//! ([`GpuTextureBlock`], with `texture_lookup_f32` the shader's lookup in Rust), for the path
+//! loop [`PATH_WGSL`] (`path_shader`, `path.wgsl`, `picture.wgsl`, `see_through.wgsl`,
+//! `sun.wgsl`, `catcher.wgsl`, `seam.wgsl`), which renders one sample per pixel
 //! of a slice into accumulation buffers on the GPU: the same estimator as the CPU's `path_tracer`,
 //! and the shadow-catcher floor and coverage channels a compositing caller needs. `floor_rest` is
 //! the path loop's test for glass resting on that floor, in Rust ([`rests_on_floor_f32`], and
@@ -20,7 +24,8 @@
 //! on it ([`see_through_on_floor_f32`]), so a caller can check the GPU rule without a graphics
 //! card; `coverage_line` is the catcher's coverage along a camera line in Rust
 //! ([`coverage_along_f32`]), `sun_line` the shadow ray's line toward the sun
-//! ([`sun_line_f32`]), each to hold against the CPU's line for line, and `sun_weights` the
+//! ([`sun_line_f32`]) with `seam_f32` the seam it asks at each hit ([`SunLineScene::seam_at`]),
+//! each to hold against the CPU's line for line, and `sun_weights` the
 //! shadow term's weights for sunlight through glass and the path's record of them
 //! ([`sample_sun_f32`], [`sun_after_f32`]), to hold against the CPU's rules case by case.
 //!
@@ -110,13 +115,17 @@
 mod build;
 mod coverage_line;
 mod floor_rest;
+mod gpu_atlas_build;
 mod gpu_contacts;
 mod gpu_pack;
 mod gpu_scene;
+mod gpu_texture_block;
+mod gpu_textures;
 mod gpu_view;
 mod layout;
 mod path_shader;
 mod scatter_shader;
+mod seam_f32;
 mod shader;
 mod sun_line;
 mod sun_weights;
@@ -136,12 +145,14 @@ pub use floor_rest::{
     see_through_on_floor_f32, there_glass_leaves_onto_floor_f32, FLOOR_OFFSET_STEPS,
     FLOOR_REST_ANTI_PARALLEL, FLOOR_REST_ROUNDING_STEPS,
 };
+pub use gpu_atlas_build::{TextureAtlasBuild, ATLAS_WORK_PER_HALVED_TEXEL};
 pub use gpu_contacts::{
     ContactEdge, GlassContactRecord, GpuGlassContacts, CONTACT_COVER_DENSER,
     CONTACT_EDGE_ALLOWANCE, CONTACT_EDGE_DIRECTION, CONTACT_EDGE_START, CONTACT_EDGE_WORDS,
     CONTACT_ENTRY_WORDS, CONTACT_FULLY_COVERED, CONTACT_HIT_DENSER, CONTACT_NO_SEAM,
-    CONTACT_SAME_GLASS, CONTACT_SKIP_TOLERANCES, CONTACT_WORD_COLOR, CONTACT_WORD_DROP,
-    CONTACT_WORD_FLAGS, CONTACT_WORD_PART, CONTACT_WORD_SURFACE, CONTACT_WORD_TOLERANCE,
+    CONTACT_SAME_GLASS, CONTACT_SAME_MATERIAL, CONTACT_SKIP_TOLERANCES, CONTACT_WORD_COLOR,
+    CONTACT_WORD_DROP, CONTACT_WORD_FLAGS, CONTACT_WORD_PART, CONTACT_WORD_SURFACE,
+    CONTACT_WORD_TOLERANCE,
 };
 pub use gpu_pack::{gpu_channel_bytes, GpuSceneBuilder, GPU_SCENE_BUILDER_UNITS_PER_FACE};
 pub use gpu_scene::{
@@ -149,10 +160,18 @@ pub use gpu_scene::{
     GpuSceneSizes, PartRecord, ACCUMULATION_STRIDE, CHANNEL_STRIDE, FACE_STRIDE, PART_STRIDE,
     PIXEL_SLICE_BYTES,
 };
+pub use gpu_texture_block::{
+    texture_lookup_f32, GpuTextureBlock, TextureLookupF32, NO_TEXTURE, TEXTURE_FACE_PICTURE,
+    TEXTURE_FACE_WORDS, TEXTURE_PICTURE_SIZE, TEXTURE_PICTURE_WORDS,
+};
+pub use gpu_textures::{
+    fit_texture_atlas, plan_texture_atlas, AtlasPlacement, GpuTextureAtlas, GpuTextureLimits,
+    ShrunkTexture, TextureAtlasPlan,
+};
 pub use gpu_view::{
     GpuCompositing, GpuFloor, GpuView, ViewRecord, GPU_SKY_SEED_SALT, GPU_SUN_SEED_SALT,
     MIN_GPU_SUN_ANGULAR_RADIUS, ROULETTE_OFF, SCENE_FLAG_COMPOSITE, SCENE_FLAG_FLOOR,
-    SCENE_FLAG_GLASS_CONTACTS, SCENE_FLAG_GRADIENT, SCENE_FLAG_ORTHOGRAPHIC,
+    SCENE_FLAG_GLASS_CONTACTS, SCENE_FLAG_GRADIENT, SCENE_FLAG_ORTHOGRAPHIC, SCENE_FLAG_PICTURES,
     SCENE_FLAG_SEE_THROUGH, SCENE_FLAG_SUN, SCENE_FLAG_SUN_STRAIGHT, SRGB_TABLE_BYTES,
     VIEW_RECORD_BYTES,
 };
@@ -162,12 +181,13 @@ pub use scatter_shader::{
     ScatterCheckCase, ScatterCheckResult, SAMPLE_FOUND, SAMPLE_SPECULAR, SCATTER_CASE_STRIDE,
     SCATTER_CHECK_WGSL, SCATTER_RESULT_STRIDE, SCATTER_WGSL,
 };
+pub use seam_f32::{cover_weights_f32, SeamAtF32, SeamF32};
 pub use shader::{hit_from_le_bytes, hit_to_le_bytes, HIT_STRIDE, NO_HIT, RAY_STRIDE, TRACE_WGSL};
 pub use sun_line::{
     facing_f32, floor_point_under_f32, next_origin_f32, passes_sun_straight_f32,
     straight_transmittance_f32, sun_bent_f32, sun_line_f32, surface_point_f32, unit_direction_f32,
-    FloorContactF32, LineRecordF32, LineVerdictF32, PathPointF32, SeamAtF32, SeamF32, SunLineF32,
-    SunLineScene, SunVertexF32, FLOOR_PART_F32, MAX_GLASS_CROSSINGS_F32,
+    FloorContactF32, LineRecordF32, LineVerdictF32, PathPointF32, SunLineF32, SunLineScene,
+    SunVertexF32, FLOOR_PART_F32, MAX_GLASS_CROSSINGS_F32,
 };
 pub use sun_weights::{
     arrival_pdf_f32, escaped_sun_weight_f32, power_heuristic_f32, sample_sun_f32,
@@ -256,6 +276,15 @@ pub enum FlatTreeError {
     },
     /// A value of the scene can't be carried in the GPU's 32-bit arithmetic; the reason says what.
     NotRepresentable { reason: &'static str },
+    /// The scene's pictures do not fit one atlas within [`GpuTextureLimits`] even halved to one
+    /// texel each (`gpu_textures.rs`).
+    TexturesTooLarge {
+        pictures: u64,
+        max_texels: u64,
+        max_side: u32,
+    },
+    /// This device could not allocate a buffer the pack needs, `bytes` long.
+    OutOfMemory { what: &'static str, bytes: u64 },
 }
 
 impl fmt::Display for FlatTreeError {
@@ -325,6 +354,29 @@ impl fmt::Display for FlatTreeError {
                  render it on the CPU"
             ),
             FlatTreeError::NotRepresentable { reason } => write!(f, "{reason}"),
+            FlatTreeError::TexturesTooLarge {
+                pictures,
+                max_texels,
+                max_side,
+            } => {
+                let noun = if *pictures == 1 {
+                    "picture"
+                } else {
+                    "pictures"
+                };
+                write!(
+                    f,
+                    "this scene's {pictures} {noun} cannot fit one GPU texture of at most \
+                     {max_side} texels a side and {max_texels} texels even shrunk to one texel \
+                     each: show fewer pictures, allow a larger texture budget, or render it on \
+                     the CPU"
+                )
+            }
+            FlatTreeError::OutOfMemory { what, bytes } => write!(
+                f,
+                "this device has no memory to spare for the {what}'s {bytes} bytes: render it \
+                 on the CPU, or show smaller pictures"
+            ),
         }
     }
 }
