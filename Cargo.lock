@@ -357,7 +357,7 @@ checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 
 [[package]]
 name = "manifold-rust"
-version = "0.19.2"
+version = "0.19.4"
 dependencies = [
  "clipper2-rust",
  "dashu-int",
@@ -560,7 +560,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "solidmesh"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "indexmap",
  "libc",
@@ -578,7 +578,7 @@ dependencies = [
 
 [[package]]
 name = "solidmesh-clipper"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "clipper2-rust",
  "libm",
@@ -587,7 +587,7 @@ dependencies = [
 
 [[package]]
 name = "solidmesh-demo-wasm"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -597,7 +597,7 @@ dependencies = [
 
 [[package]]
 name = "solidmesh-math"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "libm",
  "serde",
@@ -607,7 +607,7 @@ dependencies = [
 
 [[package]]
 name = "solidmesh-mesh"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "clipper2-rust",
  "libm",
@@ -765,7 +765,7 @@ dependencies = [
 
 [[package]]
 name = "workspace-gates"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "serde_json",
 ]
