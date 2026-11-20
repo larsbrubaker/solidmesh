@@ -29,15 +29,15 @@ path = "src/lib.rs"
 # same input would give different output by OS. `libm` is the same everywhere; the
 # `platform_math` gate (crates/workspace-gates) keeps std's out of every crate's src.
 libm = "0.2.16"
-solidmesh-math = { path = "../vector-math", version = "0.5.2" }
+solidmesh-math = { path = "../vector-math", version = "0.5.3" }
 # The ClipperLib polygon helpers and the Clipper 6 port they run on (`clipper_library`), which
 # slicing, stitching, extrude and revolve share with MatterCAD's DataConverters2D.
-solidmesh-clipper = { path = "../clipper-library", version = "0.5.2" }
+solidmesh-clipper = { path = "../clipper-library", version = "0.5.3" }
 # The boolean kernel: a path dependency on the sibling checkout (../manifold-rust,
 # github.com/larsbrubaker/manifold-rust), like the other siblings, so an upstream fix is usable
 # at once.
 # Pure Rust and wasm-capable; its rayon parallelism is opt-in (below).
-manifold-rust = { path = "../../../manifold-rust", version = "0.19.4" }
+manifold-rust = { path = "../../../manifold-rust", version = "0.19.5" }
 # The integer polygons slicing works in: Clipper2's `Path64`/`Paths64`
 # (the union itself runs on clipper-library's Clipper 6 port), from the sibling checkout (../clipper2-rust, github.com/larsbrubaker/clipper2-rust).
 clipper2-rust = { path = "../../../clipper2-rust", version = "1.2.0" }
@@ -47,7 +47,7 @@ tess2-rust = { path = "../../../tess2-rust", version = "1.2.1" }
 # Native hosts get the kernel's `parallel` feature; the browser does not, because
 # wasm32-unknown-unknown has no threads to schedule on. Only determinism-preserving sites are parallel, so the geometry is identical.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-manifold-rust = { path = "../../../manifold-rust", version = "0.19.4", features = ["parallel"] }
+manifold-rust = { path = "../../../manifold-rust", version = "0.19.5", features = ["parallel"] }
 
 [dev-dependencies]
 # Parses and validates the flat tree's WGSL compute traversal (`ray_tracer::flat_tree`) in a test,
