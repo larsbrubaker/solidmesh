@@ -56,17 +56,18 @@ pub struct MemoSettling {
 /// One write a memo was asked to make: a variant per writing method, carrying that method's
 /// arguments as owned data. A journaling memo ([`BevelPickMemo::journaling`]) records one for each
 /// write it makes, in the order it made them; [`BevelPickMemo::apply`] makes the same write on
-/// another memo.
+/// another memo. Each variant names its method in plain code rather than linking it, because the
+/// writing methods are the kernel's own and are kept out of the rendered docs (`#[doc(hidden)]`).
 #[derive(Debug, Clone)]
 pub enum MemoWrite {
-    /// [`BevelPickMemo::remember_the_room`].
+    /// `BevelPickMemo::remember_the_room`.
     RememberTheRoom {
         stamp: u64,
         key: String,
         room: Option<f64>,
         set_by: RoomSource,
     },
-    /// [`BevelPickMemo::remember_a_smaller_room`].
+    /// `BevelPickMemo::remember_a_smaller_room`.
     RememberASmallerRoom {
         stamp: u64,
         key: String,
@@ -75,9 +76,9 @@ pub enum MemoWrite {
         pinched_chain: i32,
         refused_at_size: Option<f64>,
     },
-    /// [`BevelPickMemo::remember_a_size_that_built`].
+    /// `BevelPickMemo::remember_a_size_that_built`.
     RememberASizeThatBuilt { stamp: u64, key: String, size: f64 },
-    /// [`BevelPickMemo::remember_the_settling`].
+    /// `BevelPickMemo::remember_the_settling`.
     RememberTheSettling {
         stamp: u64,
         key: String,
@@ -85,7 +86,7 @@ pub enum MemoWrite {
         settled: SettledPick,
         room: Option<f64>,
     },
-    /// [`BevelPickMemo::carry_the_settling_to`].
+    /// `BevelPickMemo::carry_the_settling_to`.
     CarryTheSettlingTo {
         stamp: u64,
         key: String,

@@ -1,24 +1,31 @@
 //! How a pick memo crosses to another process and back (`part::pick_memo_crossing`): a snapshot
 //! taken and restored answers every query the original does, a journaling memo's writes replayed
 //! onto another memo leave it exactly where the original is, a memo restored and then journaled
-//! journals only what it writes itself, and a real build warmed on one memo hands its room to a
-//! build on the memo its journal was replayed onto. The memo's own rules are pinned in
-//! `part_pick_memo_tests`.
+//! journals only what it writes itself, a journal two threads wrote into at once keeps the order
+//! the writes were applied in, and a real build warmed on one memo - a single edge's room, and a
+//! many-loop rim's settling - hands what it read to a build on the memo its journal was replayed
+//! onto. The memo's own rules are pinned in `part_pick_memo_tests`.
 //!
 //! Snapshots are compared by their `Debug` text: a settling's reading carries NaN rooms, which no
-//! derived equality reads as equal to themselves, and the text is exact to the bit for every
-//! number the memo holds.
+//! derived equality reads as equal to themselves, and the text is exact for every non-NaN number
+//! the memo holds.
 
-use std::sync::Arc;
+use std::sync::{Arc, Barrier};
+use std::thread;
 
 use solidmesh::bevel::level_line::{ChainCannotFit, RoomCandidate, RoomReading, RoomSource};
 use solidmesh::bevel::part::{
     bevel_part, BevelPartRequest, BevelPickMemo, MemoSnapshot, MemoWrite, SettledPick,
 };
-use solidmesh::topology::bevel_edge_group_resolver::create_groups_for_all_edges;
-use solidmesh_math::Vector3;
+use solidmesh::topology::bevel_edge_group_resolver::{
+    create_from_face_group, create_groups_for_all_edges,
+};
+use solidmesh::topology::{BevelEdgeGroup, FaceGroup, FeatureEdgeSet};
+use solidmesh_math::{Vector3, Vector3Float};
 use solidmesh_mesh::solids::platonic_solids::create_cube;
-use solidmesh_mesh::CancelToken;
+use solidmesh_mesh::{CancelToken, Face, Mesh};
+
+use crate::five_hole_plate_fixture as plate;
 
 fn text_of(snapshot: &MemoSnapshot) -> String {
     format!("{snapshot:?}")
@@ -282,6 +289,156 @@ fn a_replayed_journal_spares_the_next_build_its_room_reading() {
     );
     assert_eq!(on_the_page, build(0.8, &worker));
     assert_eq!(worker.rooms_read(), read_by_the_worker);
+}
+
+/// Two threads write one pick each round - one a pinch, the other a size that built - and which
+/// went first decides what the memo holds: a pinch written first has its chain cleared by the
+/// larger size that built after it, while one written after that size keeps its chain. The
+/// journal must hold the writes in the order they were applied, so a replay lands where the memo
+/// is. Each round has a key of its own, so every round's order is still visible at the end rather
+/// than only the last one's.
+#[test]
+fn a_journal_keeps_the_order_two_threads_wrote_in() {
+    const ROUNDS: usize = 4000;
+
+    let memo = Arc::new(BevelPickMemo::new().journaling());
+    let both_ready = Arc::new(Barrier::new(2));
+
+    let writer = |pinches: bool| {
+        let memo = memo.clone();
+        let both_ready = both_ready.clone();
+
+        thread::spawn(move || {
+            for round in 0..ROUNDS {
+                let key = format!("pick {round}");
+                both_ready.wait();
+
+                if pinches {
+                    let pinch = RoomSource::self_room(1);
+                    memo.remember_a_smaller_room(5, &key, 1.0, pinch, 1, Some(1.5));
+                } else {
+                    memo.remember_a_size_that_built(5, &key, 2.0);
+                }
+            }
+        })
+    };
+
+    let pinches = writer(true);
+    let builds = writer(false);
+    pinches.join().expect("the pinching thread finishes");
+    builds.join().expect("the building thread finishes");
+
+    let journal = memo.take_journal();
+    assert_eq!(journal.len(), 2 * ROUNDS);
+
+    let replayed = BevelPickMemo::new();
+    for write in &journal {
+        replayed.apply(write);
+    }
+
+    assert_eq!(text_of(&replayed.snapshot()), text_of(&memo.snapshot()));
+}
+
+/// The five-hole plate's top face as one Face-group pick: six loops, which the level line settles
+/// as a many-loop rim.
+fn the_plate_and_its_top_face() -> (Arc<Mesh>, BevelEdgeGroup) {
+    let (positions, indices, _) = plate::pick();
+
+    let mut mesh = Mesh::new();
+    for at in &positions {
+        mesh.vertices.push(Vector3Float::new(at.x, at.y, at.z));
+    }
+    for &(a, b, c) in &indices {
+        let face = Face::new(a, b, c, &mesh.vertices);
+        mesh.faces.push(face);
+    }
+
+    let graph = mesh.get_mesh_edge_graph();
+    let features = FeatureEdgeSet::create_with_graph(&mesh, &graph, plate::FOLD_DEGREES);
+    let top = mesh
+        .faces
+        .iter()
+        .position(|face| face.normal.z > 0.999)
+        .expect("the plate has a top face") as i32;
+    let region = FaceGroup::create_with_graph(&mesh, &graph, top, features.flat_angle_degrees())
+        .expect("the top face floods");
+    let group = create_from_face_group(
+        &region,
+        &region.boundary_edges()[0],
+        features.flat_angle_degrees(),
+    )
+    .expect("the anchor bounds the top face");
+
+    (Arc::new(mesh), group)
+}
+
+/// End to end on a many-loop rim: the worker's cold build settles the plate's rim and carries the
+/// settling to its survivors, and once its journal is replayed the page's rebuild at that size
+/// pays exactly what a rebuild on the worker's own memo pays - no room read again - and builds
+/// what it builds.
+#[test]
+fn a_replayed_journal_warms_a_many_loop_rim_as_the_workers_memo_is_warm() {
+    let (mesh, group) = the_plate_and_its_top_face();
+    let build = |memo: &Arc<BevelPickMemo>| {
+        let request = BevelPartRequest {
+            pick_memo: Some(memo.clone()),
+            ..BevelPartRequest::new(
+                Some(mesh.clone()),
+                vec![group.clone()],
+                plate::SIZE,
+                1,
+                false,
+                plate::FOLD_DEGREES,
+            )
+        };
+        let outcome = bevel_part(request, &CancelToken::new(), None).expect("the build runs");
+        let built = outcome.mesh.expect("the rim's survivors build");
+        format!("{:?} {:?}", built.vertices, built.faces)
+    };
+
+    let worker = Arc::new(BevelPickMemo::new().journaling());
+    build(&worker);
+    let journal = worker.take_journal();
+
+    assert!(worker.settlings_run() > 0, "the cold build settled the rim");
+    let journaled = |is_it: fn(&MemoWrite) -> bool| journal.iter().any(is_it);
+    assert!(
+        journaled(|write| matches!(write, MemoWrite::RememberTheSettling { .. })),
+        "{journal:?}"
+    );
+    assert!(
+        journaled(|write| matches!(write, MemoWrite::CarryTheSettlingTo { .. })),
+        "{journal:?}"
+    );
+
+    let page = Arc::new(BevelPickMemo::new());
+    for write in &journal {
+        page.apply(write);
+    }
+    assert_eq!(text_of(&page.snapshot()), text_of(&worker.snapshot()));
+
+    // What a warm rebuild pays, on the page and on the worker's own memo. The two must agree. The
+    // rim's room is not read again on either; the settling is, because the cold build's pinches
+    // proved a floor under the size it settled at, and the memo's own rule makes a settling that
+    // fitted stale once that happens (`part_pick_memo_tests`).
+    let paid_by = |memo: &BevelPickMemo| (memo.rooms_read(), memo.settlings_run());
+    let page_before = paid_by(&page);
+    let on_the_page = build(&page);
+    let worker_before = paid_by(&worker);
+    let on_the_worker = build(&worker);
+
+    let warm = |before: (i32, i32), after: (i32, i32)| (after.0 - before.0, after.1 - before.1);
+    let on_the_page_paid = warm(page_before, paid_by(&page));
+    assert_eq!(
+        on_the_page_paid,
+        warm(worker_before, paid_by(&worker)),
+        "the page's warm build paid what a warm build on the worker's own memo pays"
+    );
+    assert_eq!(
+        on_the_page_paid.0, 0,
+        "the page's build read the rim's room again"
+    );
+    assert_eq!(on_the_page, on_the_worker);
 }
 
 #[test]

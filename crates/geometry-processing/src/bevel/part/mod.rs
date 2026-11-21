@@ -14,12 +14,11 @@
 //! `progress_bar`); what an operation remembers about its picks across rebuilds ([`BevelPickMemo`],
 //! `pick_memo`), carried to another process and back as a snapshot and a journal of its writes
 //! ([`MemoSnapshot`], [`MemoWrite`], `pick_memo_crossing`), and the settled many-loop pick it keeps
-//! ([`SettledPick`], `settled_pick`); which
-//! touching closed loops of a many-loop pick to leave alone (`touching_loops`); which picked edge
-//! a refusal's place blames (`refusal_place`); the size a refused row offers, as a row shows it
-//! ([`the_shown_size`], `shown_size`); and the gate every level-line answer passes, whether it
-//! crosses itself where its source did not (`self_intersection_check`, over the answer as a mesh,
-//! `answer_mesh`).
+//! ([`SettledPick`], `settled_pick`); which touching closed loops of a many-loop pick to leave
+//! alone (`touching_loops`); which picked edge a refusal's place blames (`refusal_place`); the
+//! size a refused row offers, as a row shows it ([`the_shown_size`], `shown_size`); and the gate
+//! every level-line answer passes, whether it crosses itself where its source did not
+//! (`self_intersection_check`, over the answer as a mesh, `answer_mesh`).
 
 pub mod answer_mesh;
 mod entry_point;
