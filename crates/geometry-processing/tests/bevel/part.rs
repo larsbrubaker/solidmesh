@@ -19,6 +19,8 @@ pub(crate) mod part_level_line_settle_tests;
 pub(crate) mod part_no_group_without_a_row_tests;
 #[path = "part/part_partial_round_tests.rs"]
 pub(crate) mod part_partial_round_tests;
+#[path = "part_pick_memo_crossing_tests.rs"]
+pub(crate) mod part_pick_memo_crossing_tests;
 #[path = "part_pick_memo_tests.rs"]
 pub(crate) mod part_pick_memo_tests;
 #[path = "part_progress_bar_tests.rs"]

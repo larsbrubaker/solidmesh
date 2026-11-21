@@ -12,7 +12,9 @@
 //! (`point_groups`). The pieces they are orchestrated with: what a rebuild reports as it goes
 //! ([`BevelProgress`], `progress`) through its one forward-only bar ([`BevelProgressBar`],
 //! `progress_bar`); what an operation remembers about its picks across rebuilds ([`BevelPickMemo`],
-//! `pick_memo`) and the settled many-loop pick it keeps ([`SettledPick`], `settled_pick`); which
+//! `pick_memo`), carried to another process and back as a snapshot and a journal of its writes
+//! ([`MemoSnapshot`], [`MemoWrite`], `pick_memo_crossing`), and the settled many-loop pick it keeps
+//! ([`SettledPick`], `settled_pick`); which
 //! touching closed loops of a many-loop pick to leave alone (`touching_loops`); which picked edge
 //! a refusal's place blames (`refusal_place`); the size a refused row offers, as a row shows it
 //! ([`the_shown_size`], `shown_size`); and the gate every level-line answer passes, whether it
@@ -24,6 +26,7 @@ mod entry_point;
 mod error;
 mod outcome;
 pub mod pick_memo;
+mod pick_memo_crossing;
 pub mod point_groups;
 mod progress;
 pub(crate) mod progress_bar;
@@ -41,6 +44,7 @@ pub use entry_point::bevel_part;
 pub use error::{BevelBuildFailure, BevelBuildFailureKind, BevelPartError};
 pub use outcome::BevelPartOutcome;
 pub use pick_memo::BevelPickMemo;
+pub use pick_memo_crossing::{MemoSettling, MemoSnapshot, MemoWrite};
 pub use progress::{BevelProgress, BevelProgressPhase, BevelProgressReport, BevelSizeSearchRung};
 pub use progress_bar::BevelProgressBar;
 pub use request::BevelPartRequest;

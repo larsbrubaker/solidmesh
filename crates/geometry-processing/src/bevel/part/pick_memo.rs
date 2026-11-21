@@ -2,13 +2,15 @@
 //! ([`BevelPickMemo`]) - the pick's room and how a many-loop rim settles - kept across that
 //! operation's rebuilds. The caller keys it (a pick's chains, profile and the mesh's content
 //! stamp, [`BevelPickMemo::the_stamp_of`]), owns one per operation and hands it to every rebuild;
-//! the settlings it holds are [`SettledPick`]s.
+//! the settlings it holds are [`SettledPick`]s. What carries it to another process and back - a
+//! snapshot of it, and a journal of the writes made to it - is `pick_memo_crossing`.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use solidmesh_mesh::Mesh;
 
+use super::pick_memo_crossing::{MemoSettling, MemoSnapshot, MemoWrite};
 use super::settled_pick::SettledPick;
 use crate::bevel::level_line::RoomSource;
 
@@ -30,6 +32,14 @@ use crate::bevel::level_line::RoomSource;
 /// and a copied, cloned or undone operation is a new object with a new empty memo, which is always
 /// safe: an empty memo only means the next rebuild reads for itself.
 ///
+/// An operation whose rebuild runs in ANOTHER process (a browser's compute worker, which shares no
+/// memory with the page) carries its memo there and back as data. The worker starts from the
+/// page's [`Self::snapshot`] ([`Self::from_snapshot`], made [`Self::journaling`]); every write it
+/// makes is journaled too, and the page replays each one it is handed ([`Self::take_journal`],
+/// then [`Self::apply`] on its own memo) as soon as it is made - so an entry reaches the page even
+/// when the build that wrote it is cancelled, as it does where the memo is shared by `Arc`. Every
+/// key carries the mesh's content stamp, so an entry means the same in either process.
+///
 /// No entry holds a mesh. The mesh is in the key as a content stamp, so an entry can neither pin a
 /// working mesh alive nor be handed to a build of a mesh it was not read on. One mutex guards it;
 /// the memo is shared between rebuilds (which may run on worker threads) by `Arc`.
@@ -38,8 +48,8 @@ pub struct BevelPickMemo {
     the_lock: Mutex<MemoState>,
 }
 
-/// Everything kept under the lock. Looked up by key only and never iterated, so the maps'
-/// order cannot reach an output.
+/// Everything kept under the lock. Looked up by key, and iterated only by a snapshot, which sorts
+/// by key, so the maps' order cannot reach an output.
 #[derive(Default)]
 struct MemoState {
     /// Room by key; the value is itself an option, because "no size statement" is worth keeping.
@@ -89,6 +99,12 @@ struct MemoState {
     rooms_read: i32,
 
     settlings_run: i32,
+
+    /// Every write made since the journal was last taken, in the order made, on a journaling memo
+    /// only; `None` on every other, which then pays one check per write and builds nothing. Under
+    /// the same lock as the maps, so the journal's order is the order the writes were applied in -
+    /// the order a replay must keep, since a floor only goes down against the sizes built so far.
+    journal: Option<Vec<MemoWrite>>,
 }
 
 /// One remembered settling of a many-loop rim.
@@ -107,6 +123,78 @@ impl BevelPickMemo {
     /// A fresh, empty memo.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// This memo, journaling every write it makes from now on - see [`Self::take_journal`].
+    pub fn journaling(mut self) -> Self {
+        let state = self
+            .the_lock
+            .get_mut()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        state.journal.get_or_insert_with(Vec::new);
+
+        self
+    }
+
+    /// Every write journaled since the journal was last taken, in the order they were made, and an
+    /// empty journal left behind. Always empty on a memo that does not journal.
+    pub fn take_journal(&self) -> Vec<MemoWrite> {
+        self.lock()
+            .journal
+            .as_mut()
+            .map(std::mem::take)
+            .unwrap_or_default()
+    }
+
+    /// Everything this memo holds, as plain data - see [`MemoSnapshot`].
+    pub fn snapshot(&self) -> MemoSnapshot {
+        let state = self.lock();
+
+        MemoSnapshot {
+            the_stamp: state.the_stamp,
+            rooms: by_key(&state.rooms, |room| *room),
+            settlings: by_key(&state.settlings, |known| MemoSettling {
+                size: known.size,
+                settled: SettledPick::clone(&known.settled),
+                room: known.room,
+            }),
+            floors: by_key(&state.floors, |floor| *floor),
+            built: by_key(&state.built, |size| *size),
+            refused_at: by_key(&state.refused_at, |size| *size),
+            room_sources: by_key(&state.room_sources, |source| *source),
+            floor_sources: by_key(&state.floor_sources, |source| *source),
+            floor_pinched_chains: by_key(&state.floor_pinched_chains, |chain| *chain),
+        }
+    }
+
+    /// A memo holding what `snapshot` holds, which answers every query as the memo it was taken
+    /// from did. Its work counters start at zero and it does not journal.
+    pub fn from_snapshot(snapshot: MemoSnapshot) -> Self {
+        let settlings = snapshot.settlings.into_iter().map(|(key, known)| {
+            let remembered = TheSettlingRemembered {
+                size: known.size,
+                settled: Arc::new(known.settled),
+                room: known.room,
+            };
+            (key, remembered)
+        });
+
+        let state = MemoState {
+            rooms: snapshot.rooms.into_iter().collect(),
+            settlings: settlings.collect(),
+            floors: snapshot.floors.into_iter().collect(),
+            built: snapshot.built.into_iter().collect(),
+            refused_at: snapshot.refused_at.into_iter().collect(),
+            room_sources: snapshot.room_sources.into_iter().collect(),
+            floor_sources: snapshot.floor_sources.into_iter().collect(),
+            floor_pinched_chains: snapshot.floor_pinched_chains.into_iter().collect(),
+            the_stamp: snapshot.the_stamp,
+            ..MemoState::default()
+        };
+
+        BevelPickMemo {
+            the_lock: Mutex::new(state),
+        }
     }
 
     fn lock(&self) -> MutexGuard<'_, MemoState> {
@@ -189,6 +277,7 @@ impl BevelPickMemo {
     /// a VIRGIN operation although this one has already been built (the route tests' setup).
     pub fn forget(&self) {
         let mut state = self.lock();
+        state.journal_the(|| MemoWrite::Forget);
         state.empty();
         state.rooms_read = 0;
         state.settlings_run = 0;
@@ -213,6 +302,12 @@ impl BevelPickMemo {
     #[doc(hidden)]
     pub fn remember_the_room(&self, stamp: u64, key: &str, room: Option<f64>, set_by: RoomSource) {
         let mut state = self.lock();
+        state.journal_the(|| MemoWrite::RememberTheRoom {
+            stamp,
+            key: key.to_string(),
+            room,
+            set_by,
+        });
         state.only_this_mesh(stamp);
 
         state.room_sources.insert(key.to_string(), set_by);
@@ -244,6 +339,14 @@ impl BevelPickMemo {
         }
 
         let mut state = self.lock();
+        state.journal_the(|| MemoWrite::RememberASmallerRoom {
+            stamp,
+            key: key.to_string(),
+            room,
+            set_by,
+            pinched_chain,
+            refused_at_size,
+        });
         state.only_this_mesh(stamp);
 
         let mut room = room;
@@ -287,6 +390,11 @@ impl BevelPickMemo {
         }
 
         let mut state = self.lock();
+        state.journal_the(|| MemoWrite::RememberASizeThatBuilt {
+            stamp,
+            key: key.to_string(),
+            size,
+        });
         state.only_this_mesh(stamp);
 
         if state.built.get(key).is_none_or(|&carried| size > carried) {
@@ -437,6 +545,13 @@ impl BevelPickMemo {
         room: Option<f64>,
     ) {
         let mut state = self.lock();
+        state.journal_the(|| MemoWrite::RememberTheSettling {
+            stamp,
+            key: key.to_string(),
+            size,
+            settled: SettledPick::clone(&settled),
+            room,
+        });
         state.only_this_mesh(stamp);
 
         state.settlings.insert(
@@ -463,6 +578,13 @@ impl BevelPickMemo {
         room: Option<f64>,
     ) {
         let mut state = self.lock();
+        state.journal_the(|| MemoWrite::CarryTheSettlingTo {
+            stamp,
+            key: key.to_string(),
+            size,
+            settled: SettledPick::clone(&settled),
+            room,
+        });
         state.only_this_mesh(stamp);
 
         state.settlings.insert(
@@ -477,6 +599,14 @@ impl BevelPickMemo {
 }
 
 impl MemoState {
+    /// Journal a write on a journaling memo. The write is only built there, so a memo that does
+    /// not journal copies no key and no settling.
+    fn journal_the(&mut self, write: impl FnOnce() -> MemoWrite) {
+        if let Some(journal) = self.journal.as_mut() {
+            journal.push(write());
+        }
+    }
+
     fn the_source_of(
         &self,
         key: &str,
@@ -539,6 +669,18 @@ impl MemoState {
         self.refused_at.clear();
         self.the_stamp = None;
     }
+}
+
+/// A map's entries as a list sorted by key, each value made plain by `plain`. Keys are unique, so
+/// the order has no ties.
+fn by_key<V, T>(map: &HashMap<String, V>, plain: impl Fn(&V) -> T) -> Vec<(String, T)> {
+    let mut entries: Vec<(String, T)> = map
+        .iter()
+        .map(|(key, value)| (key.clone(), plain(value)))
+        .collect();
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+    entries
 }
 
 /// The zero room source - the enum's first kind and chain 0, other chain 0 - which is NOT
