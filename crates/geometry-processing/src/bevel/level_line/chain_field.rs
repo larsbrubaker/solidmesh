@@ -14,7 +14,6 @@ use std::rc::Rc;
 
 use solidmesh_math::Vector3;
 
-use super::chain_field_nearest::ChainFieldNearest;
 use super::{
     ChainFieldEndClip, ChainFieldExtension, EndRayBound, FieldCounters, FieldSample, LevelLineWork,
     SegmentNode, WorkError,
@@ -348,8 +347,7 @@ impl ChainField {
             FieldCounters::note_site();
         }
 
-        let mut found = ChainFieldNearest::start(self.points[0]);
-        self.visit_nearest(0, point, &mut found);
+        let found = self.nearest_to(point);
 
         let sample = FieldSample {
             distance: found.distance,

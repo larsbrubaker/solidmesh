@@ -25,6 +25,10 @@ pub struct SegmentNode {
     pub min: Vector3,
     pub max: Vector3,
     pub max_setback: f64,
+    /// How many readings the subtree offers a point query: one per segment plus one per mitre or
+    /// end ray it also answers for. The root's count sizes the point query's cutoff guard
+    /// (`chain_field_nearest_cutoff.rs`).
+    pub offers: i32,
 }
 
 /// The whole tree as an array, root first - the shape the chain field holds. `also_reaches` is
@@ -63,6 +67,7 @@ fn add_segment_node(
     let mut min = Vector3::POSITIVE_INFINITY;
     let mut max = Vector3::NEGATIVE_INFINITY;
     let mut max_setback = f64::NEG_INFINITY;
+    let mut offers = 0;
     for i in start..start + count {
         let i = i as usize;
         let next = (i + 1) % points.len();
@@ -72,7 +77,9 @@ fn add_segment_node(
         max = Vector3::component_max(max, Vector3::component_max(from, to));
         max_setback =
             ieee_math::max_f64(max_setback, ieee_math::max_f64(setbacks[i], setbacks[next]));
+        offers += 1;
         if let Some(Some(reaches)) = also_reaches.map(|all| &all[i]) {
+            offers += reaches.len() as i32;
             for &reach in reaches {
                 min = Vector3::component_min(min, reach);
                 max = Vector3::component_max(max, reach);
@@ -106,6 +113,7 @@ fn add_segment_node(
         min,
         max,
         max_setback,
+        offers,
     };
     index
 }

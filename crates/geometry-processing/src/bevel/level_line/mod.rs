@@ -86,6 +86,7 @@ pub mod chain_field_from_polyline;
 mod chain_field_least;
 mod chain_field_mitre;
 mod chain_field_nearest;
+mod chain_field_nearest_cutoff;
 mod chain_field_queries;
 mod chain_field_rays;
 mod chain_field_smooth_joint_spans;

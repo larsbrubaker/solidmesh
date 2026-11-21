@@ -1,15 +1,17 @@
 //! The chain field's nearest-point walk: the chain field's constants, one segment's least reading
-//! from a point, the box-tree walk that finds the nearest chain point, the mitre rays offered to
-//! it and a ray's reading, and the unclipped readings built on it (the unclipped parameter and
-//! value, and the value in an end plane). The type lives in `chain_field.rs`.
+//! from a point, the reference box-tree walk in segment order that defines the nearest chain point
+//! (the faster walk that answers the same is in `chain_field_nearest_cutoff.rs`), the readings one
+//! segment and its mitre rays offer a walk and a ray's reading, and the unclipped readings built
+//! on the walk (the unclipped parameter and value, and the value in an end plane). The type lives
+//! in `chain_field.rs`.
 
 use solidmesh_math::Vector3;
 
 use super::segment_box_tree;
-use super::{ChainField, ChainFieldExtension, LevelLineWork, WorkError};
+use super::{ChainField, ChainFieldExtension, LevelLineWork, SegmentNode, WorkError};
 
 /// The best reading a nearest-point walk has found so far.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 pub struct ChainFieldNearest {
     /// The least reading, +infinity before any.
     pub best: f64,
@@ -19,6 +21,9 @@ pub struct ChainFieldNearest {
     pub nearest: Vector3,
     /// How far the point stands from that chain point.
     pub distance: f64,
+    /// How many segments the walk searched: what the cutoff saves, read by the cost measurement
+    /// and never by an answer.
+    pub searched: i32,
 }
 
 impl ChainFieldNearest {
@@ -29,6 +34,7 @@ impl ChainFieldNearest {
             parameter: 0.0,
             nearest: first_point,
             distance: 0.0,
+            searched: 0,
         }
     }
 
@@ -144,10 +150,16 @@ impl ChainField {
         (best, best_u, chain_point, distance)
     }
 
-    /// The box tree's walk for the point query: a subtree whose box stands farther off than the
-    /// nearest point found so far is skipped whole, children in segment order so the tie rule
-    /// holds.
-    pub fn visit_nearest(&self, node: usize, point: Vector3, found: &mut ChainFieldNearest) {
+    /// The box tree's reference walk for the point query: a subtree whose box stands farther off
+    /// than the nearest point found so far is skipped whole, children in segment order so the tie
+    /// rule holds. Its answer DEFINES the point query's; [`ChainField::nearest_to`] reaches the
+    /// same answer visiting far fewer segments, and is what the queries call.
+    pub fn visit_nearest_in_index_order(
+        &self,
+        node: usize,
+        point: Vector3,
+        found: &mut ChainFieldNearest,
+    ) {
         let here = self.nodes[node];
 
         // Nothing in this subtree stands closer than the box's gap, and no ball in it has a radius
@@ -160,26 +172,36 @@ impl ChainField {
         }
 
         if here.left < 0 {
-            for i in here.start..here.start + here.count {
-                let i = i as usize;
-                let (value, t, nearest, distance) = self.least_over_segment_from_point(i, point);
-                if found.is_beaten_by(value) {
-                    found.best = value;
-                    found.nearest = nearest;
-                    found.distance = distance;
-                    let segment_length =
-                        self.parameter_at_point[i + 1] - self.parameter_at_point[i];
-                    found.parameter = self.parameter_at_point[i] + (segment_length * t);
-                }
-
-                self.nearest_over_extensions(i, point, found);
-            }
-
+            self.offer_leaf(&here, point, found);
             return;
         }
 
-        self.visit_nearest(here.left as usize, point, found);
-        self.visit_nearest(here.right as usize, point, found);
+        self.visit_nearest_in_index_order(here.left as usize, point, found);
+        self.visit_nearest_in_index_order(here.right as usize, point, found);
+    }
+
+    /// Offers a leaf's segments to a walk in segment order, each followed by its rays, under the
+    /// tie rule - the one sequence of readings every walk's answer is read from.
+    pub(super) fn offer_leaf(
+        &self,
+        leaf: &SegmentNode,
+        point: Vector3,
+        found: &mut ChainFieldNearest,
+    ) {
+        for i in leaf.start..leaf.start + leaf.count {
+            let i = i as usize;
+            found.searched += 1;
+            let (value, t, nearest, distance) = self.least_over_segment_from_point(i, point);
+            if found.is_beaten_by(value) {
+                found.best = value;
+                found.nearest = nearest;
+                found.distance = distance;
+                let segment_length = self.parameter_at_point[i + 1] - self.parameter_at_point[i];
+                found.parameter = self.parameter_at_point[i] + (segment_length * t);
+            }
+
+            self.nearest_over_extensions(i, point, found);
+        }
     }
 
     /// Offers segment `segment`'s rays to a point query, under the same tie rule as the segment
@@ -215,9 +237,7 @@ impl ChainField {
     /// point really stands.
     pub fn unclipped_parameter_at(&self, point: Vector3) -> Result<f64, WorkError> {
         LevelLineWork::charge(1)?;
-        let mut found = ChainFieldNearest::start(self.points[0]);
-        self.visit_nearest(0, point, &mut found);
-        Ok(found.parameter)
+        Ok(self.nearest_to(point).parameter)
     }
 
     /// The chain's reading along an edge lying in one of its end planes: its own, unclipped.
@@ -228,9 +248,7 @@ impl ChainField {
     /// The chain's own reading at a point, before any end plane clips it.
     pub fn unclipped_value_at(&self, point: Vector3) -> Result<f64, WorkError> {
         LevelLineWork::charge(1)?;
-        let mut found = ChainFieldNearest::start(self.points[0]);
-        self.visit_nearest(0, point, &mut found);
-        Ok(found.best)
+        Ok(self.nearest_to(point).best)
     }
 }
 

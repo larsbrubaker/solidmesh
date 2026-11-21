@@ -43,6 +43,8 @@ pub(crate) mod chain_field_end_ray_tests;
 pub(crate) mod chain_field_fixtures;
 #[path = "chain_field_mitre_tests.rs"]
 pub(crate) mod chain_field_mitre_tests;
+#[path = "chain_field_nearest_cutoff_tests.rs"]
+pub(crate) mod chain_field_nearest_cutoff_tests;
 #[path = "chain_field_speed_tests.rs"]
 pub(crate) mod chain_field_speed_tests;
 #[path = "chain_field_tests.rs"]
