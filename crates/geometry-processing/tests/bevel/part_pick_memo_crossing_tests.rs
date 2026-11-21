@@ -296,7 +296,9 @@ fn a_replayed_journal_spares_the_next_build_its_room_reading() {
 /// larger size that built after it, while one written after that size keeps its chain. The
 /// journal must hold the writes in the order they were applied, so a replay lands where the memo
 /// is. Each round has a key of its own, so every round's order is still visible at the end rather
-/// than only the last one's.
+/// than only the last one's. It catches a journal recorded before its write under a lock of its
+/// own; one recorded just after its write under a lock of its own almost never swaps (the thread
+/// that just let go takes the lock straight back), so that form is not guarded here.
 #[test]
 fn a_journal_keeps_the_order_two_threads_wrote_in() {
     const ROUNDS: usize = 4000;
