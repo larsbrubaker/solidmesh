@@ -1,10 +1,10 @@
 //! Per-face colors and textures on a [`Mesh`]: [`FaceTextureData`], remapping face data when the
 //! face list is rebuilt, interpolating a texture onto split faces, the uncolored and unknown face
 //! colors, taking a color every face wears off the mesh ([`take_uniform_face_color`]), saving
-//! face colors by centroid and restoring them by nearest centroid, saving face textures with
-//! their corner positions and restoring them onto faces with the same corners, and placing and
-//! removing textures with an explicit mapping, plus the projection picking that stretches an image
-//! over a face's plane.
+//! face colors by centroid and restoring them by nearest centroid (looked up in the kd-tree of
+//! `centroid_color_index.rs`), saving face textures with their corner positions and restoring
+//! them onto faces with the same corners, and placing and removing textures with an explicit
+//! mapping, plus the projection picking that stretches an image over a face's plane.
 //!
 //! The fields themselves (`Mesh::face_colors`, `Mesh::face_textures`) live on `Mesh` in
 //! `mesh.rs`; the operations that rebuild the face list (`mesh.rs`, `mesh_editing.rs`,
@@ -19,6 +19,7 @@ use solidmesh_math::texture::TexturePixels;
 use solidmesh_math::{Color, RectangleDouble};
 use solidmesh_math::{Matrix4X4, Quaternion, Vector2, Vector2Float, Vector3, Vector3Float};
 
+use crate::centroid_color_index::CentroidColorIndex;
 use crate::face::FaceList;
 use crate::mesh::{f32_key, Mesh};
 
@@ -195,19 +196,20 @@ impl Mesh {
         best_color
     }
 
-    /// Restores per-face colors by matching each face's centroid to the nearest saved centroid.
-    /// Does nothing for `None`.
+    /// Restores per-face colors by matching each face's centroid to the nearest saved centroid,
+    /// the colour [`Mesh::find_nearest_centroid_color`] gives for it (found through a kd-tree,
+    /// `centroid_color_index.rs`). Does nothing for `None`.
     pub fn restore_face_colors_from_centroids(&mut self, saved_colors: Option<&[CentroidColor]>) {
         let Some(saved_colors) = saved_colors else {
             return;
         };
+        // One scan per face is quadratic, and a fillet's rebuilt mesh has a hundred thousand
+        // faces; the index answers each face exactly as find_nearest_centroid_color would.
+        let index = CentroidColorIndex::new(saved_colors);
         let face_colors = self
             .faces
             .iter()
-            .map(|face| {
-                let centroid = self.face_centroid(face.v0, face.v1, face.v2);
-                Self::find_nearest_centroid_color(centroid, saved_colors)
-            })
+            .map(|face| index.nearest_color(self.face_centroid(face.v0, face.v1, face.v2)))
             .collect();
         self.face_colors = Some(face_colors);
     }

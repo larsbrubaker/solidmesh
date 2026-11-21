@@ -81,8 +81,9 @@
 //! functions of `dual_contouring`.
 //!
 //! Per-face colors and textures (`face_data`): `Mesh::face_colors` and
-//! `Mesh::face_textures` follow the faces through every rebuild, and booleans paint their result
-//! from the operands' colors and keep each operand face's picture and UVs
+//! `Mesh::face_textures` follow the faces through every rebuild, colors saved by face centroid
+//! come back through a nearest-centroid kd-tree (`centroid_color_index`), and booleans paint
+//! their result from the operands' colors and keep each operand face's picture and UVs
 //! (`csg::manifold_uv_channel`).
 //!
 //! `mesh_distance` measures the true gap between two meshes' surfaces and whether they
@@ -94,6 +95,7 @@
 
 pub mod analysis_remesh;
 pub mod cancel;
+mod centroid_color_index;
 pub mod csg;
 pub mod data_converters_2d;
 pub mod dual_contouring;

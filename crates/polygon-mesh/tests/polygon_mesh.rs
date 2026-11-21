@@ -1,6 +1,8 @@
 //! The polygon-mesh test binary: the mesh, its face colours and textures, measuring, splitting,
 //! convex hulls, marching cubes, distance fields and STL, one file per test class.
 
+#[path = "polygon_mesh/centroid_color_restore_tests.rs"]
+mod centroid_color_restore_tests;
 #[path = "polygon_mesh/closed_solid_repair_tests.rs"]
 mod closed_solid_repair_tests;
 #[path = "polygon_mesh/face_color_boolean_scenarios.rs"]
