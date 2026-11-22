@@ -1,16 +1,43 @@
 //! Linking a group's selected edges into the runs a single swept tool is built along: one such run
 //! ([`BevelSweptChain`]) and the linking - walking the selected edges into runs ([`link`],
-//! [`link_resolution`]), and splitting a run where its convexity turns over
+//! [`link_on_the_mesh`], [`link_resolution`]), and splitting a run where its convexity turns over
 //! ([`split_by_convexity`]) or where one mitred sweep cannot carry it
 //! ([`split_where_the_mitre_cannot_fit`]).
+//!
+//! **Through a junction.** A picked crease is the boundary between two face regions. Where three
+//! or more picked edges meet at a vertex, [`link_on_the_mesh`] carries a run on along the one edge
+//! that folds the same way as the edge it arrived on and bounds the same face region on the same
+//! side of the walk - one region meaning faces joined round the vertex across edges too shallow to
+//! be features (`topology::vertex_fan_regions`), so the facets of a curved wall are one region. A
+//! crease the run does not carry on along truly ends there, on the run. A tube joined to a body
+//! meets it in one closed loop even where the body's own crease runs into the tube: the loop folds
+//! one way all round and keeps the tube's wall on one side, while the body's crease folds the other
+//! way and so ends on the loop. Where no edge or more than one carries the run on - a box corner,
+//! whose three convex edges each share a face with the arriving one - the run stops, as it does at
+//! every junction under plain [`link`], which has no mesh to read regions from.
+//!
+//! **Only where the run closes, simply.** A run carried through a junction is kept only where it
+//! closes and enters each of its vertices once; any other is linked again stopping at every
+//! junction. The closing is what the recorded parts showed rather than a fact of the geometry: a
+//! closed loop with a crease ending part way along it builds (the handle join of Tea Scoop Outside
+//! Fillet), but carrying open runs through a junction moved four recorded parts - on three the
+//! level line refused an open run with a crease ending part way along it and the part fell to the
+//! existing construction, and on one a loop whose convexity turns over at the junction was carried
+//! onto the crease ending there instead. The once is geometry: where two rim loops touch at a
+//! vertex, as on the barrel of "Many Holes.mcx", the arriving edge can match one edge of the OTHER
+//! loop, and the carry closes as one run through that vertex twice, which the build refuses as a
+//! run touching itself. Still unguarded: a wrong carry that closes a simple loop.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use solidmesh_math::ieee_math;
 
+use solidmesh_mesh::{Mesh, MeshEdgeGraph};
+
 use super::bevel_chain_sweep_sections::try_build_segments;
 use super::{bevel_mitre_fit, bevel_sweep_back_depth};
-use crate::topology::{BevelEdgeGroupResolution, ChainEdge, FeatureEdge};
+use crate::topology::vertex_fan_regions;
+use crate::topology::{BevelEdgeGroupResolution, ChainEdge, FeatureEdge, FeatureEdgeSet};
 
 /// One run of edges a single swept tool is built along - the edges head to tail, and whether the
 /// run closes on itself.
@@ -86,10 +113,33 @@ pub fn split_by_convexity(chain: BevelSweptChain) -> Vec<BevelSweptChain> {
     runs
 }
 
+/// Whether two faces standing at a vertex are one face region round it: `(vertex, face, face)`.
+pub type SameRegionAt<'a> = &'a dyn Fn(i32, i32, i32) -> bool;
+
 /// The selected `edges` walked into runs: each unclaimed edge seeds a run that grows forward and
 /// then backward through vertices with exactly two selected edges whose sides agree; a run that
 /// comes back to its seed (either way round, or end to start) is closed.
 pub fn link(edges: &[FeatureEdge]) -> Vec<BevelSweptChain> {
+    link_with(edges, None)
+}
+
+/// [`link`] carried on through junctions as well where that closes a loop, on the mesh the edges
+/// were read from: at a vertex with three or more selected edges a run goes on along the one edge
+/// that folds the same way and bounds the same face region on the same side (the module header),
+/// read off `mesh`, its `graph` and the `features` the edges were picked among.
+pub fn link_on_the_mesh(
+    edges: &[FeatureEdge],
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    features: &FeatureEdgeSet,
+) -> Vec<BevelSweptChain> {
+    let same_region = |vertex: i32, a: i32, b: i32| {
+        vertex_fan_regions::share_a_region_at(mesh, graph, features, vertex, a, b)
+    };
+    link_with(edges, Some(&same_region))
+}
+
+fn link_with(edges: &[FeatureEdge], same_region: Option<SameRegionAt>) -> Vec<BevelSweptChain> {
     let mut chains = Vec::new();
 
     if edges.is_empty() {
@@ -110,34 +160,69 @@ pub fn link(edges: &[FeatureEdge]) -> Vec<BevelSweptChain> {
             continue;
         }
 
-        used[seed] = true;
-
-        let mut walk = vec![ChainEdge::new(seed as i32, edges[seed], false)];
-
-        let mut closed = grow(edges, &at_vertex, &mut used, &mut walk, seed as i32);
-
-        if !closed {
-            // The other direction is the same walk over the run turned around, so it goes
-            // through the same code and is flipped back afterwards. Its answer counts as much as
-            // the forward one's: a closure missed here becomes an OPEN run whose two capped ends
-            // sit on top of each other.
-            let mut backward = vec![walk[0].reversed()];
-
-            closed = grow(edges, &at_vertex, &mut used, &mut backward, seed as i32);
-
-            backward.remove(0);
-            backward.reverse();
-
-            let mut joined: Vec<ChainEdge> = backward.iter().map(|e| e.reversed()).collect();
-            joined.extend(walk);
-            walk = joined;
+        let (mut walk, mut closes) = walk_from(edges, &at_vertex, &mut used, seed, same_region);
+        if same_region.is_some() && !(closes && passes_each_vertex_once(&walk)) {
+            // Carried through a junction only to close a simple loop (the module header says
+            // why): any other run is walked again stopping at every junction.
+            for edge in &walk {
+                used[edge.edge_index as usize] = false;
+            }
+            (walk, closes) = walk_from(edges, &at_vertex, &mut used, seed, None);
         }
-
-        let closes = closed || closes_on_itself(&walk);
         chains.push(BevelSweptChain::new(walk, closes));
     }
 
     chains
+}
+
+/// The run seeded at edge `seed`, grown forward and then backward and claimed in `used`, and
+/// whether it closes.
+fn walk_from(
+    edges: &[FeatureEdge],
+    at_vertex: &HashMap<i32, Vec<i32>>,
+    used: &mut [bool],
+    seed: usize,
+    same_region: Option<SameRegionAt>,
+) -> (Vec<ChainEdge>, bool) {
+    used[seed] = true;
+
+    let mut walk = vec![ChainEdge::new(seed as i32, edges[seed], false)];
+
+    let mut closed = grow_with(edges, at_vertex, used, &mut walk, seed as i32, same_region);
+
+    if !closed {
+        // The other direction is the same walk over the run turned around, so it goes
+        // through the same code and is flipped back afterwards. Its answer counts as much as
+        // the forward one's: a closure missed here becomes an OPEN run whose two capped ends
+        // sit on top of each other.
+        let mut backward = vec![walk[0].reversed()];
+
+        closed = grow_with(
+            edges,
+            at_vertex,
+            used,
+            &mut backward,
+            seed as i32,
+            same_region,
+        );
+
+        backward.remove(0);
+        backward.reverse();
+
+        let mut joined: Vec<ChainEdge> = backward.iter().map(|e| e.reversed()).collect();
+        joined.extend(walk);
+        walk = joined;
+    }
+
+    let closes = closed || closes_on_itself(&walk);
+    (walk, closes)
+}
+
+/// Whether a walk enters each of its vertices once: a closed run through one vertex twice is two
+/// loops touching there, not one.
+fn passes_each_vertex_once(walk: &[ChainEdge]) -> bool {
+    let mut entered = HashSet::with_capacity(walk.len());
+    walk.iter().all(|edge| entered.insert(edge.from_vertex()))
 }
 
 /// Whether an open walk ends where it began, with its sides agreeing across that joint.
@@ -157,27 +242,47 @@ pub fn grow(
     walk: &mut Vec<ChainEdge>,
     seed: i32,
 ) -> bool {
+    grow_with(edges, at_vertex, used, walk, seed, None)
+}
+
+/// [`grow`], carried on through a junction where `same_region` reads the faces round it.
+fn grow_with(
+    edges: &[FeatureEdge],
+    at_vertex: &HashMap<i32, Vec<i32>>,
+    used: &mut [bool],
+    walk: &mut Vec<ChainEdge>,
+    seed: i32,
+    same_region: Option<SameRegionAt>,
+) -> bool {
     loop {
         let current = walk[walk.len() - 1];
         let vertex = current.to_vertex();
 
-        let Some(incident) = at_vertex
-            .get(&vertex)
-            .filter(|incident| incident.len() == 2)
-        else {
-            // A vertex with one selected edge is where the run ends; three or more is a junction
-            // the sweep would have to guess its way through.
+        let Some(incident) = at_vertex.get(&vertex) else {
             return false;
         };
 
-        let next_index = if incident[0] == current.edge_index {
-            incident[1]
-        } else {
-            incident[0]
+        let next = match (incident.len(), same_region) {
+            (2, _) => {
+                let next_index = if incident[0] == current.edge_index {
+                    incident[1]
+                } else {
+                    incident[0]
+                };
+                let next_edge = edges[next_index as usize];
+                ChainEdge::new(next_index, next_edge, next_edge.end_vertex == vertex)
+            }
+            (3.., Some(same_region)) => {
+                match carried_on_through(edges, incident, &current, vertex, same_region) {
+                    Some(next) => next,
+                    None => return false,
+                }
+            }
+            // A vertex with one selected edge is where the run ends; three or more, with no mesh
+            // to read regions from, is a junction the sweep would have to guess its way through.
+            _ => return false,
         };
-
-        let next_edge = edges[next_index as usize];
-        let next = ChainEdge::new(next_index, next_edge, next_edge.end_vertex == vertex);
+        let next_index = next.edge_index;
 
         if !sides_agree(&current, &next) {
             return false;
@@ -196,6 +301,36 @@ pub fn grow(
         used[next_index as usize] = true;
         walk.push(next);
     }
+}
+
+/// The one selected edge at junction `vertex` that carries `current` on: it folds the same way and
+/// bounds the same face region on the same side of the walk. `None` where no edge or more than one
+/// does.
+fn carried_on_through(
+    edges: &[FeatureEdge],
+    incident: &[i32],
+    current: &ChainEdge,
+    vertex: i32,
+    same_region: SameRegionAt,
+) -> Option<ChainEdge> {
+    let mut carrying: Option<ChainEdge> = None;
+    for &index in incident {
+        if index == current.edge_index {
+            continue;
+        }
+        let edge = edges[index as usize];
+        let leaving = ChainEdge::new(index, edge, edge.end_vertex == vertex);
+        let carries = edge.convexity == current.edge.convexity
+            && (same_region(vertex, current.left_face(), leaving.left_face())
+                || same_region(vertex, current.right_face(), leaving.right_face()));
+        if carries {
+            if carrying.is_some() {
+                return None;
+            }
+            carrying = Some(leaving);
+        }
+    }
+    carrying
 }
 
 /// Whether `next` keeps `current`'s sides - its left face on the left - read off shared faces

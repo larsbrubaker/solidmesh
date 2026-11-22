@@ -235,7 +235,7 @@ fn the_normal_an_edge_reads(
 
 /// The graph's index of the edge joining `a` and `b`: the graph lists its edges sorted by their
 /// lower vertex index, then their higher.
-fn edge_between(graph: &MeshEdgeGraph, a: i32, b: i32) -> Option<i32> {
+pub(crate) fn edge_between(graph: &MeshEdgeGraph, a: i32, b: i32) -> Option<i32> {
     let key = (a.min(b), a.max(b));
     let (mut low, mut high) = (0, graph.edge_count());
     while low < high {

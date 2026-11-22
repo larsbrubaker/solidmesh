@@ -1,7 +1,9 @@
 // The unit the surface construction drops and retries -
-// one RIM LOOP of one group, rather than the whole group. The loops are the connected components
-// of the group's own picked edges, which `bevel_chain_linker::link` walks them into; the builder's
-// passes (`build`, `size_that_fits`) drop and retry them, and `level_line_rows` writes their groups' rows.
+// one RIM LOOP of one group, rather than the whole group. The loops are the runs
+// `bevel_chain_linker::link_on_the_mesh` links the group's own picked edges into, by the rule the
+// build links a pick by (on through a junction only where the run closes as a simple loop, and
+// stopping there otherwise); the builder's passes (`build`, `size_that_fits`) drop and retry them,
+// and `level_line_rows` writes their groups' rows.
 
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
@@ -14,14 +16,14 @@ use crate::topology::FeatureEdge;
 use super::BevelSurfacePartBuilder;
 use crate::bevel::part::refusal_place::the_edge_nearest_the_place_among;
 
-/// One connected run of one group's picked edges, and which group picked
+/// One linked run of one group's picked edges, and which group picked
 /// it.
 ///
-/// A face group's rim is one closed loop per hole in the region it flooded - forty-five of them
-/// on the barrel of "Many Holes.mcx", forty-one being port mouths - and those loops share no edge,
-/// no face and no corner. They are independent bevels that happen to have been picked with one
-/// click, so a refusal about one of them is no more the others' than one GROUP's refusal is the
-/// next group's.
+/// A face group's rim is a closed loop round each hole in the region it flooded - most of them
+/// port mouths on the barrel of "Many Holes.mcx". Those loops share no edge, and most share no
+/// corner either; where two holes' rims touch at a single vertex the linker still keeps them two
+/// loops. They are independent bevels that happen to have been picked with one click, so a refusal
+/// about one of them is no more the others' than one GROUP's refusal is the next group's.
 ///
 /// A loop is identified by its identity, not its edges (what is dropped is found by `contains`,
 /// and loops key maps); the builder makes each loop once and hands out `Rc`s, and equality and hashing
@@ -91,10 +93,18 @@ impl BevelSurfacePartBuilder {
         // equal.
         let mut next_id: usize = self.rim_loops.values().map(Vec::len).sum();
 
-        let edges = &self.resolutions[index as usize].edges;
+        let resolution = &self.resolutions[index as usize];
+        let edges = &resolution.edges;
         let mut loops = Vec::new();
 
-        for chain in bevel_chain_linker::link(edges) {
+        // Linked by the rule the build links a pick by, through the junctions where a run closes,
+        // so a group's row counts the loops that are built.
+        for chain in bevel_chain_linker::link_on_the_mesh(
+            edges,
+            &self.working_mesh,
+            &self.working_mesh_graph,
+            &resolution.features,
+        ) {
             loops.push(Rc::new(RimLoop::new(
                 next_id,
                 index,

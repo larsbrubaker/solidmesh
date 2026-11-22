@@ -11,17 +11,20 @@
 //! (<https://creativecommons.org/publicdomain/zero/1.0/>).
 
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use serde::Deserialize;
+use solidmesh::bevel::bevel_chain_linker::link_on_the_mesh;
 use solidmesh::bevel::level_line::level_line_routing as routing;
 use solidmesh::bevel::level_line::{FieldCounters, WorkBudget};
+use solidmesh::bevel::part::prologue::{prepare, PreparedPart};
 use solidmesh::bevel::part::{
     bevel_part, BevelPartOutcome, BevelPartRequest, BevelProgress, BevelProgressReport,
 };
-use solidmesh::topology::BevelEdgeGroup;
+use solidmesh::topology::{BevelEdgeGroup, EdgeConvexity, FeatureEdge};
 use solidmesh_mesh::{CancelToken, Mesh};
 
 #[derive(Deserialize)]
@@ -116,6 +119,51 @@ fn both_rims_round_at_one_as_one_closed_solid() {
     let mesh = outcome.mesh.expect("the fillet gives a mesh");
     assert!(mesh.is_manifold(), "the fillet's answer is not closed");
     assert_eq!(shells(&mesh), 1);
+}
+
+/// The pick's chains linked by the level line's linker (`link_on_the_mesh`): the handle's join
+/// with the bowl is one closed loop of 295 edges (the bowl's own crease ends on it at both sides,
+/// it does not cut it), the handle's free end one closed rim of 48, and the bowl's crease one open
+/// run of 862 between them. The edges are every group's, each once, in group order: the edges
+/// `the_chains_of` is handed when every rim loop contributes, though it takes them loop by loop, so
+/// the runs may start at other edges; the set of runs, sorted, is what is asserted.
+#[test]
+fn the_handle_join_links_into_one_closed_loop() {
+    let PreparedPart::Ready(shared) = prepare(&the_saved_fillet()) else {
+        panic!("the part has a mesh");
+    };
+    let mut seen = HashSet::new();
+    let edges: Vec<FeatureEdge> = shared
+        .resolutions
+        .iter()
+        .flat_map(|resolution| resolution.edges.iter().copied())
+        .filter(|edge| seen.insert(edge.mesh_edge_index))
+        .collect();
+    let chains = link_on_the_mesh(
+        &edges,
+        &shared.working_mesh,
+        &shared.working_mesh_graph,
+        &shared.resolutions[0].features,
+    );
+    let mut found: Vec<(bool, usize, EdgeConvexity)> = chains
+        .iter()
+        .map(|chain| {
+            (
+                chain.is_closed,
+                chain.edges.len(),
+                chain.edges[0].edge.convexity,
+            )
+        })
+        .collect();
+    found.sort_by_key(|&(closed, count, _)| (closed, count));
+    assert_eq!(
+        found,
+        vec![
+            (false, 862, EdgeConvexity::Convex),
+            (true, 48, EdgeConvexity::Convex),
+            (true, 295, EdgeConvexity::Concave),
+        ]
+    );
 }
 
 /// The whole pick and each group alone: how long each takes, the routes taken, the known room the

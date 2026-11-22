@@ -7,6 +7,8 @@
 pub(crate) mod bevel_arc_chording_tests;
 #[path = "bevel_bead_runs_off_its_wall_tests.rs"]
 pub(crate) mod bevel_bead_runs_off_its_wall_tests;
+#[path = "bevel_chain_linker_junction_tests.rs"]
+pub(crate) mod bevel_chain_linker_junction_tests;
 #[path = "bevel_chain_linker_rim_closure_tests.rs"]
 pub(crate) mod bevel_chain_linker_rim_closure_tests;
 #[path = "bevel_folded_flap_repair_tests.rs"]

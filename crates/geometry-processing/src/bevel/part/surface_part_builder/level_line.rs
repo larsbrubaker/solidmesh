@@ -10,7 +10,8 @@
 //
 // The pass's loops are handed to the kernel as ONE PICK - one room, one `BandGap.Build`, one
 // `GapFill.Fill` - so a face rim with a hole in it is cut against a field that knows about both
-// loops at once.
+// loops at once. Where three or more picked edges meet, the runs are linked through the junction
+// on the mesh's face regions (`bevel_chain_linker::link_on_the_mesh`).
 
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -29,10 +30,10 @@ use crate::bevel::level_line::{
 };
 use crate::bevel::part::{BevelProgressPhase, SettledPick};
 use crate::bevel::{BevelAdvisory, BevelAdvisoryArg};
-use crate::topology::FeatureEdge;
+use crate::topology::{FeatureEdge, FeatureEdgeSet};
 use indexmap::IndexSet;
 use solidmesh_math::Vector3;
-use solidmesh_mesh::{CancelToken, Mesh};
+use solidmesh_mesh::{CancelToken, Mesh, MeshEdgeGraph};
 
 use super::level_line_kernel_handoff::{
     the_budget_for, the_edge_key, the_room_to_hand_the_build, the_size_refusal_for,
@@ -188,7 +189,19 @@ impl BevelSurfacePartBuilder {
         // The kernel polls its own work; these whole-part passes outside it are polled here, so a
         // Cancel lands within a pass wherever the build is.
         check(cancellation_token)?;
-        let Some((chains, closed, chain_edges)) = Self::the_chains_of(contributing) else {
+        // Every group was read at the operation's bend threshold, so any contributing loop's
+        // group names the one feature reading the pick's regions are told apart by.
+        let the_features = contributing
+            .first()
+            .map(|one| self.resolutions[one.group_index as usize].features.clone());
+        let Some((chains, closed, chain_edges)) = the_features.and_then(|features| {
+            Self::the_chains_of(
+                contributing,
+                &self.working_mesh,
+                &self.working_mesh_graph,
+                &features,
+            )
+        }) else {
             self.the_level_line_passes_it_on(
                 "existing: the pick does not link into chains".to_string(),
             );
@@ -454,8 +467,16 @@ impl BevelSurfacePartBuilder {
     /// last edge's far vertex as well. Three edges is still the floor for a closed run, but an
     /// open run of ONE edge is exactly the owner's single-edge pick and is handed over as it is.
     /// The mesh edges are how a chain the settling condemns is put back onto the rim loops it came
-    /// from (`the_loops_holding`).
-    pub fn the_chains_of(contributing: &[Rc<RimLoop>]) -> Option<TheChains> {
+    /// from (`the_loops_holding`). Where three or more picked edges meet, a run carries on along
+    /// the crease that folds its way and bounds its face region (`link_on_the_mesh`, read off
+    /// `mesh`, its `graph` and the pick's `features`), so a tube's loop round its join with a body
+    /// stays closed where the body's own crease ends on it.
+    pub fn the_chains_of(
+        contributing: &[Rc<RimLoop>],
+        mesh: &Mesh,
+        graph: &MeshEdgeGraph,
+        features: &FeatureEdgeSet,
+    ) -> Option<TheChains> {
         let mut chains = Vec::new();
         let mut closed = Vec::new();
         let mut chain_edges = Vec::new();
@@ -473,7 +494,7 @@ impl BevelSurfacePartBuilder {
             }
         }
 
-        let linked = bevel_chain_linker::link(&edges);
+        let linked = bevel_chain_linker::link_on_the_mesh(&edges, mesh, graph, features);
 
         if linked.is_empty() {
             return None;

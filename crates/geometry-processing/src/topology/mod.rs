@@ -7,7 +7,8 @@
 //! mean ([`pick_interpretations`], [`bevel_edge_readings`]), read off a set's tangent chains
 //! walked once ([`TangentChainCache`]) where a caller prepared them. Every crease reading takes a
 //! face's normal through one rule, [`sliver_normal`], which reads a sliver too thin for a normal of
-//! its own from the face it lies along.
+//! its own from the face it lies along. Which faces round a vertex are one region there is
+//! [`vertex_fan_regions`].
 //!
 //! The angle readings (edge turns, corner bends, match tolerances) use the pure-Rust `libm`
 //! crate's `acos`, `atan2` and `cos`, never std's, which differ in the last bits by platform: a
@@ -34,6 +35,7 @@ mod pick_interpretation;
 pub mod pick_interpretations;
 pub mod sliver_normal;
 mod tangent_chain_cache;
+pub mod vertex_fan_regions;
 
 pub use bevel_corner_group::BevelCornerGroup;
 pub use bevel_corner_group_resolver::BevelCornerGroupResolution;
