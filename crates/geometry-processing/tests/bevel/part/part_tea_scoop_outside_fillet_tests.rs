@@ -10,12 +10,17 @@
 //! `tests/bevel/fixtures/tea-scoop-outside-fillet.json` to the public domain under CC0 1.0
 //! (<https://creativecommons.org/publicdomain/zero/1.0/>).
 
-use std::sync::Arc;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use serde::Deserialize;
 use solidmesh::bevel::level_line::level_line_routing as routing;
-use solidmesh::bevel::part::{bevel_part, BevelPartOutcome, BevelPartRequest};
+use solidmesh::bevel::level_line::{FieldCounters, WorkBudget};
+use solidmesh::bevel::part::{
+    bevel_part, BevelPartOutcome, BevelPartRequest, BevelProgress, BevelProgressReport,
+};
 use solidmesh::topology::BevelEdgeGroup;
 use solidmesh_mesh::{CancelToken, Mesh};
 
@@ -146,5 +151,76 @@ fn probe_the_tea_scoop_fillet() {
                 refusals(&outcome).join("\n  ")
             ),
         }
+    }
+}
+
+/// The whole pick's wall-clock time per phase the progress bar names, in the order each phase
+/// was first named, with each level-line allowance's per-phase work and time, the refinement's
+/// per-rule searches and the routes taken. Run it with `--ignored --nocapture`, in a release build
+/// for timings that mean anything.
+#[test]
+#[ignore = "a probe: prints the time per reported phase, asserts nothing"]
+fn probe_the_tea_scoop_fillet_phases() {
+    // Each phase as the bar names it with the seconds spent while it was the latest one named,
+    // and when the last report came.
+    type Phases = (Vec<(String, f64)>, Instant);
+    let phases: Arc<Mutex<Phases>> = Arc::new(Mutex::new((Vec::new(), Instant::now())));
+    let seen = phases.clone();
+    let progress: BevelProgressReport = Arc::new(move |_: f64, said: &BevelProgress| {
+        let named = format!("{:?}", said.doing);
+        let mut seen = seen.lock().expect("one reporter at a time");
+        let now = Instant::now();
+        let since = now.duration_since(seen.1).as_secs_f64();
+        seen.1 = now;
+        if let Some(last) = seen.0.last_mut() {
+            last.1 += since;
+        }
+        if seen.0.last().map(|(name, _)| name.as_str()) != Some(named.as_str()) {
+            seen.0.push((named, 0.0));
+        }
+    });
+    routing::set_first_route(None);
+    routing::set_last_route(None);
+    FieldCounters::reset();
+    FieldCounters::set_meter_on(true);
+    let budgets: Rc<RefCell<Vec<Rc<WorkBudget>>>> = Rc::new(RefCell::new(Vec::new()));
+    let gathered = Rc::clone(&budgets);
+    routing::set_watch_budget(Some(Rc::new(move |b: &Rc<WorkBudget>| {
+        gathered.borrow_mut().push(Rc::clone(b))
+    })));
+    let started = Instant::now();
+    phases.lock().expect("unshared").1 = started;
+    let outcome = bevel_part(the_saved_fillet(), &CancelToken::new(), Some(progress));
+    let total = started.elapsed().as_secs_f64();
+    routing::set_watch_budget(None);
+    FieldCounters::set_meter_on(false);
+    for (k, budget) in budgets.borrow().iter().enumerate() {
+        println!("budget {k}:\n{}", budget.phase_report());
+    }
+    println!("rules:\n{}", FieldCounters::rule_report());
+    println!("refinement:\n{}", FieldCounters::refinement_report());
+    println!("{}", FieldCounters::report());
+    let mut seen = phases.lock().expect("the build is over");
+    let tail = seen.1.elapsed().as_secs_f64();
+    if let Some(last) = seen.0.last_mut() {
+        last.1 += tail;
+    }
+    for (name, seconds) in &seen.0 {
+        println!("{seconds:8.3} s  {name}");
+    }
+    println!(
+        "total {total:.3} s, routes first {:?} last {:?}",
+        routing::first_route(),
+        routing::last_route()
+    );
+    if let Ok(outcome) = outcome {
+        println!(
+            "mesh {:?}\n  {}",
+            outcome
+                .mesh
+                .as_ref()
+                .map(|mesh| (mesh.faces.len(), mesh.is_manifold(), shells(mesh))),
+            refusals(&outcome).join("\n  ")
+        );
     }
 }

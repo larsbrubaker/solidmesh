@@ -9,7 +9,10 @@
 //! The search evaluates corners and bounds above: from a corner p any point q of the piece has
 //! `value(q) <= value(p) + |q - p|`, and the farthest point of a segment or triangle from p is one
 //! of its corners. A piece whose bound cannot beat the best found so far by more than the tolerance
-//! is discarded; otherwise it is halved and both halves recurse. Nothing is sampled, so a bump as
+//! is discarded; otherwise it is halved and both halves recurse. A piece carries its corners'
+//! readings down to its halves, which share all but the new midpoint: a reading is a function of
+//! the point alone, so each point is read once and the search visits and decides exactly what it
+//! would if every piece read its own corners afresh. Nothing is sampled, so a bump as
 //! narrow as the tolerance is still found, and the same piece always gives the same answer. The
 //! Lipschitz bound is joined by the convex cell bound (`convex_cell_bound.rs`); both are SOUND and
 //! the lesser is taken. Turning this into an EXISTENCE search was tried twice and got the
@@ -62,13 +65,12 @@ pub fn over_segment(
     // A segment lying ALONG a ridge attains its greatest value at every point of it, so which
     // maximiser is returned is settled by the search's own canonical order, not by float noise.
     let mut found = BoundedMaximumCanonicalMaximum::new(at_least, a);
-    let mut stack = vec![(a, b, 0)];
-    while let Some((p, q, depth)) = stack.pop() {
+    // Each piece carries its ends' readings, so a halving reads only its new midpoint.
+    let mut stack = vec![(a, b, evaluate(a)?, evaluate(b)?, 0)];
+    while let Some((p, q, at_p, at_q, depth)) = stack.pop() {
         LevelLineWork::charge(1)?;
         LevelLineWork::poll_cancel()?;
 
-        let at_p = evaluate(p)?;
-        let at_q = evaluate(q)?;
         let span = (q - p).length();
         found.offer(at_p.value, p);
         found.offer(at_q.value, q);
@@ -88,8 +90,9 @@ pub fn over_segment(
         }
 
         let m = (p + q) * 0.5;
-        stack.push((p, m, depth + 1));
-        stack.push((m, q, depth + 1));
+        let at_m = evaluate(m)?;
+        stack.push((p, m, at_p, at_m, depth + 1));
+        stack.push((m, q, at_m, at_q, depth + 1));
     }
 
     Ok(FieldMaximum::new(found.best, found.best_point))
@@ -117,13 +120,14 @@ pub fn over_triangle(
     // search's own choices are made canonical instead (longest edge by a relative tie, fixed child
     // order, a tolerant update), so the first maximiser reached is the same in every placement.
     let mut found = BoundedMaximumCanonicalMaximum::new(at_least, a);
-    let mut stack = vec![(a, b, c, 0)];
-    while let Some((p, q, r, depth)) = stack.pop() {
+    // Each piece carries its corners' readings: a half shares two corners with the piece it was
+    // cut from, so only the new midpoint is read, once for both halves.
+    let mut stack = vec![([a, b, c], [evaluate(a)?, evaluate(b)?, evaluate(c)?], 0)];
+    while let Some((corners, samples, depth)) = stack.pop() {
         LevelLineWork::charge(1)?;
         LevelLineWork::poll_cancel()?;
 
-        let samples = [evaluate(p)?, evaluate(q)?, evaluate(r)?];
-        let corners = [p, q, r];
+        let [p, q, r] = corners;
         let mut bound = f64::INFINITY;
         for i in 0..3 {
             found.offer(samples[i].value, corners[i]);
@@ -185,18 +189,22 @@ pub fn over_triangle(
         let ab = (q - p).length();
         let bc = (r - q).length();
         let ca = (p - r).length();
+        let [at_p, at_q, at_r] = samples;
         if not_shorter(ab, bc) && not_shorter(ab, ca) {
             let m = (p + q) * 0.5;
-            stack.push((p, m, r, depth + 1));
-            stack.push((m, q, r, depth + 1));
+            let at_m = evaluate(m)?;
+            stack.push(([p, m, r], [at_p, at_m, at_r], depth + 1));
+            stack.push(([m, q, r], [at_m, at_q, at_r], depth + 1));
         } else if not_shorter(bc, ca) {
             let m = (q + r) * 0.5;
-            stack.push((q, m, p, depth + 1));
-            stack.push((m, r, p, depth + 1));
+            let at_m = evaluate(m)?;
+            stack.push(([q, m, p], [at_q, at_m, at_p], depth + 1));
+            stack.push(([m, r, p], [at_m, at_r, at_p], depth + 1));
         } else {
             let m = (r + p) * 0.5;
-            stack.push((r, m, q, depth + 1));
-            stack.push((m, p, q, depth + 1));
+            let at_m = evaluate(m)?;
+            stack.push(([r, m, q], [at_r, at_m, at_q], depth + 1));
+            stack.push(([m, p, q], [at_m, at_p, at_q], depth + 1));
         }
     }
 
