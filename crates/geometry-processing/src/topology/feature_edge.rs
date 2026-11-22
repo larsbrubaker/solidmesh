@@ -1,8 +1,14 @@
 //! One manifold edge of a mesh with the geometry a bevel needs ([`FeatureEdge`], with its
 //! [`EdgeConvexity`]). [`super::FeatureEdgeSet`] keeps
-//! the ones that are edges of the shape; chains and face groups are built from them.
+//! the ones that are edges of the shape; chains and face groups are built from them. A face too
+//! thin for its corners to give it a normal reads the face it lies along
+//! ([`the_normal_an_edge_reads`], by `sliver_normal`'s one rule), so a sliver adds no crease.
 
 use solidmesh_math::{math_helper, Vector3};
+
+use super::sliver_normal::{
+    normal_of_corners, trusted_normal_across_slivers, SINGLE_PRECISION_PLACEMENT,
+};
 use solidmesh_mesh::{Face, Mesh, MeshEdgeGraph};
 
 /// Which way the solid folds where two faces meet along an edge.
@@ -87,7 +93,8 @@ impl FeatureEdge {
 
     /// Classifies one edge of a mesh, whatever its dihedral angle. `None` for edges a bevel can
     /// say nothing about: boundary edges (one face), non-manifold edges (three or more), and
-    /// edges whose faces have no area to take a normal from. The result may be `Flat`.
+    /// edges where no face with a normal stands in for a face too thin to have one
+    /// ([`the_normal_an_edge_reads`]). The result may be `Flat`.
     pub fn try_classify(
         mesh: &Mesh,
         graph: &MeshEdgeGraph,
@@ -117,8 +124,8 @@ impl FeatureEdge {
             return None;
         }
 
-        let normal0 = try_get_face_normal(mesh, face0)?;
-        let normal1 = try_get_face_normal(mesh, face1)?;
+        let normal0 = the_normal_an_edge_reads(mesh, graph, face0)?;
+        let normal1 = the_normal_an_edge_reads(mesh, graph, face1)?;
 
         let direction = along_edge.get_normal();
 
@@ -179,20 +186,66 @@ fn try_orient_to_winding(face: &Face, vertex_a: i32, vertex_b: i32) -> Option<(i
 
 /// The face's normal, taken from its vertex positions rather than from its cached `Face::normal`:
 /// the cached one is f32 and can be stale (nothing forces a recalculation after a caller edits
-/// vertices), and a wrong normal here silently mislabels an edge convex or concave. `None` on a
-/// face with no area, whose normal is not defined.
+/// vertices), and a wrong normal here silently mislabels an edge convex or concave.
+///
+/// `None` on a face too thin for its corners to be trusted with a normal ([`normal_of_corners`]):
+/// a turn read from it would be a fact about where its corners were rounded to, not about the
+/// shape.
 fn try_get_face_normal(mesh: &Mesh, face_index: i32) -> Option<Vector3> {
     let face = mesh.faces[face_index as usize];
-    let position0 = Vector3::from_vector3_float(mesh.vertices[face.v0 as usize]);
-    let position1 = Vector3::from_vector3_float(mesh.vertices[face.v1 as usize]);
-    let position2 = Vector3::from_vector3_float(mesh.vertices[face.v2 as usize]);
+    normal_of_corners(
+        [
+            Vector3::from_vector3_float(mesh.vertices[face.v0 as usize]),
+            Vector3::from_vector3_float(mesh.vertices[face.v1 as usize]),
+            Vector3::from_vector3_float(mesh.vertices[face.v2 as usize]),
+        ],
+        // A `Mesh` stores its vertices in single precision.
+        SINGLE_PRECISION_PLACEMENT,
+    )
+}
 
-    let cross = (position1 - position0).cross(position2 - position0);
-    let length_squared = cross.length_squared();
-    // NaN is refused too, as `!(length_squared > 0)` would refuse it.
-    if length_squared.is_nan() || length_squared <= 0.0 || length_squared.is_infinite() {
-        return None;
+/// The outward normal an edge of `face_index` reads its turn with, by the one rule
+/// (`sliver_normal::trusted_normal_across_slivers`): the face's own where its corners give it one
+/// ([`try_get_face_normal`]), and otherwise that of the face the sliver lies along. Read this way
+/// a sliver inside a flat face adds no crease (the normal its corners give it is noise that can
+/// point anywhere, even straight back into the part), and a sliver lying along a real crease
+/// leaves the crease to the edges around it. `None` where no face with a normal is reached.
+fn the_normal_an_edge_reads(
+    mesh: &Mesh,
+    graph: &MeshEdgeGraph,
+    face_index: i32,
+) -> Option<Vector3> {
+    trusted_normal_across_slivers(
+        face_index,
+        &|face| try_get_face_normal(mesh, face),
+        &|face| {
+            let f = mesh.faces[face as usize];
+            [f.v0, f.v1, f.v2]
+        },
+        &|v| Vector3::from_vector3_float(mesh.vertices[v as usize]),
+        &|face, (a, b)| {
+            let edge = edge_between(graph, a, b)?;
+            if graph.get_face_count(edge) != 2 {
+                return None;
+            }
+            graph.get_faces(edge).iter().copied().find(|&f| f != face)
+        },
+    )
+}
+
+/// The graph's index of the edge joining `a` and `b`: the graph lists its edges sorted by their
+/// lower vertex index, then their higher.
+fn edge_between(graph: &MeshEdgeGraph, a: i32, b: i32) -> Option<i32> {
+    let key = (a.min(b), a.max(b));
+    let (mut low, mut high) = (0, graph.edge_count());
+    while low < high {
+        let middle = low + (high - low) / 2;
+        match (graph.get_vertex0(middle), graph.get_vertex1(middle)).cmp(&key) {
+            std::cmp::Ordering::Less => low = middle + 1,
+            std::cmp::Ordering::Greater => high = middle,
+            std::cmp::Ordering::Equal => return Some(middle),
+        }
     }
 
-    Some(cross.get_normal())
+    None
 }

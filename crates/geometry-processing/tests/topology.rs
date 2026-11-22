@@ -15,6 +15,8 @@ mod face_pick_interpretation_tests;
 mod feature_edge_chain_tests;
 #[path = "topology/feature_edge_collinear_run_tests.rs"]
 mod feature_edge_collinear_run_tests;
+#[path = "topology/feature_edge_degenerate_face_tests.rs"]
+mod feature_edge_degenerate_face_tests;
 #[path = "topology/feature_edge_detection_tests.rs"]
 mod feature_edge_detection_tests;
 #[path = "topology/rust_only_bevel_group_tests.rs"]

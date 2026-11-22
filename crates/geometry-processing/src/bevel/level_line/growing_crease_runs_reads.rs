@@ -137,9 +137,8 @@ impl GrowingCreaseRuns {
         let a0 = mesh.position(chain_edge.0);
         let along = (mesh.position(chain_edge.1) - a0).get_normal();
         let face = mesh.triangles[one[0] as usize];
-        let second = mesh.triangles[two[0] as usize];
         drop(mesh);
-        let n1 = self.normal(face);
+        let n1 = self.normal(one[0]);
         let mut t1 = along.cross(n1).get_normal();
         let third = [face.a, face.b, face.c]
             .into_iter()
@@ -149,7 +148,7 @@ impl GrowingCreaseRuns {
             t1 = -t1;
         }
 
-        Some((a0, along, n1, t1, self.normal(second)))
+        Some((a0, along, n1, t1, self.normal(two[0])))
     }
 
     /// Whether `edge` is a crease of the opposite sense to the chain's first leg.

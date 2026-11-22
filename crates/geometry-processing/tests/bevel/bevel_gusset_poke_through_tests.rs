@@ -1,13 +1,13 @@
 //! The sliver a POKE-THROUGH leaves, measured on the kernel's own boolean output rather than
 //! described - `gusset_test_meshes` is the left half of "Chain and Face Should Both work.mcx" as
-//! the union left it, and this is where its top face is refused.
+//! the union left it, and how its top face reads beside it.
 //!
 //! The gusset stands 0.1 mm proud of the plate's y = -6 face and carries a 1.3113417e-07 term in
 //! its own rotation, so its top misses z = 20 by a hair. Between the two the boolean leaves a
 //! triangle 0.1414 long and two MICRONS thick, whose normal is (-0.696, 0.696, 0.174) - nothing
-//! like either surface it lies between - and which is therefore a face region all of its own. A 0.4
-//! fillet sets back 0.3355 and takes the whole of it, so the band runs off its rim, and what is
-//! beyond is read for flatness at 1e-5.
+//! like either surface it lies between. Its corners are placed only to about the size of its
+//! thickness, so that normal is rounding noise: the sliver reads the face across its long edge as
+//! its own and is no face region of its own, and a 0.4 fillet of the top face fits past it.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -16,7 +16,6 @@ use solidmesh::bevel::bevel_chain_linker;
 use solidmesh::bevel::surface::{
     surface_chain_join, surface_chain_opens_at_the_junction, surface_room, SurfaceBevelPlan,
 };
-use solidmesh::bevel::{BevelAdvisoryArg, BevelAdvisoryCode};
 use solidmesh::topology::{FaceGroup, FaceRegionCache};
 use solidmesh_math::Vector3;
 use solidmesh_mesh::{CancelToken, Face, Mesh, MeshEdgeGraph};
@@ -63,21 +62,21 @@ fn the_poke_through_leaves_a_triangle_two_microns_thick() {
     );
 
     assert!(
-        Vector3::from_vector3_float(sliver.normal).dot(Vector3::UNIT_Z).abs() < 0.2,
-        "and its normal stands nearly square to the two tops it lies between, which is why it floods as a region of its own - it is {:?}",
+        Vector3::from_vector3_float(sliver.normal)
+            .dot(Vector3::UNIT_Z)
+            .abs()
+            < 0.2,
+        "and its normal stands nearly square to the two tops it lies between - it is {:?}",
         sliver.normal
     );
 }
 
-/// And what that costs: the part's top face, picked whole and filleted at 0.4, is refused - and
-/// the size the room names IS the sliver, measured rather than described, two microns of landing
-/// where 0.4 was asked for.
-///
-/// The sentence here is the WALL rule's, not the flatness guard's: in this half of the part the
-/// kernel wrote the gusset's top very nearly square and the run-off is not read at all, so the rim
-/// beyond the sliver is charged as the wall it looks like.
+/// And why it costs nothing: two microns is less than the part's single-precision corners are
+/// placed to, so the sliver has no normal of its own (`FeatureEdge::try_classify` reads the face
+/// across its long edge in its place), no crease bounds it and it is no face region of its own.
+/// The part's top face, picked whole, has room for the 0.4 its operation asks for.
 #[test]
-fn the_top_face_is_refused_for_the_slivers_own_thickness() {
+fn the_top_face_fits_past_a_sliver_too_thin_for_a_normal() {
     let part = gusset_test_meshes::create_plate_with_gusset_poking_through();
     let graph = part.get_mesh_edge_graph();
     let regions = Arc::new(FaceRegionCache::new(
@@ -91,45 +90,16 @@ fn the_top_face_is_refused_for_the_slivers_own_thickness() {
         surface_room::try_fit(&plans, RADIUS, &CancelToken::new(), None).expect("nothing cancels");
 
     assert!(
-        !fit.fits,
-        "the sliver is in the way of the top face's rim - it allowed {}",
-        fit.largest_fitting_size
-    );
-
-    let refusal = fit.refusal.expect("a fit that fails names why");
-
-    assert_eq!(
-        refusal.code(),
-        BevelAdvisoryCode::SizeExceedsFaceWidth,
-        "the rim beyond the sliver is charged as a wall: instead {refusal:?}"
-    );
-
-    assert!(
-        fit.largest_fitting_size < 1e-5,
-        "and the size it names is the sliver's own thickness, which is the fault saying its own name in a number - it named {}",
-        fit.largest_fitting_size
-    );
-
-    let BevelAdvisoryArg::Vector3(at) = refusal.args()[1] else {
-        panic!("the refusal's second argument is a place: {refusal:?}");
-    };
-
-    assert!(
-        (at - the_slivers_own_edge()).length() < 0.001,
-        "reported in the middle of the sliver's own long edge, which is the band the two microns are charged against: instead {at:?}"
+        fit.fits && fit.largest_fitting_size >= RADIUS,
+        "the sliver is no face of its own, so it is not in the way of the top face's rim: it allowed {} ({:?})",
+        fit.largest_fitting_size,
+        fit.refusal
     );
 }
 
 /// The gusset's buried tip on z = 20, which the boolean wrote three times over.
 fn the_buried_tip() -> Vector3 {
     Vector3::new(25.5, -6.099996, 20.0)
-}
-
-/// The middle of the sliver's long edge - from the buried tip out to where the hypotenuse leaves
-/// the plate - which is the band the two microns are charged against and so where the refusal is
-/// placed.
-fn the_slivers_own_edge() -> Vector3 {
-    (the_buried_tip() + gusset_test_meshes::the_gusset_seam().1) / 2.0
 }
 
 /// Where the gusset's hypotenuse leaves the plate's y = -6 face.

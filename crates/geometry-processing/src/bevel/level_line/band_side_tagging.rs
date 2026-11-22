@@ -88,13 +88,6 @@ pub fn outward_at(
     (end_point - back).get_normal()
 }
 
-/// The unit normal of an input triangle.
-pub fn normal_of(positions: &[Vector3], t: (i32, i32, i32)) -> Vector3 {
-    (positions[t.1 as usize] - positions[t.0 as usize])
-        .cross(positions[t.2 as usize] - positions[t.0 as usize])
-        .get_normal()
-}
-
 /// Tags with `tag` every untagged triangle reachable from `seeds`
 /// (taken in ascending order) without crossing a chain edge or a feature edge, and that `can_enter`
 /// allows. The answer is the TAG ARRAY - a set of triangles - which does not depend on the order it

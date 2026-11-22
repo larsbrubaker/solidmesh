@@ -18,7 +18,7 @@ use std::collections::HashSet;
 use solidmesh_math::Vector3;
 
 use super::band_side_tagging::{
-    flood, model_scale_of, normal_of, outward_at, ANOTHER_PICKS_SIDE, FIRST_END_TAG, SECOND_END_TAG,
+    flood, model_scale_of, outward_at, ANOTHER_PICKS_SIDE, FIRST_END_TAG, SECOND_END_TAG,
 };
 use super::end_face_flow;
 use super::end_face_sense;
@@ -224,7 +224,7 @@ fn flood_one_end(
         .get(&triangle_edges::key(chain_edge.0, chain_edge.1))
         .map_or(&[][..], |on| on.as_slice())
         .iter()
-        .map(|&t| normal_of(positions, indices[t as usize]))
+        .map(|&t| super::triangle_edges::normal_an_edge_reads(positions, indices, standing, t))
         .collect();
 
     // A soft bend is crossed only where it stands wholly PAST the end, along the chain - and at a

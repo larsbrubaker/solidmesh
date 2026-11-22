@@ -13,9 +13,7 @@ use solidmesh_math::Vector3;
 
 use super::band_side_tagging::{FIRST_END_TAG, SECOND_END_TAG};
 use super::{end_face_sense, triangle_edges};
-use super::{
-    ChainField, ForeignEdgeIndex, GrowingCreaseRuns, LevelLineMesh, LevelLineTriangle, WorkError,
-};
+use super::{ChainField, ForeignEdgeIndex, GrowingCreaseRuns, LevelLineMesh, WorkError};
 
 /// Fixed, so the room is the same bits every time it is asked for.
 pub const ROOM_BISECTION_STEPS: i32 = 40;
@@ -115,16 +113,16 @@ pub fn set_read_every_foreign_edge(on: bool) {
 /// ([`right_angle_noise`], read on the input triangles the two descend from).
 pub fn is_a_knife(mesh: &LevelLineMesh, side: i32, far: i32, edge: (i32, i32)) -> bool {
     let input_corners = |t: i32| mesh.input_triangle_behind(t).map(|v| mesh.position(v));
-    let normal_of = |t: LevelLineTriangle| {
-        let a = mesh.position(t.a);
-        (mesh.position(t.b) - a)
-            .cross(mesh.position(t.c) - a)
-            .get_normal()
-    };
 
     let (side_index, far_index) = (side, far);
-    let (side, far) = (mesh.triangles[side as usize], mesh.triangles[far as usize]);
-    let side_normal = normal_of(side);
+    let far = mesh.triangles[far as usize];
+    // Read by the one rule (`LevelLineMesh::normal_an_edge_reads`): a sliver too thin for a
+    // normal reads the face it lies along, so its rounding noise never makes a knife.
+    let normal_of = |t: i32| {
+        mesh.normal_an_edge_reads(t)
+            .unwrap_or_else(|| mesh.corner_normal(t))
+    };
+    let side_normal = normal_of(side_index);
     let opposite = if far.a != edge.0 && far.a != edge.1 {
         far.a
     } else if far.b != edge.0 && far.b != edge.1 {
@@ -144,7 +142,7 @@ pub fn is_a_knife(mesh: &LevelLineMesh, side: i32, far: i32, edge: (i32, i32)) -
         } else {
             RIGHT_ANGLE_NOISE
         };
-        side_normal.dot(normal_of(far)) < -noise
+        side_normal.dot(normal_of(far_index)) < -noise
     }
 }
 

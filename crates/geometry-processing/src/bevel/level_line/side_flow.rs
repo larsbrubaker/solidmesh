@@ -39,7 +39,9 @@ pub fn flows_onto_a_gentle_neighbour(
         return Ok(false);
     }
 
-    let normal_of = |triangle: i32| triangle_edges::normal(positions, indices[triangle as usize]);
+    let normal_of = |triangle: i32| {
+        triangle_edges::normal_an_edge_reads(positions, indices, standing, triangle)
+    };
     let first = normal_of(on[0]);
     let across = indices[on[1] as usize];
     let opposite = if across.0 != a && across.0 != b {

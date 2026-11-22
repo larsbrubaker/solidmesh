@@ -9,7 +9,7 @@ use std::rc::Rc;
 use solidmesh_math::Vector3;
 
 use super::triangle_edges;
-use super::{LevelLineMesh, LevelLineTriangle};
+use super::LevelLineMesh;
 
 /// The distance from a point to the chain.
 pub type DistanceToChain = Rc<dyn Fn(Vector3) -> f64>;
@@ -118,12 +118,12 @@ impl GrowingCreaseRuns {
         neighbours.entry(from).or_default().push(to);
     }
 
-    /// The unit normal of a working-mesh triangle.
-    pub fn normal(&self, t: LevelLineTriangle) -> Vector3 {
+    /// The unit normal working-mesh triangle `t` reads its turn with, by the one rule
+    /// (`LevelLineMesh::normal_an_edge_reads`): a sliver reads the face it lies along.
+    pub fn normal(&self, t: i32) -> Vector3 {
         let mesh = self.mesh.borrow();
-        (mesh.position(t.b) - mesh.position(t.a))
-            .cross(mesh.position(t.c) - mesh.position(t.a))
-            .get_normal()
+        mesh.normal_an_edge_reads(t)
+            .unwrap_or_else(|| mesh.corner_normal(t))
     }
 
     /// The chain edge nearest `point` - the first of a tie.

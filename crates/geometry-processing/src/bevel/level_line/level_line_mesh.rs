@@ -229,6 +229,59 @@ impl LevelLineMesh {
         self.removed[triangle as usize]
     }
 
+    /// The unit normal an edge of triangle `t` reads its turn with, by the one rule the feature
+    /// edges are read by (`topology::trusted_normal_across_slivers`): a sliver too thin for its
+    /// corners to give it a normal reads the triangle it lies along. `None` where none is reached;
+    /// each reader falls back on what it read before.
+    ///
+    /// The corners are taken as placed to single precision where the input came from float
+    /// storage (`input_is_float_stored`) and to double precision otherwise. Points the build
+    /// places itself are doubles, so on a float-stored input the bound is generous for them: a
+    /// triangle the build made thinner than single precision can place reads the triangle it lies
+    /// along instead of its own corners - the reading a sliver of the input gets, and never one
+    /// that trusts a direction the corners cannot settle.
+    pub fn normal_an_edge_reads(&self, t: i32) -> Option<Vector3> {
+        use crate::topology::sliver_normal::{
+            normal_of_corners, trusted_normal_across_slivers, DOUBLE_PRECISION_PLACEMENT,
+            SINGLE_PRECISION_PLACEMENT,
+        };
+        let placement = if self.input_is_float_stored {
+            SINGLE_PRECISION_PLACEMENT
+        } else {
+            DOUBLE_PRECISION_PLACEMENT
+        };
+        let corners_of = |at: i32| {
+            let tri = self.triangles[at as usize];
+            [tri.a, tri.b, tri.c]
+        };
+        let position = |v: i32| self.vertices[v as usize];
+        trusted_normal_across_slivers(
+            t,
+            &|at| {
+                let [a, b, c] = corners_of(at);
+                normal_of_corners([position(a), position(b), position(c)], placement)
+            },
+            &corners_of,
+            &position,
+            &|at, (a, b)| {
+                let mut others = self.triangles_on(a, b).iter().copied().filter(|&o| o != at);
+                match (others.next(), others.next()) {
+                    (Some(one), None) => Some(one),
+                    _ => None,
+                }
+            },
+        )
+    }
+
+    /// The unit normal of triangle `t` straight off its corners.
+    pub fn corner_normal(&self, t: i32) -> Vector3 {
+        let tri = self.triangles[t as usize];
+        let a = self.vertices[tri.a as usize];
+        (self.vertices[tri.b as usize] - a)
+            .cross(self.vertices[tri.c as usize] - a)
+            .get_normal()
+    }
+
     /// The position of a vertex.
     pub fn position(&self, vertex: i32) -> Vector3 {
         self.vertices[vertex as usize]

@@ -110,15 +110,20 @@ pub fn away_from_third_corner(
     }
 }
 
-/// A triangle's unit normal, or zero for one with no area.
-pub fn triangle_normal(mesh: &LevelLineMesh, face: LevelLineTriangle) -> Vector3 {
-    let normal = (mesh.position(face.b) - mesh.position(face.a))
-        .cross(mesh.position(face.c) - mesh.position(face.a));
-    if normal.length_squared() < 1e-30 {
-        Vector3::ZERO
-    } else {
-        normal.get_normal()
-    }
+/// Triangle `t`'s unit normal by the one rule (`LevelLineMesh::normal_an_edge_reads`): a sliver
+/// too thin for a normal reads the face it lies along. Where none is reached, the triangle's own
+/// corners' normal, or zero for one with no area (as near zero as a squared length of 1e-30).
+pub fn triangle_normal(mesh: &LevelLineMesh, t: i32) -> Vector3 {
+    mesh.normal_an_edge_reads(t).unwrap_or_else(|| {
+        let face = mesh.triangles()[t as usize];
+        let normal = (mesh.position(face.b) - mesh.position(face.a))
+            .cross(mesh.position(face.c) - mesh.position(face.a));
+        if normal.length_squared() < 1e-30 {
+            Vector3::ZERO
+        } else {
+            normal.get_normal()
+        }
+    })
 }
 
 /// Per edge of the closed `cycle` (keyed low, high), the removed triangles standing on it, in
@@ -747,7 +752,7 @@ pub fn convex_creases_at_the_arc_ends(
                 continue;
             }
 
-            let outward = triangle_normal(mesh, mesh.triangles()[on[0] as usize]);
+            let outward = triangle_normal(mesh, on[0]);
             if leaves_through_convex_crease(along, centroid - p, outward) {
                 creases.push(outward);
             }
@@ -786,11 +791,11 @@ pub fn in_face_cross_tangent(
         return away;
     };
 
-    let live_normal = triangle_normal(mesh, live);
+    let live_normal = triangle_normal(mesh, on[0]);
     let live_runs_a_to_b = runs_forward(live, a, b);
     for &t in removed {
         let across = mesh.triangles()[t as usize];
-        let across_normal = triangle_normal(mesh, across);
+        let across_normal = triangle_normal(mesh, t);
         if runs_forward(across, a, b) == live_runs_a_to_b
             || across_normal.length_squared() == 0.0
             || live_normal.length_squared() == 0.0

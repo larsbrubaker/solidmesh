@@ -1,9 +1,15 @@
 //! The input triangle list read as EDGES: which triangles stand on an edge, the corners a
-//! triangle traverses and in what direction. The plumbing every step of the band build reads the
-//! mesh through, and the one place the (low, high) edge key is made.
+//! triangle traverses and in what direction, and the normal an edge of an input triangle reads its
+//! turn with ([`normal_an_edge_reads`], by `topology::sliver_normal`'s rule). The plumbing every
+//! step of the band build reads the mesh through, and the one place the (low, high) edge key is
+//! made.
 
 use indexmap::IndexMap;
 use solidmesh_math::Vector3;
+
+use crate::topology::sliver_normal::{
+    normal_of_corners, trusted_normal_across_slivers, SINGLE_PRECISION_PLACEMENT,
+};
 
 use super::fast_hash::FastBuildHasher;
 use super::LevelLineTriangle;
@@ -63,4 +69,48 @@ pub fn normal(positions: &[Vector3], t: (i32, i32, i32)) -> Vector3 {
     (positions[t.1 as usize] - a)
         .cross(positions[t.2 as usize] - a)
         .get_normal()
+}
+
+/// The unit normal an edge of input triangle `t` reads its turn with, by the one rule the feature
+/// edges are read by (`topology::trusted_normal_across_slivers`): a sliver too thin for its
+/// corners to give it a normal reads the triangle it lies along. Where none is reached, the
+/// triangle's own corners' normal, all there is to read.
+///
+/// The corners are taken as placed to single precision. That is exact for the part as it comes
+/// in, which the model always hands over from float storage; after an earlier chain's build the
+/// list also holds points the build placed in doubles, for which the bound is generous: a
+/// triangle the build made thinner than single precision can place reads the triangle it lies
+/// along instead of its own corners - the reading a sliver of the input gets, and never one that
+/// trusts a direction the corners cannot settle. The list carries no record of which points the
+/// build placed, so the bound cannot be narrowed per corner here.
+pub fn normal_an_edge_reads(
+    positions: &[Vector3],
+    indices: &[(i32, i32, i32)],
+    standing: &StandingMap,
+    t: i32,
+) -> Vector3 {
+    let corners_of = |at: i32| {
+        let tri = indices[at as usize];
+        [tri.0, tri.1, tri.2]
+    };
+    let position = |v: i32| positions[v as usize];
+    trusted_normal_across_slivers(
+        t,
+        &|at| {
+            let [a, b, c] = corners_of(at);
+            normal_of_corners(
+                [position(a), position(b), position(c)],
+                SINGLE_PRECISION_PLACEMENT,
+            )
+        },
+        &corners_of,
+        &position,
+        &|at, (a, b)| {
+            standing
+                .get(&key(a, b))
+                .filter(|on| on.len() == 2)
+                .and_then(|on| on.iter().copied().find(|&o| o != at))
+        },
+    )
+    .unwrap_or_else(|| normal(positions, indices[t as usize]))
 }

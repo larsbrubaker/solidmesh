@@ -5,7 +5,9 @@
 //! [`BevelCornerGroup`]) with matching them on a rebuilt mesh ([`bevel_edge_group_resolver`]) and
 //! editing their lists ([`bevel_group_edits`]), and the readings a pick (or a stored group) can
 //! mean ([`pick_interpretations`], [`bevel_edge_readings`]), read off a set's tangent chains
-//! walked once ([`TangentChainCache`]) where a caller prepared them.
+//! walked once ([`TangentChainCache`]) where a caller prepared them. Every crease reading takes a
+//! face's normal through one rule, [`sliver_normal`], which reads a sliver too thin for a normal of
+//! its own from the face it lies along.
 //!
 //! The angle readings (edge turns, corner bends, match tolerances) use the pure-Rust `libm`
 //! crate's `acos`, `atan2` and `cos`, never std's, which differ in the last bits by platform: a
@@ -30,6 +32,7 @@ mod feature_edge_set;
 mod path_corner_set;
 mod pick_interpretation;
 pub mod pick_interpretations;
+pub mod sliver_normal;
 mod tangent_chain_cache;
 
 pub use bevel_corner_group::BevelCornerGroup;
@@ -47,4 +50,5 @@ pub use feature_edge_chain::{ChainEdge, ChainEnd, ChainStopReason, FeatureEdgeCh
 pub use feature_edge_set::FeatureEdgeSet;
 pub use path_corner_set::{PathCorner, PathCornerSet};
 pub use pick_interpretation::{PickInterpretation, PickInterpretationKind};
+pub use sliver_normal::{normal_of_corners, trusted_normal_across_slivers};
 pub use tangent_chain_cache::TangentChainCache;

@@ -64,7 +64,8 @@ pub fn sides_of(
 pub const SETBACK_STEP_FRACTION: f64 = 0.05;
 
 /// Each chain edge's setback at size 1 - the chamfer's
-/// own, or the fillet's at the edge's dihedral between its two triangles.
+/// own, or the fillet's at the edge's dihedral between its two triangles, each read by
+/// [`triangle_edges::normal_an_edge_reads`] so a sliver along the crease reads as the face it lies on.
 pub fn per_edge_unit_setbacks(
     positions: &[solidmesh_math::Vector3],
     indices: &[(i32, i32, i32)],
@@ -81,8 +82,8 @@ pub fn per_edge_unit_setbacks(
         } else {
             super::chain_setback::for_fillet(
                 1.0,
-                triangle_edges::normal(positions, indices[left as usize]),
-                triangle_edges::normal(positions, indices[right as usize]),
+                triangle_edges::normal_an_edge_reads(positions, indices, &standing, left),
+                triangle_edges::normal_an_edge_reads(positions, indices, &standing, right),
             )
         });
     }

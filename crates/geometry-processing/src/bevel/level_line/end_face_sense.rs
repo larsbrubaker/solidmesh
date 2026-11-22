@@ -588,12 +588,10 @@ pub fn growing_crease_stretch(
         return stretch;
     }
 
+    // By the one rule: a sliver too thin for a normal reads the face it lies along.
     let normal_of = |triangle: i32| {
-        let t = mesh.triangles[triangle as usize];
-        let a = mesh.position(t.a);
-        (mesh.position(t.b) - a)
-            .cross(mesh.position(t.c) - a)
-            .get_normal()
+        mesh.normal_an_edge_reads(triangle)
+            .unwrap_or_else(|| mesh.corner_normal(triangle))
     };
 
     // Every side-to-end CREASE: one picked side, one end-face triangle, and a real fold.

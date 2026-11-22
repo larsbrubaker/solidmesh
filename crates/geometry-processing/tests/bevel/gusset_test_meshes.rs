@@ -1,7 +1,6 @@
-//! The plate a gusset pokes through, kept as the triangles the boolean actually left, and the
-//! sliver seam it leaves on the top face.
+//! The plate a gusset pokes through, kept as the triangles the boolean actually left.
 
-use solidmesh_math::{Vector3, Vector3Float};
+use solidmesh_math::Vector3Float;
 use solidmesh_mesh::{Face, Mesh};
 
 /// The plate-and-gusset union of "Chain and Face Should
@@ -89,13 +88,4 @@ pub fn create_plate_with_gusset_poking_through() -> Mesh {
     }
 
     mesh
-}
-
-/// The sliver the poke-through leaves on z = 20, by the corners it is known by
-/// - `(buried tip, where the hypotenuse leaves the plate)`.
-pub fn the_gusset_seam() -> (Vector3, Vector3) {
-    (
-        Vector3::new(25.5, -6.099996, 20.0),
-        Vector3::new(25.599997, -6.0, 20.0),
-    )
 }

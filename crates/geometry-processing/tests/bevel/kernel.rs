@@ -39,3 +39,5 @@ pub(crate) mod bevel_volume_probes;
 pub(crate) mod knife_edge_rim_measures;
 #[path = "many_holes_rim_reading.rs"]
 pub(crate) mod many_holes_rim_reading;
+#[path = "sliver_on_a_crease_setback_tests.rs"]
+pub(crate) mod sliver_on_a_crease_setback_tests;

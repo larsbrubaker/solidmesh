@@ -37,5 +37,7 @@ pub(crate) mod part_self_intersection_check_tests;
 pub(crate) mod part_surface_part_builder_s3_tests;
 #[path = "part/part_surface_part_builder_tests.rs"]
 pub(crate) mod part_surface_part_builder_tests;
+#[path = "part/part_tea_scoop_outside_fillet_tests.rs"]
+pub(crate) mod part_tea_scoop_outside_fillet_tests;
 #[path = "part_touching_loops_tests.rs"]
 pub(crate) mod part_touching_loops_tests;

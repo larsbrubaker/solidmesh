@@ -1,4 +1,5 @@
-//! How the band flows over a chain's end face: its constants, the facet normal ([`normal_of`]),
+//! How the band flows over a chain's end face: its constants (facets read by
+//! `triangle_edges::normal_an_edge_reads`, so a sliver reads the face it lies along),
 //! the side-turn test
 //! ([`turns_along_a_side`]), the end-face bend ([`bends`]) and whether the end region's flood
 //! crosses a soft bend ([`crosses_a_soft_bend`]) and a flat patch of the end region
@@ -57,17 +58,12 @@ pub fn turns_along_a_side(
 
     on.iter().any(|&triangle| {
         side_normals.iter().any(|&side| {
-            let facing = normal_of(positions, indices[triangle as usize]).dot(side);
+            let facing =
+                triangle_edges::normal_an_edge_reads(positions, indices, standing, triangle)
+                    .dot(side);
             (if either_way { facing.abs() } else { facing }) > 0.5f64.sqrt()
         })
     })
-}
-
-/// The unit normal of an input triangle.
-pub fn normal_of(positions: &[Vector3], t: (i32, i32, i32)) -> Vector3 {
-    (positions[t.1 as usize] - positions[t.0 as usize])
-        .cross(positions[t.2 as usize] - positions[t.0 as usize])
-        .get_normal()
 }
 
 /// True when the two triangles standing on the edge turn by more than
@@ -84,10 +80,9 @@ pub fn bends(
         _ => return true,
     };
 
+    // By the one rule: a sliver too thin for a normal reads the face it lies along.
     let normal_of = |triangle: i32| {
-        let t = indices[triangle as usize];
-        (positions[t.1 as usize] - positions[t.0 as usize])
-            .cross(positions[t.2 as usize] - positions[t.0 as usize])
+        triangle_edges::normal_an_edge_reads(positions, indices, standing, triangle)
     };
 
     let first = normal_of(on[0]);
@@ -335,8 +330,8 @@ pub fn rounds_from_the_end(
         // The first match, or 0 where none.
         let inside = on.iter().copied().find(|t| area.contains(t)).unwrap_or(0);
         let across = on.iter().copied().find(|t| !area.contains(t)).unwrap_or(0);
-        let in_normal = normal_of(positions, indices[inside as usize]);
-        let out_normal = normal_of(positions, indices[across as usize]);
+        let in_normal = triangle_edges::normal_an_edge_reads(positions, indices, standing, inside);
+        let out_normal = triangle_edges::normal_an_edge_reads(positions, indices, standing, across);
         let axis = in_normal.cross(out_normal);
         if !(width > 0.0) || !(axis.length() > 0.0) {
             return Ok(false);
