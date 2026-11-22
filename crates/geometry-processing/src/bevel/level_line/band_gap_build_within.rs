@@ -4,7 +4,9 @@
 //! `band_gap_build_sides.rs`'s), refinement and roots per group, the band's delete, the room, the
 //! gap loops and the pinch - leaving nothing to do but fill. A pick of several chains reads its
 //! room before the sides, so the sides can be flowed over narrow end faces where that alone holds
-//! the size, by the one-chain rule (`narrow_face_flow::takes_the_flow`). Its faults travel as
+//! the size, by the one-chain rule (`narrow_face_flow::takes_the_flow`). A pick of one chain reads
+//! its room after the sides, and where that room already refuses the size (and the band does not
+//! end on a rim) it refuses there, before the refinement. Its faults travel as
 //! [`BuildFault`] (`band_gap_build_fault.rs`), which
 //! [`band_gap::build_unvalidated`](super::band_gap::build_unvalidated) turns into the caller's
 //! outcomes. Step 1's setbacks and fields are `band_gap_setback_fields.rs`'s.
@@ -243,6 +245,36 @@ pub(super) fn build_from_the_setbacks(
     };
     let ends_on_the_rim = consumed_rims.is_some();
 
+    // A pick of ONE chain whose own room, read just above, refuses the size and whose band does not
+    // end on a rim is refused HERE, before the refinement. Nothing after this point can change that
+    // answer: the room the decision below reads is this reading (no room was handed in), lowered at
+    // most by the square crease end's cap, which reads only the input; and the band's rim was read
+    // above. The refinement, the roots and the delete could only spend work on a band that is
+    // never cut - or fail on the way, which is no better an answer than the size the user can be
+    // offered instead.
+    if let Some(read) = read_room {
+        if size > read && !ends_on_the_rim {
+            let (mut room, mut room_set_by) = (read, read_room_set_by);
+            square_crease_end_clip::cap_room(
+                positions,
+                indices,
+                chains,
+                closed,
+                sharp_turn_degrees,
+                &mut room,
+                &mut room_set_by,
+            );
+            return Ok(refused_at_the_room(
+                room,
+                room_set_by,
+                *unflowed_room,
+                None,
+                fields,
+                mesh,
+            ));
+        }
+    }
+
     // The input's precision is applied only from here on; the strips and needles go after the room
     // reading, under their own phase.
     {
@@ -332,25 +364,23 @@ pub(super) fn build_from_the_setbacks(
         }
 
         // A side the refinement has left with NO surviving vertex loses its loop: only then is its
-        // last surviving point searched for and made a vertex - unless a refusal is already coming.
-        let refusal_is_coming = read_room.is_some_and(|room| size > room) && !ends_on_the_rim;
-        if !refusal_is_coming {
-            if let Err(lost) = side_witness::give_the_side_a_witness(
-                &reading,
-                &*group_field,
-                group.tag,
-                size,
-                tolerance,
-                topology_only,
-            )? {
-                return Ok(BandGapResult {
-                    refusal: BandGapRefusal::RefinementWouldNotSettle,
-                    room: 0.0,
-                    offending_triangle: lost,
-                    mesh: Some(Rc::clone(&mesh)),
-                    ..BandGapResult::default()
-                });
-            }
+        // last surviving point searched for and made a vertex. (A size refusal already decided by
+        // the room read in the build has left before the refinement.)
+        if let Err(lost) = side_witness::give_the_side_a_witness(
+            &reading,
+            &*group_field,
+            group.tag,
+            size,
+            tolerance,
+            topology_only,
+        )? {
+            return Ok(BandGapResult {
+                refusal: BandGapRefusal::RefinementWouldNotSettle,
+                room: 0.0,
+                offending_triangle: lost,
+                mesh: Some(Rc::clone(&mesh)),
+                ..BandGapResult::default()
+            });
         }
 
         LevelLineWork::enter(LevelLineWorkPhase::EdgeRoots);
@@ -413,17 +443,14 @@ pub(super) fn build_from_the_setbacks(
 
     // ONE number decides: the size asked for is refused exactly when it stands above the room.
     if size > room && !ends_on_the_rim {
-        // A flowed band refused by size quotes the room it had without the flow, the one the user
-        // is told everywhere else (`unflowed_room`), never the flowed room it was cut by - and the
-        // reading that named THAT room, so the place shown is where that number is set.
-        return Ok(BandGapResult {
-            refusal: BandGapRefusal::Size,
-            room: unflowed_room.unwrap_or(room),
-            room_set_by: unflowed_set_by.unwrap_or(room_set_by),
-            chains: fields,
-            mesh: Some(mesh),
-            ..BandGapResult::default()
-        });
+        return Ok(refused_at_the_room(
+            room,
+            room_set_by,
+            *unflowed_room,
+            unflowed_set_by,
+            fields,
+            mesh,
+        ));
     }
 
     // A side the strip swallows whole leaves no run, and its made-up one is read off the side
@@ -664,4 +691,26 @@ pub(super) fn build_from_the_setbacks(
         carried_by_tag,
         ..BandGapResult::default()
     })
+}
+
+/// The size refusal at `room`, as `room_set_by` read it. A flowed band refused by size quotes the
+/// room it had without the flow, the one the user is told everywhere else (`unflowed_room`), never
+/// the flowed room it was cut by - and the reading that named THAT room (`unflowed_set_by`), so
+/// the place shown is where that number is set. The working mesh goes back as it stands.
+fn refused_at_the_room(
+    room: f64,
+    room_set_by: RoomSource,
+    unflowed_room: Option<f64>,
+    unflowed_set_by: Option<RoomSource>,
+    fields: Vec<Rc<super::ChainField>>,
+    mesh: Rc<RefCell<LevelLineMesh>>,
+) -> BandGapResult {
+    BandGapResult {
+        refusal: BandGapRefusal::Size,
+        room: unflowed_room.unwrap_or(room),
+        room_set_by: unflowed_set_by.unwrap_or(room_set_by),
+        chains: fields,
+        mesh: Some(mesh),
+        ..BandGapResult::default()
+    }
 }

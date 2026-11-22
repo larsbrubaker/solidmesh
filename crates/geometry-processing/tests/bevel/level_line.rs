@@ -315,6 +315,8 @@ pub(crate) mod room_ceiling_tests;
 pub(crate) mod room_pairs_cost_tests;
 #[path = "room_read_cost_tests.rs"]
 pub(crate) mod room_read_cost_tests;
+#[path = "room_read_refuses_before_refining_tests.rs"]
+pub(crate) mod room_read_refuses_before_refining_tests;
 #[path = "room_rigid_motion_tests.rs"]
 pub(crate) mod room_rigid_motion_tests;
 #[path = "room_scales_with_the_part_tests.rs"]
