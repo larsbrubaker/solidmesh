@@ -1,8 +1,18 @@
 //! A fillet's arc across the band, drawn into the level-line mesh: the plain and skew rows
-//! ([`build`], [`build_skew`]), a STOPPED end's row in its plane ([`build_in_a_stopped_plane`]), a closed chain's zip spoke carried along or round the chain
+//! ([`build`], [`build_skew`], the skew row's points [`skew_row`]), an open fill's skew row on one
+//! straight run of the chain ([`on_one_straight_run`]), a STOPPED end's row in its plane
+//! ([`build_in_a_stopped_plane`]), a closed chain's zip spoke carried along or round the chain
 //! ([`along_the_chain`]), and the rows on a sharp joint's seam ([`in_the_seam`],
 //! [`on_a_rim_joints_seam`]). The geometry they read (the carry, the seam row, the leg tests) is in
 //! `fillet_arc`.
+//!
+//! A SKEW ROW joins two rail vertices that cross the chain at different points. Drawn about one
+//! chain point as a plain row, its corner is measured in the slanted plane through its ends,
+//! which a skew opens past the fold (90 degrees opened to 147 by a 55 mm skew on an R12), and the
+//! arc's weight read from that angle bulges it off the round (by 0.640 there). The skew row slides
+//! both ends along the chain into the section at the chain point, draws the square row there, and
+//! carries each point back by its share of the two slides. Along a straight run the slide is a
+//! translation along the axis, so the points land on the fillet's cylinder exactly.
 
 use solidmesh_math::{ieee_math, Vector3};
 
@@ -118,14 +128,82 @@ pub fn build_skew(
         return vec![from, to];
     }
 
+    let row = skew_row(
+        mesh.position(from),
+        mesh.position(to),
+        from_chain_point,
+        chain_point,
+        to_chain_point,
+    );
+    row_of(mesh, from, to, segments, added_vertices, |s| {
+        row(s as f64 / segments as f64)
+    })
+}
+
+/// The skew row's point at share `t` from `p` to `q` (the file header, "A skew row"): `p` and `q`
+/// cross the chain at `from_chain_point` and `to_chain_point`, and the row is drawn in the section
+/// at `chain_point`.
+pub fn skew_row(
+    p: Vector3,
+    q: Vector3,
+    from_chain_point: Vector3,
+    chain_point: Vector3,
+    to_chain_point: Vector3,
+) -> impl Fn(f64) -> Vector3 {
     let from_shift = chain_point - from_chain_point;
     let to_shift = chain_point - to_chain_point;
-    let p = mesh.position(from) + from_shift;
-    let q = mesh.position(to) + to_shift;
-    row_of(mesh, from, to, segments, added_vertices, |s| {
-        let t = s as f64 / segments as f64;
-        arc_point(p, chain_point, q, t) - (from_shift * (1.0 - t)) - (to_shift * t)
-    })
+    let p = p + from_shift;
+    let q = q + to_shift;
+    move |t| arc_point(p, chain_point, q, t) - (from_shift * (1.0 - t)) - (to_shift * t)
+}
+
+/// How far a row end may lean along the chain, as a share of its reach to the chain, and still
+/// stand square to it: a float reading's worth, so only an end the band's own level line put in
+/// the chain's normal plane is read as square.
+pub const SQUARE_END_SHARE: f64 = 1e-6;
+
+/// An open fill's row from `p` (reading `from_reads`) to `q` (reading `to_reads`) about
+/// `chain_point`, drawn as the skew row where that is exact: the two readings are apart (by more
+/// than `tie`) and both on the chain, the chain runs straight between them (its chord and its
+/// length there agree to `tie`), and each end stands square to that run (to
+/// [`SQUARE_END_SHARE`]). There the section slid along the run is the same section, so the row is
+/// the round's own. `None` everywhere else - tied readings, a run past an end, round a turn the
+/// chord-and-length test reads, or an end that leans - where the plain row stays as it was drawn.
+/// A turn under about 2e-6 radians passes the test as straight; the skew row is then off the
+/// round by at most its slide times that turn, about 1e-4 on a 55 mm slide.
+pub fn on_one_straight_run(
+    chain: &ChainField,
+    p: Vector3,
+    q: Vector3,
+    from_reads: f64,
+    to_reads: f64,
+    chain_point: Vector3,
+    tie: f64,
+) -> Option<impl Fn(f64) -> Vector3> {
+    let length = chain.length;
+    let on_the_chain = |reads: f64| reads >= -tie && reads <= length + tie;
+    if (to_reads - from_reads).abs() <= tie || !on_the_chain(from_reads) || !on_the_chain(to_reads)
+    {
+        return None;
+    }
+
+    let from_point = chain.point_at(from_reads.clamp(0.0, length));
+    let to_point = chain.point_at(to_reads.clamp(0.0, length));
+    let run = to_point - from_point;
+    if (run.length() - (to_reads - from_reads).abs()).abs() > tie {
+        return None;
+    }
+
+    let direction = run.get_normal();
+    let stands_square = |end: Vector3, on: Vector3| {
+        let reach = end - on;
+        reach.dot(direction).abs() <= SQUARE_END_SHARE * reach.length()
+    };
+    if !stands_square(p, from_point) || !stands_square(q, to_point) {
+        return None;
+    }
+
+    Some(skew_row(p, q, from_point, chain_point, to_point))
 }
 
 /// A parameter round the chain's loop into `[0, length)`.

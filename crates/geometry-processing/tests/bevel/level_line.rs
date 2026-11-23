@@ -147,6 +147,8 @@ pub(crate) mod fill_closes_or_refuses_tests;
 pub(crate) mod fillet_arc_carry_tests;
 #[path = "fillet_arc_seam_row_tests.rs"]
 pub(crate) mod fillet_arc_seam_row_tests;
+#[path = "fillet_arc_straight_run_tests.rs"]
+pub(crate) mod fillet_arc_straight_run_tests;
 #[path = "fillet_strip_sag_tests.rs"]
 pub(crate) mod fillet_strip_sag_tests;
 #[path = "fillet_thin_front_fin.rs"]
@@ -271,6 +273,8 @@ pub(crate) mod oblique_end_face_owner_tests;
 pub(crate) mod oblique_end_face_tests;
 #[path = "one_room_reading_tests.rs"]
 pub(crate) mod one_room_reading_tests;
+#[path = "open_chain_fade_square_rows_tests.rs"]
+pub(crate) mod open_chain_fade_square_rows_tests;
 #[path = "open_chain_fade_tests.rs"]
 pub(crate) mod open_chain_fade_tests;
 #[path = "open_chain_fixtures.rs"]

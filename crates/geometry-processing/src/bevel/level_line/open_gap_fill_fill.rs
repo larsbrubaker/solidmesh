@@ -110,7 +110,8 @@ pub fn fill(
     // bead by a share that depended on where the diagonals fell relative to the size (the
     // ladder's L: 0.204 r^2 per unit length at size 3 against the exact 0.2146).
     // Only where both ends are closed by end-face caps: a fade's rails curl round its meeting
-    // points, and its zipper is left exactly as it was.
+    // points, and its zipper is left exactly as it was. A fade's row that the zipper skews along
+    // one straight run of the chain is drawn on the round instead, as the skew row (`arcs`).
     let square = ends.end_runs.is_some();
     if square {
         left = with_stations_of(mesh, chain, &left, &right, chain.length)?;

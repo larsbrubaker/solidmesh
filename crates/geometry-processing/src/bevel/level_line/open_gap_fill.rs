@@ -4,8 +4,9 @@
 //! runs ([`hole_between`]), a result carrying the minted vertices ([`with_minted`]), a run end's
 //! meeting point ([`meeting_point_of`]), a reversed arc ([`backwards`]), a run read as a rail
 //! ([`try_rail`]), the extended parameter past an end ([`extended`]) and the rows laid along the
-//! spokes ([`arcs`]), and the entry points that route an open chain's gap ([`try_open`]) and fill
-//! the fade ([`try_fade`]), which hands a chain stopped at both ends to `stopped_end_fill.rs`.
+//! spokes ([`arcs`], a skew row on a straight run drawn on the round), and the entry points that
+//! route an open chain's gap ([`try_open`]) and fill the fade ([`try_fade`]), which hands a chain
+//! stopped at both ends to `stopped_end_fill.rs`.
 //! The fill itself is in `open_gap_fill_fill.rs`, kept apart for the file-size limit.
 
 use std::cell::RefCell;
@@ -17,10 +18,10 @@ use solidmesh_math::{ieee_math, Vector3};
 use super::end_face_section_row::{section_row, EndRowAsked};
 use super::open_gap_fill_fill::{self, OpenFillEnds};
 use super::{
-    corner_cap_flat_ends, dying_crease_fill, end_face_fill, gap_fill, open_gap_fill_cut_section,
-    open_gap_fill_stations, stopped_end_fill, virtual_rail, virtual_rail_past_the_end,
-    BandGapResult, BandProfile, ChainField, GapFillRefusal, GapFillResult, GapLoop, LevelLineMesh,
-    LevelLineMeshError,
+    corner_cap_flat_ends, dying_crease_fill, end_face_fill, fillet_arc_rows, gap_fill,
+    open_gap_fill_cut_section, open_gap_fill_stations, stopped_end_fill, virtual_rail,
+    virtual_rail_past_the_end, BandGapResult, BandProfile, ChainField, GapFillRefusal,
+    GapFillResult, GapLoop, LevelLineMesh, LevelLineMeshError,
 };
 
 /// A watcher of the fade's hole, as directed edges.
@@ -430,6 +431,9 @@ pub fn extended(q: Vector3, parameter: f64, chain: &ChainField) -> f64 {
 /// the end row drawn about the end vertex (and, leaning, as the round's section).
 /// `end_controls` moves that row's control point off the end vertex where a stopped end's side
 /// folds (`end_face_section_row::stopped_end_controls`).
+/// Where the rails meet on the crease (`meets_on_the_crease`: a fade, a dying crease, a swallowed
+/// side), a row whose two ends cross one straight run of the chain at different points is drawn
+/// as the skew row instead (`fillet_arc_rows::on_one_straight_run`), so it lies on the round.
 /// Every vertex minted is appended to `added_vertices`; each spoke charged. `rows_on_the_ray` and
 /// `meets_on_the_crease` are usually `false`.
 #[allow(clippy::too_many_arguments)]
@@ -536,6 +540,32 @@ pub fn arcs(
         arc[segments as usize] = b;
         let mut along: Box<dyn Fn(f64) -> Vector3> =
             Box::new(move |f| gap_fill::arc_point(p, c, q, f));
+        // A fade's row whose two ends cross one straight run of the chain at different points is
+        // drawn as the skew row, on the round (`fillet_arc_rows`, "A skew row"): the fade's
+        // zipper joins its rails as it finds them, and across long rail edges a row runs along
+        // the chain. Only rows that meet on the crease, so a capped fill's rows are unchanged, and
+        // not a row with an end on a virtual stretch of its rail: the strip there is clipped on a
+        // growing neighbour's planes, which read the plain row (moved, Swallowed Fin's valley wall
+        // at 6.228 had no single stretch to clip on and refused).
+        if meets_on_the_crease
+            && !end_face_row
+            && !rows_on_the_ray
+            && control.is_none()
+            && !on_a_virtual_stretch(mesh, left, lu)
+            && !on_a_virtual_stretch(mesh, right, ru)
+        {
+            if let Some(skew) = fillet_arc_rows::on_one_straight_run(
+                chain,
+                p,
+                q,
+                left_reads,
+                right_reads,
+                chain_point,
+                tie,
+            ) {
+                along = Box::new(skew);
+            }
+        }
         // A leaning end face's last row is the round's own section in that face
         // (`end_face_section_row`); a square end's is the row just drawn.
         if end_face_row && !rows_on_the_ray {
@@ -610,6 +640,16 @@ pub fn arcs(
     }
 
     Ok(arcs)
+}
+
+/// Whether rail vertex `k` ends a VIRTUAL edge of the rail, one carried past a crease that stands
+/// on no triangle.
+fn on_a_virtual_stretch(mesh: &LevelLineMesh, rail: &OpenGapFillOpenRail, k: usize) -> bool {
+    let virtual_edge = |i: usize| {
+        mesh.triangles_on(rail.vertices[i], rail.vertices[i + 1])
+            .is_empty()
+    };
+    (k > 0 && virtual_edge(k - 1)) || (k + 1 < rail.vertices.len() && virtual_edge(k))
 }
 
 /// Whether two open gap loops meet end to end - the left's start the
