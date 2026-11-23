@@ -51,6 +51,8 @@ mod path_shader_inlining_tests;
 mod path_shader_precision_tests;
 #[path = "ray_tracer/path_shader_seam_tests.rs"]
 mod path_shader_seam_tests;
+#[path = "ray_tracer/path_shader_stack_tests.rs"]
+mod path_shader_stack_tests;
 #[path = "ray_tracer/path_shader_tests.rs"]
 mod path_shader_tests;
 #[path = "ray_tracer/path_tracer_glass_contact_measure_tests.rs"]

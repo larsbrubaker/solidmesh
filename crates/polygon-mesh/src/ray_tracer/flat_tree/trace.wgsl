@@ -10,6 +10,15 @@
 // Each invocation traces one ray and writes one hit at the ray's index, so a dispatch of any size
 // can cover a contiguous slice of the ray buffer.
 //
+// The traversal's stack is one pair of module-scope arrays, `trace_stack_code` and
+// `trace_stack_near`, that every call shares, where traverse.rs keeps it on each call's own stack:
+// an invocation runs one traversal at a time, so one stack serves them all. With the stack local
+// to `trace`, an Apple M5's Metal driver compiled a path loop that lost values it held across a
+// traversal, a whole SIMD group at a time; the loss followed the size of that function-local
+// stack (almost no loss with its two arrays at 32 entries, more at 512 than at 128) and was gone
+// with the stack at module scope. `path_shader_stack_tests` keeps the stack here and holds the
+// arrays each function holds to what `trace` held in that almost-loss-free case.
+//
 // Two tolerances are WGSL's own and differ from traverse.rs. WGSL allows a compiler to reassociate
 // or fuse `a * b - c * d`, and allows 2.5 ULP of error in a division where Rust's is correctly
 // rounded, so this shader does not promise the exact negatives on a shared edge that traverse.rs
@@ -267,6 +276,10 @@ fn trace_any(ray: Ray) -> Hit {
     return trace(ray, true);
 }
 
+// The traversal's stack, shared by every call (see the header).
+var<private> trace_stack_code: array<u32, STACK_CAPACITY>;
+var<private> trace_stack_near: array<f32, STACK_CAPACITY>;
+
 fn trace(ray: Ray, stop_at_first_hit: bool) -> Hit {
     let inverse = vec3<f32>(
         safe_inverse(ray.direction[0]),
@@ -275,20 +288,18 @@ fn trace(ray: Ray, stop_at_first_hit: bool) -> Hit {
     );
     let shear = shear_of(ray.direction);
 
-    var stack_code: array<u32, STACK_CAPACITY>;
-    var stack_near: array<f32, STACK_CAPACITY>;
     var stack_size = 1u;
-    stack_code[0] = 0u;
-    stack_near[0] = ray.t_min;
+    trace_stack_code[0] = 0u;
+    trace_stack_near[0] = ray.t_min;
 
     var best = Hit(0.0f, NO_HIT, 0u, 0u, 0.0f, 0.0f, 0.0f);
     var t_best = ray.t_max;
 
     while stack_size > 0u {
         stack_size -= 1u;
-        let code = stack_code[stack_size];
+        let code = trace_stack_code[stack_size];
         // A nearer hit may have been found since this entry was pushed.
-        if stack_near[stack_size] > t_best {
+        if trace_stack_near[stack_size] > t_best {
             continue;
         }
 
@@ -349,8 +360,8 @@ fn trace(ray: Ray, stop_at_first_hit: bool) -> Hit {
             }
         }
         for (var position = 0u; position < order_count; position += 1u) {
-            stack_code[stack_size] = order[position];
-            stack_near[stack_size] = order_near[position];
+            trace_stack_code[stack_size] = order[position];
+            trace_stack_near[stack_size] = order_near[position];
             stack_size += 1u;
         }
     }

@@ -8,7 +8,7 @@ use solidmesh_mesh::ray_tracer::flat_tree::PATH_WGSL;
 
 /// `source` with every comment removed, so a name in prose is not counted as a call: `//` to the
 /// end of the line, and `/* */` blocks, which nest in WGSL.
-fn without_comments(source: &str) -> String {
+pub(crate) fn without_comments(source: &str) -> String {
     let mut code = String::with_capacity(source.len());
     let mut chars = source.chars().peekable();
     let mut depth = 0usize;

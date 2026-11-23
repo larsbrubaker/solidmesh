@@ -22,11 +22,12 @@
 // range and dispatching `ceil(count / 64)` workgroups; an invocation past the range runs the
 // range's last pixel and writes nothing (the entry point says why). Limits used: 7 storage buffers
 // and 1 sampled texture (at most `GpuTextureLimits::max_side` texels a side, 8192 by default) in
-// the compute stage, 3 uniform buffers, 3 bind groups, 64 invocations per workgroup, about 2.1
-// KB of private memory and 1.2 KB of function memory per invocation (those two measured when the
-// loop was first written, in 0.2.4, and not measured again since `PathVertex` and the sun's records
-// grew in 0.4.0). WebGPU's defaults are 8, 16, 8192, 12, 4, 256 and the 8 KB its compilers must
-// accept, so nothing here asks for more than a phone gives.
+// the compute stage, 3 uniform buffers, 3 bind groups, 64 invocations per workgroup, about 3.1
+// KB of private memory per invocation (the crossing list's 2 KB, `see_through.wgsl`, and the
+// traversal's 1 KB stack, `trace.wgsl`) and about 0.2 KB of function memory (estimated from the
+// loop's first measurement, less the stack; `PathVertex` and the sun's records have grown
+// since). WebGPU's defaults are 8, 16, 8192, 12, 4, 256 and the 8 KB its compilers must accept,
+// so nothing here asks for more than a phone gives.
 //
 // The color and the coverage channels are two buffers and not one 48-byte record: a browser's
 // default 128 MB storage binding holds a 1440p image's 16-byte colors and 32-byte channels apart,
