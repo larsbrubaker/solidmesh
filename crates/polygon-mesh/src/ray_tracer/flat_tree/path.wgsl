@@ -582,7 +582,14 @@ fn path_radiance(camera_ray: Ray) -> vec3<f32> {
 
         let vertex = PathVertex(point, surface, frame, toward_camera, wo, seam, resting, floor_first,
             rest_hit, rest_picture);
-        let shadow = path_sample_sun(vertex, sun_path.chain, sun_path.in_glass);
+        // The sun's direction is drawn here and not inside `path_sample_sun` (`sun.wgsl`'s header).
+        var sun_u = vec2<f32>(0.0f);
+        if path_sun_sampled() {
+            let u0 = path_next_unit();
+            let u1 = path_next_unit();
+            sun_u = vec2<f32>(u0, u1);
+        }
+        let shadow = path_sample_sun(vertex, sun_path.chain, sun_path.in_glass, sun_u);
         radiance += throughput * shadow.light;
 
         let drawn = surface_sample(surface, wo, path_next_unit3());

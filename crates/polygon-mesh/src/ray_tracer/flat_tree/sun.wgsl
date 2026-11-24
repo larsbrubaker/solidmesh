@@ -41,6 +41,16 @@
 // `path_escaped` scales the sun's disc by `chain` after a glass event. The view sets the flag for
 // `SunThroughGlass::Straight` in a scene with glass (`gpu_view.rs`); without it every operation is
 // the plain shadow ray's and the plain escape's.
+//
+// **The path loop draws the sun's two numbers.** `path_radiance` draws them where
+// `path_sun_sampled` says a vertex takes a sun sample and passes them in, so `path_sample_sun`
+// draws nothing itself; the stream advances exactly as it would with the draws inside. On an
+// Apple M5's Metal driver, with `path_sample_sun` drawing them itself just after its early return
+// on the view's sun and strategy, the default compile lost values held across that call a whole
+// SIMD group at a time, differently from run to run (two fresh renders of a filled bed seen from
+// afar differed in up to 4844 of 12288 pixels, and the card read darker than the CPU); with the
+// draws in the caller, before that return, or with the return taken away, two fresh renders agreed
+// bit for bit. `path_shader_sun_draw_tests` keeps the draws in the caller.
 
 // ---- Lights (`lights.rs`).
 
@@ -439,20 +449,27 @@ struct SunShadow {
     receiver_pdf: f32,
 }
 
+// Whether a vertex takes a sample of the sun at all: the view has one, and its strategy samples it
+// (Straight always does).
+fn path_sun_sampled() -> bool {
+    let straight = (path_view.flags & PATH_FLAG_SUN_STRAIGHT) != 0u;
+    return path_has_sun() && !(path_view.strategy == PATH_STRATEGY_SURFACE_ONLY && !straight);
+}
+
 // The sun's contribution at this vertex (`sample_sun`), `chain` and `in_glass` the path's record of
-// how it got here. Without `PATH_FLAG_SUN_STRAIGHT` it is Exact's shadow ray, operation for
-// operation; with it the header's two routes.
-fn path_sample_sun(vertex: PathVertex, chain: f32, in_glass: bool) -> SunShadow {
+// how it got here, `u` the two numbers the path loop drew for the sun's direction where
+// `path_sun_sampled` says (the header says why the loop draws them). Without
+// `PATH_FLAG_SUN_STRAIGHT` it is Exact's shadow ray, operation for operation; with it the header's
+// two routes.
+fn path_sample_sun(vertex: PathVertex, chain: f32, in_glass: bool, u: vec2<f32>) -> SunShadow {
     var shadow = SunShadow(vec3<f32>(0.0f), path_view.sun_tangent.w);
     let straight = (path_view.flags & PATH_FLAG_SUN_STRAIGHT) != 0u;
-    if !path_has_sun() || (path_view.strategy == PATH_STRATEGY_SURFACE_ONLY && !straight) {
+    if !path_sun_sampled() {
         return shadow;
     }
     // A receiver inside glass, not at a seam or a contact, reads the sun bent at the glass's face.
     let inside = straight && in_glass && vertex.seam.kind != SEAM_INTERFACE && !vertex.resting;
-    let u0 = path_next_unit();
-    let u1 = path_next_unit();
-    let wi_world = path_sun_sample(vec2<f32>(u0, u1));
+    let wi_world = path_sun_sample(u);
     var wi = path_to_local(vertex.frame, wi_world);
     if !path_sides_agree(vertex.point.geometric, vertex.toward_camera, wi_world, vertex.wo.z, wi.z) {
         return shadow;

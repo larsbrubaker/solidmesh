@@ -1,11 +1,12 @@
 //! The text of the GPU route's weights for sunlight through glass, pinned to their Rust mirror's
-//! steps (`flat_tree/sun_weights.rs`): the whole of `path_sample_sun`, `path_sun_toward`,
-//! `path_sun_toward_light`, `path_sun_wants_glass`, `path_shadow_weight`, `path_sun_after` and
-//! `path_escaped` (`sun.wgsl`), the density and its two parts a sample carries (`surface_pdf`,
-//! `finish_sample`, the glass lobe's mark in `surface_sample`, `scatter.wgsl`), the declarations
-//! of the records they read and make (`SunToward`, `SunShadow`, `PathSunState`, `ScatterSample`),
-//! and how the path loop keeps and updates the record (`path.wgsl`), so a change to any of them fails here until
-//! the mirror and its case-by-case checks against the CPU (`sun_weights_tests`) follow it.
+//! steps (`flat_tree/sun_weights.rs`): the whole of `path_sun_sampled`, `path_sample_sun`,
+//! `path_sun_toward`, `path_sun_toward_light`, `path_sun_wants_glass`, `path_shadow_weight`,
+//! `path_sun_after` and `path_escaped` (`sun.wgsl`), the density and its two parts a sample
+//! carries (`surface_pdf`, `finish_sample`, the glass lobe's mark in `surface_sample`,
+//! `scatter.wgsl`), the declarations of the records they read and make (`SunToward`, `SunShadow`,
+//! `PathSunState`, `ScatterSample`), and how the path loop keeps and updates the record
+//! (`path.wgsl`), so a change to any of them fails here until the mirror and its case-by-case
+//! checks against the CPU (`sun_weights_tests`) follow it.
 
 use solidmesh_mesh::ray_tracer::flat_tree::PATH_WGSL;
 
@@ -69,15 +70,20 @@ const PATH_SUN_TOWARD_LIGHT: &str =
     vec3<f32>(toward.glass) * toward.radiance * (toward.cos / toward.pdf_light * \
     toward.glass_weight); } return direct;";
 
+/// `path_sun_sampled`, flattened by `function_text`.
+const PATH_SUN_SAMPLED: &str =
+    "fn path_sun_sampled() -> bool { let straight = (path_view.flags & PATH_FLAG_SUN_STRAIGHT) \
+    != 0u; return path_has_sun() && !(path_view.strategy == PATH_STRATEGY_SURFACE_ONLY && \
+    !straight);";
+
 /// `path_sample_sun`, flattened by `function_text`.
 const PATH_SAMPLE_SUN: &str =
-    "fn path_sample_sun(vertex: PathVertex, chain: f32, in_glass: bool) -> SunShadow { var \
-    shadow = SunShadow(vec3<f32>(0.0f), path_view.sun_tangent.w); let straight = \
-    (path_view.flags & PATH_FLAG_SUN_STRAIGHT) != 0u; if !path_has_sun() || (path_view.strategy \
-    == PATH_STRATEGY_SURFACE_ONLY && !straight) { return shadow; } let inside = straight && \
-    in_glass && vertex.seam.kind != SEAM_INTERFACE && !vertex.resting; let u0 = \
-    path_next_unit(); let u1 = path_next_unit(); let wi_world = path_sun_sample(vec2<f32>(u0, \
-    u1)); var wi = path_to_local(vertex.frame, wi_world); if \
+    "fn path_sample_sun(vertex: PathVertex, chain: f32, in_glass: bool, u: vec2<f32>) -> \
+    SunShadow { var shadow = SunShadow(vec3<f32>(0.0f), path_view.sun_tangent.w); let straight \
+    = (path_view.flags & PATH_FLAG_SUN_STRAIGHT) != 0u; if !path_sun_sampled() { return shadow; \
+    } let inside = straight && in_glass && vertex.seam.kind != SEAM_INTERFACE && \
+    !vertex.resting; let wi_world = path_sun_sample(u); var wi = path_to_local(vertex.frame, \
+    wi_world); if \
     !path_sides_agree(vertex.point.geometric, vertex.toward_camera, wi_world, vertex.wo.z, \
     wi.z) { return shadow; } var bsdf = surface_evaluate(vertex.surface, vertex.wo, wi); if \
     path_largest_channel(bsdf) <= 0.0f { return shadow; } var toward: SunToward; var \
@@ -157,6 +163,7 @@ fn the_shader_weights_are_their_mirrors() {
         ("path_sun_toward", PATH_SUN_TOWARD),
         ("path_sun_wants_glass", PATH_SUN_WANTS_GLASS),
         ("path_sun_toward_light", PATH_SUN_TOWARD_LIGHT),
+        ("path_sun_sampled", PATH_SUN_SAMPLED),
         ("path_sample_sun", PATH_SAMPLE_SUN),
         ("path_sun_after", PATH_SUN_AFTER),
     ];
@@ -200,9 +207,11 @@ fn the_path_loop_keeps_the_record_as_the_mirror_does() {
         // The escape reads the record.
         "radiance += throughput * path_escaped(ray.direction, arrival_sampled, arrival_pdf, \
          sun_path.last_glass, sun_path.chain); break;",
-        // The shadow ray reads it, and says the density its own weight was taken against.
-        "let shadow = path_sample_sun(vertex, sun_path.chain, sun_path.in_glass); radiance += \
-         throughput * shadow.light;",
+        // The shadow ray reads it, and says the density its own weight was taken against; its
+        // direction's two numbers are drawn first, where the vertex takes a sun sample.
+        "var sun_u = vec2<f32>(0.0f); if path_sun_sampled() { let u0 = path_next_unit(); let u1 = \
+         path_next_unit(); sun_u = vec2<f32>(u0, u1); } let shadow = path_sample_sun(vertex, \
+         sun_path.chain, sun_path.in_glass, sun_u); radiance += throughput * shadow.light;",
         // After the event, its shadow ray, and before roulette and the next ray: the arrival's
         // density by the drawn lobe's part, then `in_glass` and the rest of the record.
         "scatters += 1u; arrival_sampled = !drawn.is_specular; arrival_pdf = drawn.pdf; if \
