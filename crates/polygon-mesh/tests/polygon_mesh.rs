@@ -51,6 +51,8 @@ mod reduce_seam_tests;
 mod reduce_test_support;
 #[path = "polygon_mesh/repair_texture_caps_tests.rs"]
 mod repair_texture_caps_tests;
+#[path = "polygon_mesh/revolve_profile_tests.rs"]
+mod revolve_profile_tests;
 #[path = "polygon_mesh/rust_only_mesh_editing_tests.rs"]
 mod rust_only_mesh_editing_tests;
 #[path = "polygon_mesh/rust_only_platonic_solids_tests.rs"]

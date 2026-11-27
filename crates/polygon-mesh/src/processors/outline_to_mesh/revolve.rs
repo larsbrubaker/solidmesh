@@ -81,6 +81,10 @@ fn sweep_angles(angle_start: f64, angle_end: f64) -> Result<(f64, f64), MathErro
 /// the profile's precision), capping both ends of a partial sweep. A profile that encloses no
 /// area, or a sweep of no angle, revolves to an empty mesh.
 ///
+/// The polygons are filled even-odd, as [`extrude`](fn@super::extrude) fills them: a point inside
+/// an odd number of them is solid, so a hole is a hole whichever way it is wound, and where two
+/// outlines overlap the overlap is left out. A caller wanting their union unions them first.
+///
 /// The angles are brought into `[0, Tau]` first; one that cannot be (below `-Tau`, or NaN) is
 /// an error; a clipper failure is the other.
 pub fn revolve(

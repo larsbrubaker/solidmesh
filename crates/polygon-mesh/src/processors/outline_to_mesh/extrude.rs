@@ -39,6 +39,10 @@ pub fn extrude(polygons: &Paths64, z_height_top: f64) -> Result<Mesh, ClipperErr
 /// Extrudes a closed profile (integer polygons at `DEFAULT_SCALING`) from z = 0 up to
 /// `z_height_top`, optionally rounding either end.
 ///
+/// The polygons are filled even-odd: a point inside an odd number of them is solid, so a hole is
+/// a hole whichever way it is wound, and where two outlines overlap the overlap is left out. A
+/// caller wanting their union unions them first.
+///
 /// `bevel` (`(height, inset_amount)` pairs) is the top bevel ordered from the bottom of the
 /// bevel UPWARD. Each `height` is an absolute z and each `inset_amount` is in mm from the
 /// ORIGINAL profile (negative shrinks it) - insets never compound. The wall rises un-inset to
