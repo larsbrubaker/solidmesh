@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (0.061 mm^3 over the closed form on a 200 mm^3 chamfer, allowance 0.017): the chamfer that ends at the joined pin converges to slightly less removed than exact at its end against the pin.",
+  "seen": "volume's converged limit misses the closed form"
+}

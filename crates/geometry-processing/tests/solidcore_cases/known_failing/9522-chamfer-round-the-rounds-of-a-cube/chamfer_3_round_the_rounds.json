@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (2.3 to 2.8 mm^3 short against 475-1265 mm^3 chamfers; the rounded cube alone converges to within 2e-3): the chamfer round the rounded cube's bottom loop converges to slightly more removed than exact where it crosses the corner rounds.",
+  "seen": "volume's converged limit misses the closed form"
+}

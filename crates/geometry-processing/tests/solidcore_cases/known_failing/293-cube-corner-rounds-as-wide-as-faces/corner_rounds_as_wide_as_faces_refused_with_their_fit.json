@@ -1,0 +1,4 @@
+{
+  "reason": "Refused as the case wants (SizeExceedsFaceWidth, SurfaceStripSeamDidNotMeet), but the largest fit it reports is 19.921 mm where the case's differs beyond its tol: the corner rounds' size search reads the room of the meeting strips, not of the faces.",
+  "seen": "the refusal's largest fit misses the case's"
+}

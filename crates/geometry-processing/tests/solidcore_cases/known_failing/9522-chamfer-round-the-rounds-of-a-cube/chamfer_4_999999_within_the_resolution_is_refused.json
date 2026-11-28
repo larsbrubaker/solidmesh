@@ -1,0 +1,4 @@
+{
+  "reason": "A chamfer of 4.999999 round the bottom loop of a cube with 5 mm rounds leaves corner arcs of radius 1e-6, within the part's resolution, and the case expects a refusal; bevel_part builds it (closed, one lump), welding the near-coincident arc ends instead of refusing.",
+  "seen": "result builds where a refusal is expected"
+}

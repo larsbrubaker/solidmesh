@@ -1,0 +1,4 @@
+{
+  "reason": "A 4 mm round on the top edge of a 2 mm fin is refused (SizeExceedsFaceWidth, largest fit 2 mm); the case expects it built past the fin's thickness, running off the far side. solidmesh has no run-off construction for a round whose rail leaves its face.",
+  "seen": "the bevel refuses result (SizeExceedsFaceWidth)"
+}

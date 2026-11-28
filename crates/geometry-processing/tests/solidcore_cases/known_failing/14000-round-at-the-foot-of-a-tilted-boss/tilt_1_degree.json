@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (the limit is 0.13 to 0.19 mm^3 below the closed form against a 7 mm^3 cove at the foot of the boss, at every tilt): the concave round on the faceted boss adds too little material.",
+  "seen": "volume's converged limit misses the closed form"
+}

@@ -1,0 +1,4 @@
+{
+  "reason": "A round exactly as tall as the disc's 2 mm wall builds at 48 and 96 sides but is refused at 192 (SizeExceedsFaceWidth): the room reading of a round that uses the wall up exactly depends on the faceting.",
+  "seen": "at 192 sides only: the bevel refuses result (SizeExceedsFaceWidth)"
+}

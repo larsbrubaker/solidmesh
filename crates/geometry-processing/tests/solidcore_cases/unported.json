@@ -1,0 +1,10 @@
+{
+  "1488-round-after-a-flush-loft-join/slab_3_5": "loft",
+  "1488-round-after-a-flush-loft-join/slab_3_control": "loft",
+  "3468-offset-face-next-to-fillet/boss_wall_in_1": "offset_faces",
+  "3468-offset-face-next-to-fillet/boss_wall_out_1": "offset_faces",
+  "3468-offset-face-next-to-fillet/box_top_beside_top_round": "offset_faces",
+  "3468-offset-face-next-to-fillet/box_wall_beside_vertical_round": "offset_faces",
+  "4829-cut-by-the-top-face-inside-a-fillet/prism_of_the_top_face": "sweep_face",
+  "solidcore-968-drafted-pocket-floor-cut/floor_cut_straight_down": "sweep_face"
+}

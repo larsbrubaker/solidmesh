@@ -1,0 +1,4 @@
+{
+  "reason": "Rounds of 3 on both top edges of a 4 mm rib cross on the top face (only 2 fits), but bevel_part builds a closed single-lump body (volume ~3049 mm^3) instead of refusing; the chamfers of 3 on the same rib are refused (SizeCollidesAcrossFace), so the round's collision check across the top face misses two rounds whose arcs overlap.",
+  "seen": "result builds where a refusal is expected"
+}

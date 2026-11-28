@@ -1,0 +1,4 @@
+{
+  "reason": "The chamfer on the knife edge removes far less than the closed form and does not approach it. The case's chamfer distance is a rolling-ball radius (a leg of distance * cot(angle / 2) on each face of an acute edge), while solidmesh's chamfer size is the setback along each face, so on this acute edge solidmesh cuts a much smaller chamfer: the two define the chamfer size differently away from right angles.",
+  "seen": "removed's converged limit misses the closed form; removed's allowance is not small next to the blend's own change"
+}

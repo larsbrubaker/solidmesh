@@ -1,0 +1,4 @@
+{
+  "reason": "bevel_part refuses a round that runs off the top face into the pocket (SizeExceedsFaceWidth, largest fit 4 mm); the case expects it built through as if the faces went on, removing only what lies in the body. solidmesh has no run-off-a-cliff construction for a blend whose rail leaves its face.",
+  "seen": "the bevel refuses result (SizeExceedsFaceWidth)"
+}

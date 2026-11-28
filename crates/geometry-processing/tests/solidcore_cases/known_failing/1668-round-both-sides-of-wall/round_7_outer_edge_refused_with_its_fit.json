@@ -1,0 +1,4 @@
+{
+  "reason": "A 7 mm round on the outer top edge of a 2 mm wall breaks through the wall (the ball centre is 7.07 mm from the inner corner), but bevel_part builds it as a closed single lump (~38447 mm^3) instead of refusing with the largest radius that stays inside the wall; the room reading does not see the inner face across the wall.",
+  "seen": "result builds where a refusal is expected"
+}

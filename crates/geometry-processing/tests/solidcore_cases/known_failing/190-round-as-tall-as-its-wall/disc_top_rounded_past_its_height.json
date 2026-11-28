@@ -1,0 +1,4 @@
+{
+  "reason": "A round taller than the disc's 2 mm wall is refused (SizeExceedsFaceWidth, largest fit 2 mm); the case expects it built as if the wall went on below the bottom, removing only what lies in the disc. solidmesh has no run-off construction for a round whose rail leaves its face.",
+  "seen": "the bevel refuses result (SizeExceedsFaceWidth)"
+}

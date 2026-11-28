@@ -1,0 +1,4 @@
+{
+  "reason": "Rounds of 3 on the vertical edges of a 6 mm wide bar use the end face up exactly (a full round), and bevel_part refuses (SizeCollidesAcrossFace) with a largest fit just under 3 mm; solidmesh cannot let two rounds meet tangentially across a face they consume whole.",
+  "seen": "the bevel refuses result (SizeCollidesAcrossFace)"
+}

@@ -1,0 +1,4 @@
+{
+  "reason": "A 5 mm round on the knife edge is refused (SizeExceedsFaceWidth) with a largest fit that halves when the faceting doubles (0.964 then 0.481 mm): the room reading on the knife edge is set by the facet size, not the shape.",
+  "seen": "the bevel refuses result (SizeExceedsFaceWidth)"
+}

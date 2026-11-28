@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (0.79 mm^3 short): the cylinder cut through the fillet's top-face edge converges to slightly more removed than exact.",
+  "seen": "volume's converged limit misses the closed form"
+}

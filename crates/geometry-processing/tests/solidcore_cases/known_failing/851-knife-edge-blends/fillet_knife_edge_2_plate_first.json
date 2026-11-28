@@ -1,0 +1,4 @@
+{
+  "reason": "A 2 mm round on the knife edge builds at 48 sides but is refused at 96 and 192 (SizeExceedsFaceWidth, fit halving with the faceting): the room reading on the knife edge depends on the facet size.",
+  "seen": "at 96, 192 sides only: the bevel refuses result (SizeExceedsFaceWidth)"
+}

@@ -1,0 +1,4 @@
+{
+  "reason": "Refused as the case wants (SizeCollidesAcrossFace), but the largest fit it reports is 2.96 mm where the case's is 3 mm (half the 6 mm face): solidmesh cannot build the full round that uses the face up exactly, so its fit stops short of it.",
+  "seen": "the refusal's largest fit misses the case's"
+}

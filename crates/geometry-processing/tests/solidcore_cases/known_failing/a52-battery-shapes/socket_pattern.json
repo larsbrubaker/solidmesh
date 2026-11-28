@@ -1,0 +1,4 @@
+{
+  "reason": "No blend: a plate less six cylinders, one boolean after another along the pattern, every extruded outline keeping all its vertices. Against the exact volumes of the solids their inscribed 48-, 96- and 192-gons make, the meshes are 0.155, 0.079 and 0.068 mm^3 short (each socket about 0.05 to 0.1 um wider in radius than its polygon), so the limit lands 0.064 below the closed form. The extra removal is solidmesh's own, in the patterned do_array subtractions or the outline's snapping; which is not yet found.",
+  "seen": "volume's converged limit misses the closed form"
+}

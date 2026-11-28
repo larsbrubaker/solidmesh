@@ -1,0 +1,4 @@
+{
+  "reason": "Chamfering all twelve edges of a box (a flat case, exact on a mesh) misses the closed form, and by a different amount for each pick order (14046.25 for the issue's order, 14056.25 sorted, against 14062.5): the corners where three chamfers meet are cut differently depending on which pick builds first.",
+  "seen": "volume misses the closed form of a flat case"
+}

@@ -1,0 +1,4 @@
+{
+  "reason": "extrude_contours drops outline points that fall collinear on its 1 um grid: the built outline has no vertex at 2 of 52 points at 48 sides, 2 of 100 points at 96 sides, 6 of 196 points at 192 sides it was given, so those runs are not the polygons they stand for and their volumes cannot be extrapolated. An extrude fault in solidmesh-mesh, not the bevel; fixing it moves output MatterCAD ships, so it is its own step. The lost points sit where the rectangle's straight sides meet its corner arcs tangentially. With them the rim round also converges to 0.17 mm^3 more removed than the closed form (51.53 against 51.36).",
+  "seen": "an outline lost vertices on the 1 \u00b5m grid; removed's converged limit misses the closed form"
+}

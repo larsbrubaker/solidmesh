@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (limit 38374.13 against 38375.60, 1.47 mm^3 short of a 110 mm^3 chamfer): the 1 mm chamfer on the faceted cylinder rim converges to a cut slightly too large, so the chamfer's setback on a curved wall is not the exact one.",
+  "seen": "volume's converged limit misses the closed form"
+}

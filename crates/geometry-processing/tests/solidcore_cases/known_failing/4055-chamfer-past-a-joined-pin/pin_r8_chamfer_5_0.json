@@ -1,0 +1,4 @@
+{
+  "reason": "A chamfer on the bar's bottom front edge that reaches the joined pin is refused (SizeExceedsFaceWidth) with the largest fit where the chamfer meets the pin; the case expects it carried past the pin, the pin trimming it. solidmesh does not run a chamfer past a standing feature on its face.",
+  "seen": "the bevel refuses result (SizeExceedsFaceWidth)"
+}

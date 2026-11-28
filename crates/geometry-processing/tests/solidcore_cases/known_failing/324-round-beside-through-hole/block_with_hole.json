@@ -1,0 +1,4 @@
+{
+  "reason": "extrude_contours drops outline points that fall collinear on its 1 um grid: the built outline has no vertex at 51 of 192 points at 192 sides it was given, so those runs are not the polygons they stand for and their volumes cannot be extrapolated. An extrude fault in solidmesh-mesh, not the bevel; fixing it moves output MatterCAD ships, so it is its own step.",
+  "seen": "at 192 sides only: an outline lost vertices on the 1 \u00b5m grid"
+}

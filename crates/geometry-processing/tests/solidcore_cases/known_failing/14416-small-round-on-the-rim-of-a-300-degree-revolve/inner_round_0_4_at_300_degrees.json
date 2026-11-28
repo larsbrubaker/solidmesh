@@ -1,0 +1,4 @@
+{
+  "reason": "The volume converges to the closed form, but at 192 sides the inner rim's 0.4 mm round leaves a result that is not a closed manifold: the bevel's sewing on the revolve's fine facets leaves an open or doubled edge.",
+  "seen": "at 192 sides only: the result is not a closed manifold"
+}

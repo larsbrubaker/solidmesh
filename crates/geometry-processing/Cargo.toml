@@ -16,7 +16,9 @@ homepage.workspace = true
 readme = "README.md"
 # The tests and their fixtures stay in the repository: they read data files and the kernel's
 # hidden internals, and a published crate needs neither (the bevel fixtures alone are ~10 MB).
-exclude = ["tests/"]
+# `examples/` holds only maintainer tools (the solidcore case sync), which a user of the crate
+# has no use for.
+exclude = ["tests/", "examples/"]
 
 [lib]
 name = "solidmesh"

@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (the limit is 0.48 mm^3 below the closed form against 93 mm^3 of rounds on the six edges): the rounds on the faceted boss and slab converge to slightly the wrong volume.",
+  "seen": "volume's converged limit misses the closed form"
+}

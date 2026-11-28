@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (about 2.4 mm^3 short of the closed form against a 7.6 mm^3 round): the round on the edge running into the tangent seam converges to the wrong solid, about a third more removed than exact, whether or not the edge ends on the seam.",
+  "seen": "volume's converged limit misses the closed form"
+}

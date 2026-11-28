@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (34.5291 against 34.5280, 1.1e-3 mm^3 over an allowance of 7e-4): the round's end against the 50 degree end face converges to a slightly larger removal than the exact one.",
+  "seen": "removed's converged limit misses the closed form"
+}

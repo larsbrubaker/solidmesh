@@ -141,6 +141,11 @@ The tests include the repository gates (file headers and size, Markdown placemen
 licenses and pure-Rust dependencies, the browser-safe clock); CI runs the same commands plus a
 `wasm32-unknown-unknown` build of every library crate.
 
+The `solidcore_cases` test replays solidcore's user-reported fillet and chamfer recipes against
+the bevel and holds each one's outcome (pass, known-failing with its reason, unported);
+`scripts/sync_solidcore_cases.sh` brings those cases up to a newer solidcore commit and lists
+what changed.
+
 ## License
 
 BSD-2-Clause ([LICENSE](LICENSE)). Third-party code the crates adapt is listed, by the crate

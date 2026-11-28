@@ -1,0 +1,4 @@
+{
+  "reason": "A 0.5 mm round on the knife edge builds at 48 and 96 sides, removing far more than the closed form (184 then 826 mm^3 against 18), and is refused at 192 (SizeExceedsFaceWidth, fit 0.235 mm, halving with the faceting): on a knife edge the round's room and cut follow the facet size, not the shape.",
+  "seen": "at 192 sides only: the bevel refuses result (SizeExceedsFaceWidth)"
+}

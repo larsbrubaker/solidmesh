@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (the limit is 1.53 mm^3 below the closed form against 127 mm^3 of rounds on the outer edges): the rounds converge to slightly more removed than exact.",
+  "seen": "volume's converged limit misses the closed form"
+}

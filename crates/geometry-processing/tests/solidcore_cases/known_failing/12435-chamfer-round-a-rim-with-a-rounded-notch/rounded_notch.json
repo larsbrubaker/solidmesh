@@ -1,0 +1,4 @@
+{
+  "reason": "Converges at second order, but to a limit off the closed form by more than its residual allows (limit 37852.49 against 37859.37, 6.9 mm^3 short of a 56 mm^3 fillet, order 1.77): the 5 mm fillet between the cylinder and the scallop removes too much, consistent with its rim standing off the exact rolling-ball rim.",
+  "seen": "volume's converged limit misses the closed form"
+}

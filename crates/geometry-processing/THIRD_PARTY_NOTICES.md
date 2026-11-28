@@ -36,3 +36,28 @@ Apache-2.0), the cost tests' mesh digests; https://github.com/zip-rs/zip2 (`zip`
 Thingi10K sweep reads the corpus' meshes out of their zip files with. Used as crates (not copied),
 by the tests alone: none of them reaches the library. License texts are in each crate's
 repository.
+
+## solidcore fillet and chamfer cases (Apache-2.0, test data only)
+
+Carried by: solidmesh (`crates/geometry-processing`), in its tests alone
+
+Source: https://github.com/tangency-labs/solidcore, `fixtures/solidcraft/` at commit
+c8f07fd3ae6a5b6d838d26b6f72ea9a438633d92 (2026-11-28). The case files that hold a fillet or
+chamfer are copied unchanged into `crates/geometry-processing/tests/solidcore_cases/fixtures/`
+(`pin.json` beside them records the commit and each file's SHA-256), and the `solidcore_cases`
+test binary replays them against solidmesh's own bevel. No solidcore code is copied or run; the
+files are excluded from the published crate (`exclude = ["tests/"]`). They are used under the
+Apache License, Version 2.0, whose full text, as solidcore ships it, is copied beside them at
+`crates/geometry-processing/tests/solidcore_cases/LICENSE-APACHE`. solidcore's NOTICE reads, in
+the part that covers its own work:
+
+    solidcore
+    Copyright (c) 2026 The solidcore contributors
+
+    This product is a Rust port (a derivative work) of the SMLib and SM_API
+    components of USD BRep, https://github.com/NVIDIA-Omniverse/usd-brep
+    (v1.0.1, commit 3fd5b95), licensed under the Apache License, Version 2.0.
+
+    USD BRep is Copyright (c) 2020-2026, NVIDIA CORPORATION & AFFILIATES. All
+    rights reserved. NVIDIA-authored portions of this product are licensed under
+    the Apache License, Version 2.0, except where otherwise noted.

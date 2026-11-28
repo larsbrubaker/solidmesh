@@ -1,0 +1,4 @@
+{
+  "reason": "The 2 mm cove where the boss meets the joined slab settles within the case's tol by 192 sides (18640.572 then 18640.575), but 0.49 mm^3 below the closed form against a 32 mm^3 cove, so the cove adds too little material. No outline loses vertices here, so it is not the extrude's decimation.",
+  "seen": "volume's converged limit misses the closed form"
+}

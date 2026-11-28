@@ -1,0 +1,4 @@
+{
+  "reason": "Refused as the case wants (SizeCollidesAcrossFace), but the largest fit it reports is 1.999 mm where the case's is 2 mm within 1e-6: the size search stops one search step short of the exact half-width.",
+  "seen": "the refusal's largest fit misses the case's"
+}

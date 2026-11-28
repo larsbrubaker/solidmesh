@@ -1,0 +1,4 @@
+{
+  "reason": "The chamfer's points on the top rim of the 5 mm fillet between the cylinder and its scallop pick their edges at 48 sides, but at 96 the nearest feature edge is 0.224 mm away and at 192 still 0.178 mm away, far past the faceting's reach and shrinking only slowly: solidmesh's fillet rim there stands off the exact rolling-ball rim, so the notched rim's tangent chain cannot be picked.",
+  "seen": "at 96, 192 sides only: a point picks no feature edge"
+}
